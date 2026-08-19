@@ -103,8 +103,24 @@ namespace DIIIX
 
             Verify(layout, res);
             ApplyHdr(layout, res);
-            TranslucentTb.Apply(layout.Taskbar, res.Warnings);
+            ApplyTaskbar(layout, res);
             return res;
+        }
+
+        /// <summary>Вид панели задач из профиля. Пустое значение — не вмешиваться.</summary>
+        private static void ApplyTaskbar(Layout layout, ApplyResult res)
+        {
+            if (string.IsNullOrEmpty(layout.Taskbar)) return;
+            if (!ExplorerTap.Available)
+            {
+                res.Warnings.Add("Вид панели задач задан, но рядом с программой нет DIIIX.ExplorerTAP.dll.");
+                return;
+            }
+
+            // смена раскладки пересоздаёт панели задач — связь со службой могла оборваться
+            ExplorerTap.Forget();
+            if (!ExplorerTap.Apply(ExplorerTap.Parse(layout.Taskbar), 0x00000000, 9.0f))
+                res.Warnings.Add("Не удалось задать вид панели задач: " + ExplorerTap.LastError);
         }
 
         private static bool HasClone(Layout layout)

@@ -691,8 +691,8 @@ namespace DIIIX
             _current.Taskbar = (string)item.Value;
             MarkDirty();
 
-            if (!string.IsNullOrEmpty(_current.Taskbar) && !TranslucentTb.Installed)
-                UpdateStatus("Вид панели задач задаёт TranslucentTB — он не установлен, и настройка ни на что не повлияет.");
+            if (!string.IsNullOrEmpty(_current.Taskbar) && !ExplorerTap.Available)
+                UpdateStatus("Рядом с программой нет DIIIX.ExplorerTAP.dll — вид панели задач задать нечем.");
             else
                 UpdateStatus(null);
         }
@@ -701,14 +701,14 @@ namespace DIIIX
         {
             var items = new List<Item>();
             items.Add(new Item("Панель: не менять", ""));
-            foreach (string accent in TranslucentTb.Accents)
-                items.Add(new Item("Панель: " + TranslucentTb.Describe(accent).ToLowerInvariant(), accent));
+            foreach (string accent in ExplorerTap.Names)
+                items.Add(new Item("Панель: " + ExplorerTap.Describe(accent).ToLowerInvariant(), accent));
 
             _taskbarCombo.ItemsSource = items;
             _taskbarCombo.IsEnabled = _current != null;
-            _taskbarCombo.ToolTip = TranslucentTb.Installed
-                ? "Вид панели задач при переключении на этот профиль (через TranslucentTB)"
-                : "Требуется TranslucentTB — он не установлен";
+            _taskbarCombo.ToolTip = ExplorerTap.Available
+                ? "Вид панели задач при переключении на этот профиль"
+                : "Нет DIIIX.ExplorerTAP.dll рядом с программой";
 
             string want = _current != null ? (_current.Taskbar ?? "") : "";
             foreach (Item it in items) if ((string)it.Value == want) { _taskbarCombo.SelectedItem = it; break; }

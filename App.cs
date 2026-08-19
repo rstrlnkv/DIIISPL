@@ -75,6 +75,7 @@ namespace DIIIX
             _messageWindow = new HwndSource(0, 0, 0, 0, 0, "DIIIXMessages", IntPtr.Zero);
             _messageWindow.AddHook(WndProc);
 
+            ExplorerTap.RestoreWhenProcessExits = true;   // трей живёт долго — при выходе вернём панель
             _window = new MainWindow();
             _window.Icon = Fluent.MakeWindowIcon();
             _window.ProfilesChanged += ReloadHotkeys;

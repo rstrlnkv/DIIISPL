@@ -1,3 +1,4 @@
+#include "diiixlog.hpp"
 #include "taskbarappearanceservice.hpp"
 #include <RpcProxy.h>
 #include <shellapi.h>
@@ -36,9 +37,22 @@ HRESULT TaskbarAppearanceService::GetVersion(DWORD* apiVersion) noexcept
 
 HRESULT TaskbarAppearanceService::SetTaskbarAppearance(HWND taskbar, TaskbarBrush brush, UINT color) try
 {
-	if (const auto info = GetTaskbarInfo(taskbar))
+	DiiixLog(L"SetTaskbarAppearance: вызвана");
+
+	if (auto info = GetTaskbarInfo(taskbar))
 	{
-		if (info->background.control && info->background.originalFill)
+		DiiixLog(std::wstring(L"  control=") + (info->background.control ? L"есть" : L"НЕТ") +
+		         L", originalFill=" + (info->background.originalFill ? L"есть" : L"НЕТ"));
+
+		// Кисть фона могла быть ещё не назначена в момент, когда прямоугольник
+		// только появился в дереве, — тогда перечитываем её сейчас.
+		if (info->background.control && !info->background.originalFill)
+		{
+			info->background.originalFill = info->background.control.Fill();
+			DiiixLog(std::wstring(L"  перечитал Fill: ") + (info->background.originalFill ? L"получилось" : L"всё равно пусто"));
+		}
+
+		if (info->background.control)
 		{
 			const winrt::Windows::UI::Color tint = Util::Color::FromABGR(color);
 			wux::Media::Brush newBrush = nullptr;

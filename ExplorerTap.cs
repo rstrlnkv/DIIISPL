@@ -54,6 +54,9 @@ namespace DIIIX
         private const int BrushAcrylic = 0;
         private const int BrushSolidColor = 1;
 
+        /// <summary>Возвращать ли панель к системному виду при выходе — только для долгоживущего трея.</summary>
+        public static bool RestoreWhenProcessExits;
+
         private static ITaskbarAppearanceService _service;
         private static string _lastError;
 
@@ -87,9 +90,17 @@ namespace DIIIX
 
             try
             {
+                // Сразу после перезапуска проводника первая попытка нередко не дожидается
+                // готовности библиотеки внутри него, поэтому пробуем несколько раз.
                 Guid iid = IID_TaskbarAppearanceService;
-                IntPtr raw;
-                int hr = InjectExplorerTAP(taskbar, ref iid, out raw);
+                IntPtr raw = IntPtr.Zero;
+                int hr = 0;
+                for (int attempt = 1; attempt <= 3; attempt++)
+                {
+                    hr = InjectExplorerTAP(taskbar, ref iid, out raw);
+                    if (hr == 0 && raw != IntPtr.Zero) break;
+                    if (attempt < 3) System.Threading.Thread.Sleep(1500);
+                }
                 if (hr != 0 || raw == IntPtr.Zero)
                 {
                     _lastError = "не удалось подключиться к проводнику (0x" + hr.ToString("X8") + ")";
@@ -99,9 +110,14 @@ namespace DIIIX
                 _service = (ITaskbarAppearanceService)Marshal.GetObjectForIUnknown(raw);
                 Marshal.Release(raw);
 
-                // если DIIIX закроется, панель должна вернуться к системному виду сама
-                try { _service.RestoreAllTaskbarsToDefaultWhenProcessDies((uint)System.Diagnostics.Process.GetCurrentProcess().Id); }
-                catch { }
+                // Просим вернуть панель к системному виду при закрытии DIIIX — но только если
+                // программа живёт долго. Для однократной команды это самоубийственно:
+                // процесс завершается сразу, и служба тут же откатывает всё, что мы задали.
+                if (RestoreWhenProcessExits)
+                {
+                    try { _service.RestoreAllTaskbarsToDefaultWhenProcessDies((uint)System.Diagnostics.Process.GetCurrentProcess().Id); }
+                    catch { }
+                }
 
                 _lastError = null;
                 return _service;

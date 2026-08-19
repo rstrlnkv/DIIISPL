@@ -1,3 +1,4 @@
+#include "diiixlog.hpp"
 #include "visualtreewatcher.hpp"
 #include <windows.ui.xaml.hosting.desktopwindowxamlsource.h>
 #include "undefgetcurrenttime.h"
@@ -14,13 +15,16 @@ VisualTreeWatcher::VisualTreeWatcher(winrt::com_ptr<IUnknown> site, wil::unique_
 	std::thread([self_strong = get_strong()]
 	{
 		// AdviseVisualTreeChange is special-cased to bring us to the UI thread for the callback.
-		winrt::check_hresult(self_strong->m_XamlDiagnostics.as<IVisualTreeService3>()->AdviseVisualTreeChange(self_strong.get()));
+		const HRESULT advise = self_strong->m_XamlDiagnostics.as<IVisualTreeService3>()->AdviseVisualTreeChange(self_strong.get());
+		DiiixLogHr(L"AdviseVisualTreeChange", advise);
+		winrt::check_hresult(advise);
 		self_strong->m_ReadyEvent.SetEvent();
 	}).detach();
 }
 
 HRESULT VisualTreeWatcher::OnVisualTreeChange(ParentChildRelation relation, VisualElement element, VisualMutationType mutationType) try
 {
+	if (mutationType == Add) DiiixLog(std::wstring(L"дерево +: ") + std::wstring(element.Type, SysStringLen(element.Type)) + L"  имя=" + std::wstring(element.Name, SysStringLen(element.Name)));
 	switch (mutationType)
 	{
 	case Add:
@@ -60,6 +64,7 @@ HRESULT VisualTreeWatcher::OnVisualTreeChange(ParentChildRelation relation, Visu
 					HWND hwnd = nullptr;
 					winrt::check_hresult(nativeSource->get_WindowHandle(&hwnd));
 
+					DiiixLog(L"НАШЁЛ TaskbarFrame -> RegisterTaskbar");
 					m_AppearanceService->RegisterTaskbar(element.Handle, hwnd);
 					m_NonMatchingXamlSources.erase(it);
 
@@ -82,6 +87,7 @@ HRESULT VisualTreeWatcher::OnVisualTreeChange(ParentChildRelation relation, Visu
 					const auto shape = FromHandle<wux::Shapes::Rectangle>(element.Handle);
 					if (backgroundFill)
 					{
+						DiiixLog(L"НАШЁЛ BackgroundFill -> RegisterTaskbarBackground");
 						m_AppearanceService->RegisterTaskbarBackground(handle, shape);
 					}
 					else if (backgroundStroke)

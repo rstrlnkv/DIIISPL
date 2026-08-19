@@ -1,3 +1,4 @@
+#include "diiixlog.hpp"
 #include "tapsite.hpp"
 #include <format>
 
@@ -18,6 +19,7 @@ wil::unique_event_nothrow TAPSite::GetReadyEvent()
 
 DWORD TAPSite::Install(void*)
 {
+	DiiixLog(L"TAPSite::Install — стартую внутри проводника");
 	const auto event = GetReadyEvent();
 
 	auto [location, hr] = win32::GetDllLocation(wil::GetModuleInstanceHandle());
@@ -50,6 +52,7 @@ DWORD TAPSite::Install(void*)
 		std::thread([&hr, ixde, pid, &location, conn = std::format(L"VisualDiagConnection{}", static_cast<int>(attempts))]
 		{
 			hr = ixde(conn.c_str(), pid, nullptr, location.c_str(), CLSID_TAPSite, nullptr);
+			DiiixLogHr((L"InitializeXamlDiagnosticsEx (" + conn + L", " + location.wstring() + L")").c_str(), hr);
 		}).join();
 
 		if (SUCCEEDED(hr))
