@@ -41,14 +41,18 @@ if not exist "%HERE%obj" mkdir "%HERE%obj"
 "%WIX%\candle.exe" -nologo -arch x64 ^
   -dSourceDir="%ROOT%" -dBinDir="%HERE%obj\stage" -dLicenseRtf="%HERE%LICENSE.rtf" ^
   -ext WixUtilExtension -ext WixUIExtension ^
-  -out "%HERE%obj\DIIIX.wixobj" "%HERE%DIIIX.wxs" || exit /b 1
+  -out "%HERE%obj\\" "%HERE%DIIIX.wxs" "%HERE%DIIIXUI.wxs" || exit /b 1
 
-rem ICE60 ругается на шрифты в файлах без версии — к нашим файлам не относится.
+rem Отключённые проверки:
+rem   ICE60 — про шрифты в файлах без версии, к нашим файлам не относится;
+rem   ICE38, ICE43, ICE57 — считают меню «Пуск» пользовательским и требуют ключа
+rem     в HKCU. Пакет ставится на всю машину (ALLUSERS=1), меню там общее, и ключ
+rem     в HKLM для него верный — статические проверки этого не учитывают.
 "%WIX%\light.exe" -nologo ^
   -ext WixUtilExtension -ext WixUIExtension ^
   -cultures:ru-RU ^
-  -sice:ICE60 ^
-  -out "%ROOT%\DIIIX-%VERSION%-x64.msi" "%HERE%obj\DIIIX.wixobj" || exit /b 1
+  -sice:ICE60 -sice:ICE38 -sice:ICE43 -sice:ICE57 ^
+  -out "%ROOT%\DIIIX-%VERSION%-x64.msi" "%HERE%obj\DIIIX.wixobj" "%HERE%obj\DIIIXUI.wixobj" || exit /b 1
 
 echo === Подпись пакета ===
 call "%HERE%sign.cmd" "%ROOT%\DIIIX-%VERSION%-x64.msi" || exit /b 1

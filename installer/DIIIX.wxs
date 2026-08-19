@@ -59,14 +59,7 @@
 
     <DirectoryRef Id="INSTALLFOLDER">
       <Component Id="MainProgram" Guid="*" Win64="yes">
-        <File Id="DIIIX.exe" Source="$(var.BinDir)\DIIIX.exe" KeyPath="yes">
-          <Shortcut Id="StartMenuShortcut"
-                    Directory="ProgramMenuFolder"
-                    Name="DIIIX"
-                    Description="Раскладки мониторов"
-                    Icon="DIIIX.ico"
-                    Advertise="yes" />
-        </File>
+        <File Id="DIIIX.exe" Source="$(var.BinDir)\DIIIX.exe" KeyPath="yes" />
       </Component>
 
       <!--
@@ -87,16 +80,40 @@
       </Component>
     </DirectoryRef>
 
+    <!--
+      Ярлык отдельным компонентом, а не довеском к файлу программы: иначе от него
+      нельзя отказаться — компонент ставится целиком. Ключом здесь запись в реестре,
+      потому что сам ярлык ключом быть не может.
+    -->
+    <Property Id="INSTALLSHORTCUT" Value="1" Secure="yes" />
+
+    <DirectoryRef Id="ProgramMenuFolder">
+      <Component Id="StartMenuShortcut" Guid="*" Win64="yes">
+        <!--
+          Сравнение со значением обязательно: голое имя свойства истинно при любой
+          непустой строке, а «0» — тоже непустая строка, и ярлык создавался бы
+          даже при снятом флажке.
+        -->
+        <Condition>INSTALLSHORTCUT = "1"</Condition>
+        <Shortcut Id="DIIIXShortcut"
+                  Name="DIIIX"
+                  Description="Раскладки мониторов"
+                  Target="[INSTALLFOLDER]DIIIX.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="DIIIX.ico" />
+        <RegistryValue Root="HKLM" Key="Software\DIIIX" Name="StartMenuShortcut"
+                       Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
     <Feature Id="Main" Title="DIIIX" Level="1" Absent="disallow"
+             ConfigurableDirectory="INSTALLFOLDER"
              Description="Менеджер раскладок мониторов.">
       <ComponentRef Id="MainProgram" />
+      <ComponentRef Id="TaskbarLibrary" />
       <ComponentRef Id="License" />
       <ComponentRef Id="Readme" />
-
-      <Feature Id="Taskbar" Title="Оформление панели задач" Level="1"
-               Description="Позволяет профилю задавать вид панели задач.">
-        <ComponentRef Id="TaskbarLibrary" />
-      </Feature>
+      <ComponentRef Id="StartMenuShortcut" />
     </Feature>
 
     <!-- Предложить запуск сразу после установки. -->
@@ -105,9 +122,10 @@
     <CustomAction Id="LaunchApplication" BinaryKey="WixCA" DllEntry="WixShellExec"
                   Impersonate="yes" Return="ignore" />
 
+    <!-- Свой набор окон: выбор папки плюс отдельный вопрос про ярлык, см. DIIIXUI.wxs. -->
     <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
     <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
-    <UIRef Id="WixUI_InstallDir" />
+    <UIRef Id="WixUI_DIIIX" />
 
     <UI>
       <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication">
