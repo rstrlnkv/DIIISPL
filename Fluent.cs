@@ -3,8 +3,6 @@
 // Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
 
 using System;
-using System.IO;
-using System.Reflection;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -37,25 +35,26 @@ namespace DIIIX
         /// <summary>
         /// Значок для трея.
         ///
-        /// Берётся из готового DIIIX.ico, вшитого в программу, а не рисуется заново:
-        /// в файле под каждый размер лежит свой кадр, выверенный по сетке точек, — от
-        /// нарисованного на лету значок отличается тем, что не мылится ни в 16 точек,
-        /// ни в 32 на крупном масштабе экрана.
+        /// Берётся из значка самой программы, а не рисуется заново: в нём под каждый
+        /// размер лежит свой кадр, выверенный по сетке точек, — от нарисованного на лету
+        /// значок отличается тем, что не мылится ни в 16 точек, ни в 32 на крупном
+        /// масштабе экрана. Вторая копия значка внутри программы для этого не нужна:
+        /// ресурс Windows, который читает проводник, годится и здесь.
         /// </summary>
         public static Gdi.Icon MakeTrayIcon()
         {
             Gdi.Size wanted = System.Windows.Forms.SystemInformation.SmallIconSize;   // на 200% масштабе это 32
-            using (Stream stream = IconStream())
-            {
-                if (stream != null) return new Gdi.Icon(stream, wanted);
-            }
-            return Gdi.SystemIcons.Application;
-        }
 
-        /// <summary>Тот же значок открытым потоком; null, если ресурс почему-то не вшит.</summary>
-        private static Stream IconStream()
-        {
-            return Assembly.GetExecutingAssembly().GetManifestResourceStream("DIIIX.ico");
+            // 32512 — номер, под которым компилятор C# кладёт значок программы.
+            IntPtr handle = Native.LoadImage(Native.GetModuleHandle(null), "#32512",
+                                             Native.IMAGE_ICON, wanted.Width, wanted.Height, 0);
+            if (handle == IntPtr.Zero) return Gdi.SystemIcons.Application;
+
+            try
+            {
+                using (Gdi.Icon tmp = Gdi.Icon.FromHandle(handle)) return (Gdi.Icon)tmp.Clone();
+            }
+            finally { Native.DestroyIcon(handle); }
         }
     }
 }

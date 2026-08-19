@@ -11,7 +11,6 @@ set WPF=%NETDIR%\WPF
 "%NETDIR%\csc.exe" /nologo /target:winexe /optimize+ /platform:anycpu /codepage:65001 ^
   /out:"%~dp0DIIIX.exe" ^
   /win32icon:"%~dp0DIIIX.ico" ^
-  /resource:"%~dp0DIIIX.ico",DIIIX.ico ^
   /r:System.dll /r:System.Core.dll /r:System.Xml.dll ^
   /r:System.Drawing.dll /r:System.Windows.Forms.dll ^
   /r:"%NETDIR%\System.Xaml.dll" ^

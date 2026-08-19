@@ -364,6 +364,20 @@ namespace DIIIX
         [DllImport("user32.dll")]
         public static extern bool DestroyIcon(IntPtr handle);
 
+        /// <summary>
+        /// Загрузить значок из ресурсов самой программы нужного размера. Так значок
+        /// хранится в файле один раз: ресурс Windows нужен проводнику и панели задач,
+        /// а отсюда его берёт и значок в области уведомлений.
+        /// </summary>
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern IntPtr LoadImage(IntPtr instance, string name, uint type,
+                                              int cx, int cy, uint load);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+        public static extern IntPtr GetModuleHandle(string name);
+
+        public const uint IMAGE_ICON = 1;
+
         [DllImport("user32.dll")]
         public static extern bool SetForegroundWindow(IntPtr hWnd);
 
