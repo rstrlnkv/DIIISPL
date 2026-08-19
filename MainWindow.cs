@@ -28,7 +28,7 @@ namespace DIIIX
         private readonly TextBlock _nameText = new TextBlock();
         private readonly TextBox _nameBox = new TextBox();
         private readonly Button _hotkeyButton = new Button();
-        private readonly ComboBox _taskbarCombo = new ComboBox();
+        private readonly Button _taskbarButton = new Button();
         private readonly Button _applyButton = new Button();
         private readonly Button _saveButton = new Button();
         private readonly MonitorCanvas _canvas = new MonitorCanvas();
@@ -236,12 +236,12 @@ namespace DIIIX
             Grid.SetColumn(actions, 1);
 
             // вид панели задач — свойство профиля, а не монитора, поэтому здесь
-            _taskbarCombo.Style = (Style)Application.Current.Resources["Combo"];
-            _taskbarCombo.Height = 42;
-            _taskbarCombo.Width = 205;
-            _taskbarCombo.Margin = new Thickness(0, 0, 8, 0);
-            _taskbarCombo.SelectionChanged += delegate { OnTaskbarChanged(); };
-            actions.Children.Add(_taskbarCombo);
+            _taskbarButton.Style = (Style)Application.Current.Resources["Btn"];
+            _taskbarButton.Height = 42;
+
+            _taskbarButton.Margin = new Thickness(0, 0, 8, 0);
+            _taskbarButton.Click += delegate { OpenTaskbarSettings(); };
+            actions.Children.Add(_taskbarButton);
 
             _hotkeyButton.Style = (Style)Application.Current.Resources["Btn"];
             _hotkeyButton.Height = 42;
@@ -683,36 +683,40 @@ namespace DIIIX
             UpdateHeader();
         }
 
-        private void OnTaskbarChanged()
+        /// <summary>Открыть отдельный экран настроек панели задач для текущего профиля.</summary>
+        private void OpenTaskbarSettings()
         {
-            if (_updating || _current == null) return;
-            var item = _taskbarCombo.SelectedItem as Item;
-            if (item == null) return;
-            _current.Taskbar = (string)item.Value;
-            MarkDirty();
+            if (_current == null) return;
 
-            if (!string.IsNullOrEmpty(_current.Taskbar) && !ExplorerTap.Available)
-                UpdateStatus("Рядом с программой нет DIIIX.ExplorerTAP.dll — вид панели задач задать нечем.");
-            else
-                UpdateStatus(null);
+            var before = _current.Taskbar.Copy();
+            var window = new TaskbarWindow(_current.Name, _current.Taskbar);
+            window.Owner = this;
+            window.ShowDialog();
+
+            // предпросмотр менял вид на лету, поэтому считаем изменённым по факту
+            if (!SameSettings(before, _current.Taskbar)) MarkDirty();
+            UpdateTaskbarButton();
+            UpdateStatus(null);
         }
 
-        private void FillTaskbarCombo()
+        private static bool SameSettings(TaskbarSettings a, TaskbarSettings b)
         {
-            var items = new List<Item>();
-            items.Add(new Item("Панель: не менять", ""));
-            foreach (string accent in ExplorerTap.Names)
-                items.Add(new Item("Панель: " + ExplorerTap.Describe(accent).ToLowerInvariant(), accent));
+            foreach (TaskbarState s in TaskbarSettings.Order)
+                if (a[s].Serialize() != b[s].Serialize()) return false;
+            return true;
+        }
 
-            _taskbarCombo.ItemsSource = items;
-            _taskbarCombo.IsEnabled = _current != null;
-            _taskbarCombo.ToolTip = ExplorerTap.Available
-                ? "Вид панели задач при переключении на этот профиль"
+        private void UpdateTaskbarButton()
+        {
+            _taskbarButton.IsEnabled = _current != null;
+            int on = 0;
+            if (_current != null)
+                foreach (TaskbarState s in TaskbarSettings.Order) if (_current.Taskbar[s].Enabled) on++;
+
+            _taskbarButton.Content = Glyph("", on > 0 ? "Панель задач · " + on : "Панель задач");
+            _taskbarButton.ToolTip = ExplorerTap.Available
+                ? "Как выглядит панель задач в этом профиле"
                 : "Нет DIIIX.ExplorerTAP.dll рядом с программой";
-
-            string want = _current != null ? (_current.Taskbar ?? "") : "";
-            foreach (Item it in items) if ((string)it.Value == want) { _taskbarCombo.SelectedItem = it; break; }
-            if (_taskbarCombo.SelectedItem == null) _taskbarCombo.SelectedItem = items[0];
         }
 
         private void UpdateHeader()
@@ -720,7 +724,7 @@ namespace DIIIX
             _updating = true;
             _nameText.Text = _current != null ? _current.Name : "";
             _applyButton.IsEnabled = _current != null;
-            FillTaskbarCombo();
+            UpdateTaskbarButton();
             _saveButton.IsEnabled = _current != null && _dirty;
             _hotkeyButton.Content = Glyph("", _current != null && !string.IsNullOrEmpty(_current.Hotkey)
                 ? _current.Hotkey : "Сочетание клавиш");

@@ -82,6 +82,7 @@ namespace DIIIX
 
             BuildTray();
             ReloadHotkeys();
+            StartTaskbarForActiveProfile();
 
             if (!startHidden) ShowManager();
             Run();
@@ -183,8 +184,31 @@ namespace DIIIX
             _window.Topmost = false;
         }
 
+        /// <summary>
+        /// При запуске подхватываем вид панели того профиля, который сейчас применён:
+        /// иначе после перезагрузки панель осталась бы системной до первого переключения.
+        /// </summary>
+        private void StartTaskbarForActiveProfile()
+        {
+            if (!ExplorerTap.Available) return;
+            try
+            {
+                var live = Monitors.Enumerate();
+                foreach (var layout in Store.LoadAll())
+                {
+                    if (!layout.MatchesCurrent(live)) continue;
+                    if (layout.Taskbar != null && layout.Taskbar.AnyEnabled) TaskbarWatcher.Use(layout.Taskbar);
+                    return;
+                }
+            }
+            catch { }
+        }
+
         private void Quit()
         {
+            TaskbarWatcher.Stop();
+            if (ExplorerTap.Available) ExplorerTap.RestoreAll();
+
             UnregisterHotkeys();
             if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
             Shutdown();

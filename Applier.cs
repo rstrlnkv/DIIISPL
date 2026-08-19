@@ -107,20 +107,25 @@ namespace DIIIX
             return res;
         }
 
-        /// <summary>Вид панели задач из профиля. Пустое значение — не вмешиваться.</summary>
+        /// <summary>
+        /// Передать наблюдателю настройки панели из профиля. Кеш сбрасывается обязательно:
+        /// смена раскладки пересоздаёт панели задач, и всё, что мы помнили об их окнах
+        /// и о связи со службой в проводнике, после этого недействительно.
+        /// </summary>
         private static void ApplyTaskbar(Layout layout, ApplyResult res)
         {
-            if (string.IsNullOrEmpty(layout.Taskbar)) return;
+            TaskbarWatcher.ResetCache();
+
+            if (layout.Taskbar == null || !layout.Taskbar.AnyEnabled) { TaskbarWatcher.Use(null); return; }
             if (!ExplorerTap.Available)
             {
                 res.Warnings.Add("Вид панели задач задан, но рядом с программой нет DIIIX.ExplorerTAP.dll.");
                 return;
             }
 
-            // смена раскладки пересоздаёт панели задач — связь со службой могла оборваться
-            ExplorerTap.Forget();
-            if (!ExplorerTap.Apply(ExplorerTap.Parse(layout.Taskbar), 0x00000000, 9.0f))
-                res.Warnings.Add("Не удалось задать вид панели задач: " + ExplorerTap.LastError);
+            TaskbarWatcher.Use(layout.Taskbar);
+            if (ExplorerTap.LastError != null)
+                res.Warnings.Add("Панель задач: " + ExplorerTap.LastError);
         }
 
         private static bool HasClone(Layout layout)

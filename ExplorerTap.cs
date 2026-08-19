@@ -201,6 +201,63 @@ namespace DIIIX
             return found;
         }
 
+        /// <summary>
+        /// Служба принимает цвет как ABGR, а хранить настройки удобнее в привычном
+        /// AARRGGBB — переставляем красный с синим.
+        /// </summary>
+        private static uint ToAbgr(uint argb)
+        {
+            return (argb & 0xFF00FF00) | ((argb & 0x00FF0000) >> 16) | ((argb & 0x000000FF) << 16);
+        }
+
+        /// <summary>Задать вид одной панели задач.</summary>
+        public static bool ApplyTo(IntPtr bar, TaskbarLook look, uint colorArgb, float blurRadius, bool showLine)
+        {
+            var service = Service();
+            if (service == null) return false;
+
+            try
+            {
+                uint color = ToAbgr(colorArgb);
+                switch (look)
+                {
+                    case TaskbarLook.Opaque:
+                        service.SetTaskbarAppearance(bar, BrushSolidColor, color | 0xFF000000);
+                        break;
+                    case TaskbarLook.Clear:
+                        service.SetTaskbarAppearance(bar, BrushSolidColor, color & 0x00FFFFFF);
+                        break;
+                    case TaskbarLook.Acrylic:
+                        service.SetTaskbarAppearance(bar, BrushAcrylic, color);
+                        break;
+                    case TaskbarLook.Blur:
+                        service.SetTaskbarBlur(bar, color, blurRadius);
+                        break;
+                    default:
+                        service.ReturnTaskbarToDefaultAppearance(bar);
+                        break;
+                }
+                service.SetTaskbarBorderVisibility(bar, showLine ? 1 : 0);
+                _lastError = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _lastError = ex.Message;
+                _service = null;         // проводник мог перезапуститься
+                return false;
+            }
+        }
+
+        /// <summary>Вернуть все панели к системному виду.</summary>
+        public static void RestoreAll()
+        {
+            var service = Service();
+            if (service == null) return;
+            try { service.RestoreAllTaskbarsToDefault(); }
+            catch { _service = null; }
+        }
+
         /// <summary>Задать вид всем панелям задач. Возвращает false, если не вышло.</summary>
         public static bool Apply(TaskbarLook look, uint color, float blurRadius)
         {

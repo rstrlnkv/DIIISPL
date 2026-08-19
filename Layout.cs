@@ -51,7 +51,7 @@ namespace DIIIX
         public string Name = "";
         public string Hotkey = "";
         public int Order = 0;                 // порядок в списке, задаётся пользователем
-        public string Taskbar = "";           // вид панели задач через TranslucentTB; пусто — не трогать
+        public TaskbarSettings Taskbar = new TaskbarSettings();   // вид панели задач по состояниям
         public List<LayoutDisplay> Displays = new List<LayoutDisplay>();
 
         /// <summary>
@@ -121,7 +121,7 @@ namespace DIIIX
             copy.Name = Name;
             copy.Hotkey = Hotkey;
             copy.Order = Order;
-            copy.Taskbar = Taskbar;
+            copy.Taskbar = Taskbar.Copy();
             foreach (var d in Displays) copy.Displays.Add(d.Clone());
             return copy;
         }
@@ -221,7 +221,9 @@ namespace DIIIX
             sb.AppendLine("name = " + Name);
             sb.AppendLine("hotkey = " + (Hotkey ?? ""));
             sb.AppendLine("order = " + Order.ToString(CultureInfo.InvariantCulture));
-            sb.AppendLine("taskbar = " + (Taskbar ?? ""));
+            sb.AppendLine();
+            sb.AppendLine("[taskbar]");
+            foreach (string line in Taskbar.Serialize()) sb.AppendLine(line);
             foreach (var d in Displays)
             {
                 sb.AppendLine();
@@ -268,7 +270,14 @@ namespace DIIIX
                     if (key == "name") layout.Name = val;
                     else if (key == "hotkey") layout.Hotkey = val;
                     else if (key == "order") layout.Order = ParseInt(val);
-                    else if (key == "taskbar") layout.Taskbar = val;
+                    // прежний формат: одно поле на весь профиль
+                    else if (key == "taskbar") layout.Taskbar.AdoptLegacy(val);
+                }
+                else if (section == "taskbar")
+                {
+                    TaskbarState state;
+                    if (TaskbarSettings.TryParseKey(key, out state))
+                        layout.Taskbar.States[state] = TaskbarAppearance.Parse(val);
                 }
                 else if (section == "display" && cur != null)
                 {
