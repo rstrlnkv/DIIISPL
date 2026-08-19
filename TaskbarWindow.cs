@@ -54,7 +54,6 @@ namespace DIIIX
             title.Style = (Style)Application.Current.Resources["Subtitle"];
             title.Text = "Вид панели задач в профиле «" + _profileName + "»";
             title.Margin = new Thickness(2, 0, 0, 6);
-            root.Children.Add(title);
 
             var sub = new TextBlock();
             sub.Style = (Style)Application.Current.Resources["Caption"];
@@ -62,10 +61,10 @@ namespace DIIIX
                        "«Виден рабочий стол» — запасной вариант, когда не подошло ничто выше.";
             sub.TextWrapping = TextWrapping.Wrap;
             sub.Margin = new Thickness(2, 0, 0, 14);
+
             var head = new StackPanel();
             head.Children.Add(title);
             head.Children.Add(sub);
-            root.Children.RemoveAt(0);
             root.Children.Add(head);
 
             var card = new Border();

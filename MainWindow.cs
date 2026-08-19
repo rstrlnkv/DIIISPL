@@ -683,6 +683,9 @@ namespace DIIIX
             UpdateHeader();
         }
 
+        /// <summary>Открыть экран настроек панели задач для текущего профиля.</summary>
+        public void ShowTaskbarSettings() { OpenTaskbarSettings(); }
+
         /// <summary>Открыть отдельный экран настроек панели задач для текущего профиля.</summary>
         private void OpenTaskbarSettings()
         {
