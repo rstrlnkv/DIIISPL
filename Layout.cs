@@ -51,6 +51,7 @@ namespace DIIIX
         public string Name = "";
         public string Hotkey = "";
         public int Order = 0;                 // порядок в списке, задаётся пользователем
+        public string Taskbar = "";           // вид панели задач через TranslucentTB; пусто — не трогать
         public List<LayoutDisplay> Displays = new List<LayoutDisplay>();
 
         /// <summary>
@@ -120,6 +121,7 @@ namespace DIIIX
             copy.Name = Name;
             copy.Hotkey = Hotkey;
             copy.Order = Order;
+            copy.Taskbar = Taskbar;
             foreach (var d in Displays) copy.Displays.Add(d.Clone());
             return copy;
         }
@@ -219,6 +221,7 @@ namespace DIIIX
             sb.AppendLine("name = " + Name);
             sb.AppendLine("hotkey = " + (Hotkey ?? ""));
             sb.AppendLine("order = " + Order.ToString(CultureInfo.InvariantCulture));
+            sb.AppendLine("taskbar = " + (Taskbar ?? ""));
             foreach (var d in Displays)
             {
                 sb.AppendLine();
@@ -265,6 +268,7 @@ namespace DIIIX
                     if (key == "name") layout.Name = val;
                     else if (key == "hotkey") layout.Hotkey = val;
                     else if (key == "order") layout.Order = ParseInt(val);
+                    else if (key == "taskbar") layout.Taskbar = val;
                 }
                 else if (section == "display" && cur != null)
                 {

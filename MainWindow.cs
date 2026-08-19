@@ -28,6 +28,7 @@ namespace DIIIX
         private readonly TextBlock _nameText = new TextBlock();
         private readonly TextBox _nameBox = new TextBox();
         private readonly Button _hotkeyButton = new Button();
+        private readonly ComboBox _taskbarCombo = new ComboBox();
         private readonly Button _applyButton = new Button();
         private readonly Button _saveButton = new Button();
         private readonly MonitorCanvas _canvas = new MonitorCanvas();
@@ -233,6 +234,14 @@ namespace DIIIX
             var actions = new StackPanel();
             actions.Orientation = Orientation.Horizontal;
             Grid.SetColumn(actions, 1);
+
+            // вид панели задач — свойство профиля, а не монитора, поэтому здесь
+            _taskbarCombo.Style = (Style)Application.Current.Resources["Combo"];
+            _taskbarCombo.Height = 42;
+            _taskbarCombo.Width = 205;
+            _taskbarCombo.Margin = new Thickness(0, 0, 8, 0);
+            _taskbarCombo.SelectionChanged += delegate { OnTaskbarChanged(); };
+            actions.Children.Add(_taskbarCombo);
 
             _hotkeyButton.Style = (Style)Application.Current.Resources["Btn"];
             _hotkeyButton.Height = 42;
@@ -674,11 +683,44 @@ namespace DIIIX
             UpdateHeader();
         }
 
+        private void OnTaskbarChanged()
+        {
+            if (_updating || _current == null) return;
+            var item = _taskbarCombo.SelectedItem as Item;
+            if (item == null) return;
+            _current.Taskbar = (string)item.Value;
+            MarkDirty();
+
+            if (!string.IsNullOrEmpty(_current.Taskbar) && !TranslucentTb.Installed)
+                UpdateStatus("Вид панели задач задаёт TranslucentTB — он не установлен, и настройка ни на что не повлияет.");
+            else
+                UpdateStatus(null);
+        }
+
+        private void FillTaskbarCombo()
+        {
+            var items = new List<Item>();
+            items.Add(new Item("Панель: не менять", ""));
+            foreach (string accent in TranslucentTb.Accents)
+                items.Add(new Item("Панель: " + TranslucentTb.Describe(accent).ToLowerInvariant(), accent));
+
+            _taskbarCombo.ItemsSource = items;
+            _taskbarCombo.IsEnabled = _current != null;
+            _taskbarCombo.ToolTip = TranslucentTb.Installed
+                ? "Вид панели задач при переключении на этот профиль (через TranslucentTB)"
+                : "Требуется TranslucentTB — он не установлен";
+
+            string want = _current != null ? (_current.Taskbar ?? "") : "";
+            foreach (Item it in items) if ((string)it.Value == want) { _taskbarCombo.SelectedItem = it; break; }
+            if (_taskbarCombo.SelectedItem == null) _taskbarCombo.SelectedItem = items[0];
+        }
+
         private void UpdateHeader()
         {
             _updating = true;
             _nameText.Text = _current != null ? _current.Name : "";
             _applyButton.IsEnabled = _current != null;
+            FillTaskbarCombo();
             _saveButton.IsEnabled = _current != null && _dirty;
             _hotkeyButton.Content = Glyph("", _current != null && !string.IsNullOrEmpty(_current.Hotkey)
                 ? _current.Hotkey : "Сочетание клавиш");

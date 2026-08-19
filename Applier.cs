@@ -103,6 +103,7 @@ namespace DIIIX
 
             Verify(layout, res);
             ApplyHdr(layout, res);
+            TranslucentTb.Apply(layout.Taskbar, res.Warnings);
             return res;
         }
 
