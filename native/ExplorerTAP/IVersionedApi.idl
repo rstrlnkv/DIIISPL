@@ -1,0 +1,7 @@
+import "unknwn.idl";
+
+[object, uuid(e0811f94-c7fd-4895-9df6-297b71e81e33)]
+interface IVersionedApi : IUnknown
+{
+	HRESULT GetVersion([out] DWORD *apiVersion);
+};

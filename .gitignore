@@ -12,3 +12,8 @@ tests/selftest-log.txt
 *.suo
 Thumbs.db
 desktop.ini
+
+# нативная часть: результаты сборки и пакеты
+*.dll
+native/packages/
+native/nuget.exe

@@ -20,6 +20,7 @@ namespace DIIIX
                     case "monitors": return DumpMonitors();
                     case "hdr": return DumpHdr();
                     case "state": return DumpState();
+                    case "taskbar": return SetTaskbar(args);
                     case "list": return ListProfiles();
                     case "save": return SaveCurrent(args);
                     case "apply":
@@ -84,6 +85,41 @@ namespace DIIIX
                 Console.WriteLine();
             }
             return 0;
+        }
+
+        /// <summary>Вид панели задач: default, opaque, clear, blur, acrylic.</summary>
+        private static int SetTaskbar(string[] args)
+        {
+            Console.WriteLine();
+            if (!ExplorerTap.Available)
+            {
+                Console.WriteLine("  Нет DIIIX.ExplorerTAP.dll рядом с программой — оформление панели недоступно.");
+                return 1;
+            }
+            if (args.Length < 2)
+            {
+                Console.WriteLine("  Укажите вид: " + string.Join(", ", ExplorerTap.Names));
+                Console.WriteLine();
+                Console.Write(ExplorerTap.Diagnose());
+                return 2;
+            }
+
+            var bars = ExplorerTap.FindTaskbars();
+            Console.WriteLine("  панелей задач: " + bars.Count);
+
+            var look = ExplorerTap.Parse(args[1]);
+            uint color = 0x00000000;
+            if (args.Length > 2)
+            {
+                try { color = Convert.ToUInt32(args[2].TrimStart('#', '0', 'x'), 16); }
+                catch { Console.WriteLine("  цвет должен быть в виде AARRGGBB"); return 2; }
+            }
+
+            bool ok = ExplorerTap.Apply(look, color, 9.0f);
+            Console.WriteLine(ok
+                ? "  применено: " + ExplorerTap.Describe(args[1].ToLowerInvariant())
+                : "  не удалось: " + ExplorerTap.LastError);
+            return ok ? 0 : 1;
         }
 
         /// <summary>Состояние в машиночитаемом виде — для скриптов и диагностики.</summary>

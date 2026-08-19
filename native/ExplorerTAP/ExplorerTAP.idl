@@ -1,0 +1,21 @@
+import "ITaskbarAppearanceService.idl";
+import "IVersionedApi.idl";
+import "ocidl.idl";
+
+[uuid(d2167cd1-7f60-4cc7-a848-12ba1bc4155f)]
+library ExplorerTAP
+{
+	[uuid(5a6ba2a9-37cb-4ed4-91bd-012125ecc43d)]
+	coclass TaskbarAppearanceService
+	{
+		[default]
+		interface ITaskbarAppearanceService;
+		interface IVersionedApi;
+	}
+
+	[uuid(9d1cff9e-0388-4220-a4f4-3851a6ae3314)]
+	coclass TAPSite
+	{
+		interface IObjectWithSite;
+	};
+};
