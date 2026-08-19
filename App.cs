@@ -40,8 +40,26 @@ namespace Triptych
             }
 
             bool startHidden = args.Length > 0;
-            var app = new App();
-            app.Start(startHidden);
+            try
+            {
+                var app = new App();
+                app.Start(startHidden);
+            }
+            catch (Exception ex)
+            {
+                // молча падать нельзя: пользователь увидит только исчезнувший значок
+                try
+                {
+                    System.IO.File.WriteAllText(System.IO.Path.Combine(Store.DataDir, "error.log"),
+                        DateTime.Now + Environment.NewLine + ex);
+                }
+                catch { }
+                Forms.MessageBox.Show("Не удалось запустить " + AppTitle + ":" + Environment.NewLine +
+                    Environment.NewLine + ex.Message + Environment.NewLine +
+                    Environment.NewLine + "Подробности: %AppData%\\" + Store.AppFolder + "\\error.log",
+                    AppTitle);
+                return 1;
+            }
             return 0;
         }
 

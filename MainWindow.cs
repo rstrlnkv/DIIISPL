@@ -21,6 +21,7 @@ namespace Triptych
         public event Action ProfilesChanged;
 
         private readonly ListBox _profileList = new ListBox();
+        private readonly TextBlock _nameText = new TextBlock();
         private readonly TextBox _nameBox = new TextBox();
         private readonly Button _hotkeyButton = new Button();
         private readonly Button _applyButton = new Button();
@@ -46,6 +47,7 @@ namespace Triptych
         private bool _updating;
         private bool _dirty;
         private bool _capturingHotkey;
+        private bool _renaming;
         private string _activeProfileName;
 
         public MainWindow()
@@ -189,21 +191,39 @@ namespace Triptych
             header.ColumnDefinitions.Add(new ColumnDefinition());
             header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            var nameStack = new StackPanel();
+            // Название по умолчанию — обычный заголовок. Правка включается двойным щелчком,
+            // клавишей F2 или пунктом «Переименовать» в списке слева.
+            var nameStack = new Grid();
+            nameStack.HorizontalAlignment = HorizontalAlignment.Left;
+
+            _nameText.Style = (Style)Application.Current.Resources["Subtitle"];
+            _nameText.FontSize = 24;
+            _nameText.VerticalAlignment = VerticalAlignment.Center;
+            _nameText.Margin = new Thickness(2, 0, 0, 0);
+            _nameText.MinWidth = 240;
+            _nameText.TextTrimming = TextTrimming.CharacterEllipsis;
+            _nameText.Cursor = Cursors.IBeam;
+            _nameText.ToolTip = "Двойной щелчок или F2 — переименовать";
+            _nameText.MouseLeftButtonDown += delegate(object s, MouseButtonEventArgs e)
+            {
+                if (e.ClickCount == 2) BeginRename();
+            };
+            nameStack.Children.Add(_nameText);
+
             _nameBox.Style = (Style)Application.Current.Resources["Input"];
             _nameBox.FontSize = 20;
             _nameBox.FontWeight = FontWeights.SemiBold;
             _nameBox.Height = 42;
-            _nameBox.HorizontalAlignment = HorizontalAlignment.Left;
             _nameBox.MinWidth = 320;
-            _nameBox.TextChanged += delegate
+            _nameBox.Visibility = Visibility.Collapsed;
+            _nameBox.KeyDown += delegate(object s, KeyEventArgs e)
             {
-                if (_updating || _current == null) return;
-                _current.Name = _nameBox.Text;
-                MarkDirty();
-                RefreshProfileList();
+                if (e.Key == Key.Enter) { CommitRename(true); e.Handled = true; }
+                else if (e.Key == Key.Escape) { CommitRename(false); e.Handled = true; }
             };
+            _nameBox.LostFocus += delegate { if (_renaming) CommitRename(true); };
             nameStack.Children.Add(_nameBox);
+
             header.Children.Add(nameStack);
 
             var actions = new StackPanel();
@@ -379,25 +399,27 @@ namespace Triptych
                 var titleRow = new StackPanel();
                 titleRow.Orientation = Orientation.Horizontal;
 
-                // действующая раскладка помечена точкой акцентного цвета
-                var dot = new System.Windows.Shapes.Ellipse();
-                dot.Width = 7; dot.Height = 7;
-                dot.Margin = new Thickness(0, 0, 7, 0);
-                dot.VerticalAlignment = VerticalAlignment.Center;
-                dot.Fill = (Brush)Application.Current.Resources["Accent"];
-                dot.Visibility = isActive ? Visibility.Visible : Visibility.Collapsed;
-                titleRow.Children.Add(dot);
-
                 var name = new TextBlock();
                 name.Text = l.Name;
                 name.FontWeight = FontWeights.SemiBold;
                 name.TextTrimming = TextTrimming.CharacterEllipsis;
                 titleRow.Children.Add(name);
+
+                // действующая раскладка помечена точкой акцентного цвета справа от названия
+                var dot = new System.Windows.Shapes.Ellipse();
+                dot.Width = 7; dot.Height = 7;
+                dot.Margin = new Thickness(8, 1, 0, 0);
+                dot.VerticalAlignment = VerticalAlignment.Center;
+                dot.Fill = (Brush)Application.Current.Resources["Accent"];
+                dot.ToolTip = "Эта раскладка применена сейчас";
+                dot.Visibility = isActive ? Visibility.Visible : Visibility.Collapsed;
+                titleRow.Children.Add(dot);
+
                 sp.Children.Add(titleRow);
 
                 var sub = new TextBlock();
                 sub.Style = (Style)Application.Current.Resources["Caption"];
-                sub.Margin = new Thickness(isActive ? 14 : 0, 2, 0, 0);
+                sub.Margin = new Thickness(0, 2, 0, 0);
                 int on = 0;
                 foreach (var d in l.Displays) if (d.Enabled) on++;
                 sub.Text = string.IsNullOrEmpty(l.Hotkey)
@@ -405,22 +427,74 @@ namespace Triptych
                     : (l.Hotkey + "   ·   мониторов: " + on);
                 sp.Children.Add(sub);
 
-                // отдельной строкой, иначе не влезает в колонку профилей
+                // отдельной строкой: вместе с частотой и числом мониторов в колонку не влезает
                 if (isActive)
                 {
                     var now = new TextBlock();
                     now.Style = (Style)Application.Current.Resources["Caption"];
                     now.Text = "применена сейчас";
-                    now.Margin = new Thickness(14, 2, 0, 0);
+                    now.Margin = new Thickness(0, 2, 0, 0);
                     now.Foreground = (Brush)Application.Current.Resources["Accent"];
                     sp.Children.Add(now);
                 }
 
                 item.Content = sp;
+                item.ContextMenu = BuildProfileMenu(l);
+                item.MouseDoubleClick += delegate { BeginRename(); };
                 _profileList.Items.Add(item);
                 if (ReferenceEquals(l, _current)) _profileList.SelectedItem = item;
             }
             _updating = false;
+        }
+
+        /// <summary>Правка списка профилей: переименовать, переставить, удалить.</summary>
+        private ContextMenu BuildProfileMenu(Layout layout)
+        {
+            var menu = new ContextMenu();
+            menu.Style = (Style)Application.Current.Resources["FlyoutMenu"];
+
+            menu.Items.Add(MenuAction("Переименовать", "F2", delegate
+            {
+                SelectProfile(layout);
+                BeginRename();
+            }));
+            menu.Items.Add(MenuAction("Переместить вверх", "Alt+↑", delegate { MoveProfile(layout, -1); }));
+            menu.Items.Add(MenuAction("Переместить вниз", "Alt+↓", delegate { MoveProfile(layout, +1); }));
+
+            var sep = new Separator();
+            sep.Style = (Style)Application.Current.Resources["MenuSeparator"];
+            menu.Items.Add(sep);
+
+            menu.Items.Add(MenuAction("Удалить", "", delegate
+            {
+                SelectProfile(layout);
+                DeleteCurrent();
+            }));
+            return menu;
+        }
+
+        private MenuItem MenuAction(string header, string gesture, Action action)
+        {
+            var item = new MenuItem();
+            item.Style = (Style)Application.Current.Resources["FlyoutMenuItem"];
+            item.Header = header;
+            item.InputGestureText = gesture;
+            item.Click += delegate { action(); };
+            return item;
+        }
+
+        private void MoveProfile(Layout layout, int delta)
+        {
+            int index = _profiles.IndexOf(layout);
+            int target = index + delta;
+            if (index < 0 || target < 0 || target >= _profiles.Count) return;
+
+            _profiles.RemoveAt(index);
+            _profiles.Insert(target, layout);
+            Store.SaveOrder(_profiles);
+            RefreshProfileList();
+            SelectListItemFor(layout);
+            Raise(ProfilesChanged);
         }
 
         private void SelectListItemFor(Layout layout)
@@ -561,11 +635,45 @@ namespace Triptych
         private static void Raise(Action a) { if (a != null) a(); }
 
         // ---------------------------------------------------------------- свойства
+        // ---------------------------------------------------------------- переименование
+        private void BeginRename()
+        {
+            if (_current == null) return;
+            _renaming = true;
+            _updating = true;
+            _nameBox.Text = _current.Name;
+            _updating = false;
+            _nameText.Visibility = Visibility.Collapsed;
+            _nameBox.Visibility = Visibility.Visible;
+            _nameBox.Focus();
+            _nameBox.SelectAll();
+        }
+
+        private void CommitRename(bool keep)
+        {
+            if (!_renaming) return;
+            _renaming = false;
+            _nameBox.Visibility = Visibility.Collapsed;
+            _nameText.Visibility = Visibility.Visible;
+
+            if (keep && _current != null)
+            {
+                string name = _nameBox.Text.Trim();
+                if (name.Length > 0 && name != _current.Name)
+                {
+                    _current.Name = name;
+                    SaveCurrent(false);
+                    RefreshProfileList();
+                    Raise(ProfilesChanged);
+                }
+            }
+            UpdateHeader();
+        }
+
         private void UpdateHeader()
         {
             _updating = true;
-            _nameBox.Text = _current != null ? _current.Name : "";
-            _nameBox.IsEnabled = _current != null;
+            _nameText.Text = _current != null ? _current.Name : "";
             _applyButton.IsEnabled = _current != null;
             _saveButton.IsEnabled = _current != null && _dirty;
             _hotkeyButton.Content = Glyph("", _current != null && !string.IsNullOrEmpty(_current.Hotkey)
@@ -902,6 +1010,17 @@ namespace Triptych
 
         private void OnPreviewKeyDown(object sender, KeyEventArgs e)
         {
+            if (!_capturingHotkey && !_renaming && _current != null)
+            {
+                if (e.Key == Key.F2) { BeginRename(); e.Handled = true; return; }
+                if (Keyboard.Modifiers == ModifierKeys.Alt)
+                {
+                    Key arrow = e.Key == Key.System ? e.SystemKey : e.Key;
+                    if (arrow == Key.Up) { MoveProfile(_current, -1); e.Handled = true; return; }
+                    if (arrow == Key.Down) { MoveProfile(_current, +1); e.Handled = true; return; }
+                }
+            }
+
             if (!_capturingHotkey) return;
             e.Handled = true;
 

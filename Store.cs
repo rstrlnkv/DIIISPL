@@ -48,8 +48,24 @@ namespace Triptych
                 try { list.Add(Layout.Load(f)); }
                 catch { /* битый файл просто не показываем */ }
             }
-            list.Sort(delegate(Layout a, Layout b) { return string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase); });
+            // порядок задаёт пользователь; профили без порядка (старые файлы) идут следом по алфавиту
+            list.Sort(delegate(Layout a, Layout b)
+            {
+                if (a.Order != b.Order) return a.Order.CompareTo(b.Order);
+                return string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase);
+            });
             return list;
+        }
+
+        /// <summary>Пронумеровать профили по текущему положению в списке и записать на диск.</summary>
+        public static void SaveOrder(List<Layout> ordered)
+        {
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                if (ordered[i].Order == i) continue;
+                ordered[i].Order = i;
+                Save(ordered[i]);
+            }
         }
 
         public static Layout LoadByName(string name)

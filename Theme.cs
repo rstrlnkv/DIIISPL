@@ -498,13 +498,46 @@ namespace Triptych
     <Setter Property='Template'>
       <Setter.Value>
         <ControlTemplate TargetType='ContextMenu'>
-          <Border Background='{StaticResource Flyout}' BorderBrush='{StaticResource Stroke}' BorderThickness='1'
-                  CornerRadius='8' Padding='4' MinWidth='220'>
+          <Border x:Name='Root' Background='{StaticResource Flyout}' BorderBrush='{StaticResource Stroke}'
+                  BorderThickness='1' CornerRadius='8' Padding='4' MinWidth='220' Opacity='0'
+                  RenderTransformOrigin='0.5,1'>
+            <Border.RenderTransform>
+              <TranslateTransform x:Name='Slide' Y='10'/>
+            </Border.RenderTransform>
             <Border.Effect>
               <DropShadowEffect BlurRadius='20' ShadowDepth='4' Opacity='0.3' Color='#000000'/>
             </Border.Effect>
             <StackPanel IsItemsHost='True'/>
           </Border>
+          <ControlTemplate.Triggers>
+            <!-- своё появление: у меню с собственным шаблоном системная анимация не наследуется -->
+            <Trigger Property='IsOpen' Value='True'>
+              <Trigger.EnterActions>
+                <BeginStoryboard>
+                  <Storyboard>
+                    <DoubleAnimation Storyboard.TargetName='Root' Storyboard.TargetProperty='Opacity'
+                                     To='1' Duration='0:0:0.13'/>
+                    <DoubleAnimation Storyboard.TargetName='Slide' Storyboard.TargetProperty='Y'
+                                     To='0' Duration='0:0:0.18'>
+                      <DoubleAnimation.EasingFunction>
+                        <CubicEase EasingMode='EaseOut'/>
+                      </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                  </Storyboard>
+                </BeginStoryboard>
+              </Trigger.EnterActions>
+              <Trigger.ExitActions>
+                <BeginStoryboard>
+                  <Storyboard>
+                    <DoubleAnimation Storyboard.TargetName='Root' Storyboard.TargetProperty='Opacity'
+                                     To='0' Duration='0:0:0.08'/>
+                    <DoubleAnimation Storyboard.TargetName='Slide' Storyboard.TargetProperty='Y'
+                                     To='10' Duration='0:0:0.08'/>
+                  </Storyboard>
+                </BeginStoryboard>
+              </Trigger.ExitActions>
+            </Trigger>
+          </ControlTemplate.Triggers>
         </ControlTemplate>
       </Setter.Value>
     </Setter>

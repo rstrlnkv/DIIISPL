@@ -46,6 +46,7 @@ namespace Triptych
     {
         public string Name = "";
         public string Hotkey = "";
+        public int Order = 0;                 // порядок в списке, задаётся пользователем
         public List<LayoutDisplay> Displays = new List<LayoutDisplay>();
 
         /// <summary>
@@ -114,6 +115,7 @@ namespace Triptych
             var copy = new Layout();
             copy.Name = Name;
             copy.Hotkey = Hotkey;
+            copy.Order = Order;
             foreach (var d in Displays) copy.Displays.Add(d.Clone());
             return copy;
         }
@@ -212,6 +214,7 @@ namespace Triptych
             sb.AppendLine("[profile]");
             sb.AppendLine("name = " + Name);
             sb.AppendLine("hotkey = " + (Hotkey ?? ""));
+            sb.AppendLine("order = " + Order.ToString(CultureInfo.InvariantCulture));
             foreach (var d in Displays)
             {
                 sb.AppendLine();
@@ -257,6 +260,7 @@ namespace Triptych
                 {
                     if (key == "name") layout.Name = val;
                     else if (key == "hotkey") layout.Hotkey = val;
+                    else if (key == "order") layout.Order = ParseInt(val);
                 }
                 else if (section == "display" && cur != null)
                 {
