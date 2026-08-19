@@ -3,6 +3,8 @@
 // Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
 
 using System;
+using System.IO;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -32,48 +34,28 @@ namespace DIIIX
             catch { /* без Mica окно просто останется однотонным */ }
         }
 
-        /// <summary>Иконка-триптих: три панели, средняя крупнее.</summary>
+        /// <summary>
+        /// Значок для трея.
+        ///
+        /// Берётся из готового DIIIX.ico, вшитого в программу, а не рисуется заново:
+        /// в файле под каждый размер лежит свой кадр, выверенный по сетке точек, — от
+        /// нарисованного на лету значок отличается тем, что не мылится ни в 16 точек,
+        /// ни в 32 на крупном масштабе экрана.
+        /// </summary>
         public static Gdi.Icon MakeTrayIcon()
         {
-            using (var bmp = new Gdi.Bitmap(32, 32))
+            Gdi.Size wanted = System.Windows.Forms.SystemInformation.SmallIconSize;   // на 200% масштабе это 32
+            using (Stream stream = IconStream())
             {
-                using (Gdi.Graphics g = Gdi.Graphics.FromImage(bmp))
-                {
-                    g.SmoothingMode = Gdi.Drawing2D.SmoothingMode.AntiAlias;
-                    g.Clear(Gdi.Color.Transparent);
-                    Color a = Theme.Accent();
-                    using (var fill = new Gdi.SolidBrush(Gdi.Color.FromArgb(255, a.R, a.G, a.B)))
-                    using (var side = new Gdi.SolidBrush(Gdi.Color.FromArgb(160, 255, 255, 255)))
-                    {
-                        g.FillRectangle(side, 2, 9, 7, 14);
-                        g.FillRectangle(fill, 11, 5, 10, 22);
-                        g.FillRectangle(side, 23, 9, 7, 14);
-                    }
-                }
-                IntPtr h = bmp.GetHicon();
-                try
-                {
-                    using (Gdi.Icon tmp = Gdi.Icon.FromHandle(h)) return (Gdi.Icon)tmp.Clone();
-                }
-                finally { Native.DestroyIcon(h); }
+                if (stream != null) return new Gdi.Icon(stream, wanted);
             }
+            return Gdi.SystemIcons.Application;
         }
 
-        public static ImageSource MakeWindowIcon()
+        /// <summary>Тот же значок открытым потоком; null, если ресурс почему-то не вшит.</summary>
+        private static Stream IconStream()
         {
-            var visual = new DrawingVisual();
-            using (DrawingContext dc = visual.RenderOpen())
-            {
-                var accent = new SolidColorBrush(Theme.Accent());
-                var side = new SolidColorBrush(Color.FromArgb(160, 255, 255, 255));
-                dc.DrawRoundedRectangle(side, null, new Rect(2, 9, 7, 14), 1.5, 1.5);
-                dc.DrawRoundedRectangle(accent, null, new Rect(11, 5, 10, 22), 2, 2);
-                dc.DrawRoundedRectangle(side, null, new Rect(23, 9, 7, 14), 1.5, 1.5);
-            }
-            var bmp = new RenderTargetBitmap(32, 32, 96, 96, PixelFormats.Pbgra32);
-            bmp.Render(visual);
-            bmp.Freeze();
-            return bmp;
+            return Assembly.GetExecutingAssembly().GetManifestResourceStream("DIIIX.ico");
         }
     }
 }

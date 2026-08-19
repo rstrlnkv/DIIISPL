@@ -76,8 +76,10 @@ namespace DIIIX
             _messageWindow.AddHook(WndProc);
 
             ExplorerTap.RestoreWhenProcessExits = true;   // трей живёт долго — при выходе вернём панель
+            // Значок окну не задаём: без него WPF берёт значок самой программы, а там
+            // под каждый размер лежит свой кадр — и в заголовке, и на панели задач,
+            // и в Alt+Tab окно получает подходящий, а не растянутый из одного.
             _window = new MainWindow();
-            _window.Icon = Fluent.MakeWindowIcon();
             _window.ProfilesChanged += ReloadHotkeys;
 
             BuildTray();
