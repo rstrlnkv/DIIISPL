@@ -23,13 +23,23 @@ if not exist "%WIX%\candle.exe" (
   "%ROOT%\native\nuget.exe" install WiX -Version 3.14.1 -OutputDirectory "%HERE%wix" -NonInteractive -ExcludeVersion || exit /b 1
 )
 
+rem Двоичные файлы раскладываются копиями и подписываются уже там. На месте их
+rem подписать нельзя: библиотека оформления загружена в проводник, а программа
+rem может быть запущена — signtool упрётся в занятый файл. Заодно сборка не правит
+rem то, что лежит в рабочем каталоге.
+echo === Подпись файлов программы ===
+if not exist "%HERE%obj\stage" mkdir "%HERE%obj\stage"
+copy /y "%ROOT%\DIIIX.exe" "%HERE%obj\stage\" >nul || exit /b 1
+copy /y "%ROOT%\DIIIX.ExplorerTAP.dll" "%HERE%obj\stage\" >nul || exit /b 1
+call "%HERE%sign.cmd" "%HERE%obj\stage\DIIIX.exe" "%HERE%obj\stage\DIIIX.ExplorerTAP.dll" || exit /b 1
+
 echo === Лицензия ===
 powershell -NoProfile -ExecutionPolicy Bypass -File "%HERE%make-license-rtf.ps1" -Source "%ROOT%\LICENSE" -Target "%HERE%LICENSE.rtf" || exit /b 1
 
 echo === Сборка пакета ===
 if not exist "%HERE%obj" mkdir "%HERE%obj"
 "%WIX%\candle.exe" -nologo -arch x64 ^
-  -dSourceDir="%ROOT%" -dLicenseRtf="%HERE%LICENSE.rtf" ^
+  -dSourceDir="%ROOT%" -dBinDir="%HERE%obj\stage" -dLicenseRtf="%HERE%LICENSE.rtf" ^
   -ext WixUtilExtension -ext WixUIExtension ^
   -out "%HERE%obj\DIIIX.wixobj" "%HERE%DIIIX.wxs" || exit /b 1
 
@@ -39,6 +49,9 @@ rem ICE60 ругается на шрифты в файлах без версии
   -cultures:ru-RU ^
   -sice:ICE60 ^
   -out "%ROOT%\DIIIX-%VERSION%-x64.msi" "%HERE%obj\DIIIX.wixobj" || exit /b 1
+
+echo === Подпись пакета ===
+call "%HERE%sign.cmd" "%ROOT%\DIIIX-%VERSION%-x64.msi" || exit /b 1
 
 echo.
 echo Готово: %ROOT%\DIIIX-%VERSION%-x64.msi

@@ -16,7 +16,7 @@
            Language="1049"
            Codepage="1251"
            Version="$(var.Version)"
-           Manufacturer="r.strlnkv"
+           Manufacturer="Rostislav Strelnikov"
            UpgradeCode="0E2BE8B0-FF5F-4590-9D0A-F7D9E6C6BDC1">
 
     <Package InstallerVersion="500"
@@ -59,7 +59,7 @@
 
     <DirectoryRef Id="INSTALLFOLDER">
       <Component Id="MainProgram" Guid="*" Win64="yes">
-        <File Id="DIIIX.exe" Source="$(var.SourceDir)\DIIIX.exe" KeyPath="yes">
+        <File Id="DIIIX.exe" Source="$(var.BinDir)\DIIIX.exe" KeyPath="yes">
           <Shortcut Id="StartMenuShortcut"
                     Directory="ProgramMenuFolder"
                     Name="DIIIX"
@@ -74,7 +74,7 @@
         работает, поэтому она вынесена в свою возможность, которую можно не ставить.
       -->
       <Component Id="TaskbarLibrary" Guid="*" Win64="yes">
-        <File Id="DIIIX.ExplorerTAP.dll" Source="$(var.SourceDir)\DIIIX.ExplorerTAP.dll" KeyPath="yes" />
+        <File Id="DIIIX.ExplorerTAP.dll" Source="$(var.BinDir)\DIIIX.ExplorerTAP.dll" KeyPath="yes" />
       </Component>
 
       <!-- По компоненту на файл: у обоих нет версии, а такие в один не складываются. -->
