@@ -119,7 +119,7 @@ namespace DIIIX.Tools
         {
             var payloads = new List<byte[]>();
             foreach (Bitmap frame in frames)
-                payloads.Add(frame.Width >= 64 ? AsPng(frame) : AsDib(frame));
+                payloads.Add(frame.Width >= 256 ? AsPng(frame) : AsDib(frame));
 
             var w = new BinaryWriter(output);
             w.Write((short)0);                    // зарезервировано
@@ -155,7 +155,10 @@ namespace DIIIX.Tools
 
         /// <summary>
         /// Старый формат кадра: заголовок DIB, точки снизу вверх и маска прозрачности.
-        /// Мелкие размеры пишутся именно так — PNG в них понимают не все места системы.
+        /// Так пишется всё, кроме 256: PNG внутри значка понимают не везде — например,
+        /// System.Drawing.Icon.ToBitmap на таком кадре просто падает. Для 256 иначе
+        /// нельзя (кадр вышел бы на четверть мегабайта), а его читают только те,
+        /// кто про PNG знает.
         /// </summary>
         private static byte[] AsDib(Bitmap frame)
         {
