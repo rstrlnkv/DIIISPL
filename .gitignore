@@ -1,0 +1,14 @@
+# сборка
+*.exe
+*.pdb
+*.obj
+
+# логи автотеста
+tests/selftest-log.txt
+
+# мусор редакторов и системы
+.vs/
+*.user
+*.suo
+Thumbs.db
+desktop.ini

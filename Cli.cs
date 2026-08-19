@@ -1,0 +1,197 @@
+using System;
+using System.Collections.Generic;
+
+namespace Triptych
+{
+    internal static class Cli
+    {
+        public static int Run(string[] args)
+        {
+            Native.AttachConsole(-1);
+            string cmd = args[0].TrimStart('-', '/').ToLowerInvariant();
+            try
+            {
+                switch (cmd)
+                {
+                    case "monitors": return DumpMonitors();
+                    case "hdr": return DumpHdr();
+                    case "state": return DumpState();
+                    case "list": return ListProfiles();
+                    case "save": return SaveCurrent(args);
+                    case "apply":
+                    case "switch": return ApplyProfile(args);
+                    case "delete": return DeleteProfile(args);
+                    default: return Help();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Ошибка: " + ex.Message);
+                return 1;
+            }
+        }
+
+        private static int Help()
+        {
+            Console.WriteLine();
+            Console.WriteLine("Triptych — раскладки мониторов");
+            Console.WriteLine();
+            Console.WriteLine("  Triptych.exe                 открыть окно менеджера");
+            Console.WriteLine("  Triptych.exe /apply \"Имя\"    применить профиль");
+            Console.WriteLine("  Triptych.exe /save \"Имя\"     записать текущую раскладку в профиль");
+            Console.WriteLine("  Triptych.exe /list           список профилей");
+            Console.WriteLine("  Triptych.exe /delete \"Имя\"   удалить профиль");
+            Console.WriteLine("  Triptych.exe /monitors       что подключено и как опознано");
+            Console.WriteLine("  Triptych.exe /hdr            состояние HDR на каждом выходе");
+            return 0;
+        }
+
+        private static int DumpMonitors()
+        {
+            Console.WriteLine();
+            var list = Monitors.Enumerate();
+            if (list.Count == 0) { Console.WriteLine("  мониторы не найдены"); return 1; }
+
+            foreach (var m in list)
+            {
+                Console.WriteLine("  " + m.Name + "   [" + m.ConnectionType + "]");
+                Console.WriteLine("    ключ:      " + m.Identity);
+                Console.WriteLine("    состояние: " + (m.Active
+                    ? ("включён, " + m.Width + "x" + m.Height + " @ " + m.X + "," + m.Y + ", " + m.Hz.ToString("0.###") + " Гц, source " + m.SourceId + (m.Primary ? ", основной" : ""))
+                    : "выключен"));
+                Console.WriteLine("    HDR:       " + (m.HdrSupported ? (m.HdrEnabled ? "поддерживается, включён" : "поддерживается, выключен") : "недоступен"));
+                Console.WriteLine("    предпочт.: " + m.PreferredWidth + "x" + m.PreferredHeight + " " + m.PreferredHz.ToString("0.###") + " Гц");
+                Console.WriteLine("    режимов:   " + m.Modes.Count + (m.ModesAreApproximate ? " (список приблизительный)" : ""));
+                if (m.Modes.Count > 0)
+                {
+                    var top = new List<string>();
+                    for (int i = 0; i < Math.Min(4, m.Modes.Count); i++)
+                    {
+                        var r = m.Modes[i];
+                        var rates = new List<string>();
+                        foreach (double hz in r.Rates) rates.Add(hz.ToString("0.##"));
+                        top.Add(r.Width + "x" + r.Height + " (" + string.Join("/", rates.ToArray()) + ")");
+                    }
+                    Console.WriteLine("               " + string.Join(", ", top.ToArray()));
+                }
+                var sids = new List<string>();
+                foreach (uint s in m.ValidSourceIds) sids.Add(s.ToString());
+                Console.WriteLine("    выходы:    source " + string.Join(",", sids.ToArray()));
+                Console.WriteLine();
+            }
+            return 0;
+        }
+
+        /// <summary>Состояние в машиночитаемом виде — для скриптов и диагностики.</summary>
+        private static int DumpState()
+        {
+            foreach (var m in Monitors.Enumerate())
+            {
+                Console.WriteLine(string.Join("\t", new string[] {
+                    m.Identity,
+                    m.Name,
+                    m.Active ? "on" : "off",
+                    m.X.ToString(), m.Y.ToString(),
+                    m.Width.ToString(), m.Height.ToString(),
+                    m.Hz.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
+                    m.Rotation.ToString(),
+                    m.SourceId.ToString(),
+                    (m.Active && m.X == 0 && m.Y == 0) ? "primary" : "-",
+                    m.HdrSupported ? (m.HdrEnabled ? "hdr-on" : "hdr-off") : "hdr-na"
+                }));
+            }
+            return 0;
+        }
+
+        /// <summary>Кто сейчас в HDR и кто вообще может — для разбора полётов с дублированием.</summary>
+        private static int DumpHdr()
+        {
+            Console.WriteLine();
+            var list = Monitors.Enumerate();
+            var bySource = new Dictionary<string, List<MonitorInfo>>();
+            foreach (var m in list)
+            {
+                if (!m.Active) continue;
+                string key = m.Adapter.Key + "/" + m.SourceId;
+                if (!bySource.ContainsKey(key)) bySource[key] = new List<MonitorInfo>();
+                bySource[key].Add(m);
+            }
+
+            foreach (var m in list)
+            {
+                bool inCloneGroup = m.Active && bySource.ContainsKey(m.Adapter.Key + "/" + m.SourceId)
+                                    && bySource[m.Adapter.Key + "/" + m.SourceId].Count > 1;
+                string mode = m.Active ? (m.Width + "x" + m.Height + " " + m.Hz.ToString("0.###") + " Гц") : "выключен";
+                string hdr = !m.Active ? "—"
+                    : (m.HdrSupported ? (m.HdrEnabled ? "ВКЛЮЧЁН" : "поддерживается, выключен")
+                                      : (inCloneGroup ? "недоступен: выход в дублировании" : "недоступен на этом режиме"));
+                Console.WriteLine("  " + m.Name + "  [" + m.ConnectionType + "]");
+                Console.WriteLine("    режим: " + mode);
+                Console.WriteLine("    HDR:   " + hdr);
+            }
+
+            foreach (var kv in bySource)
+            {
+                if (kv.Value.Count < 2) continue;
+                var names = new List<string>();
+                var states = new List<string>();
+                foreach (var m in kv.Value)
+                {
+                    names.Add(m.Name);
+                    states.Add(m.HdrEnabled ? "HDR" : "SDR");
+                }
+                Console.WriteLine();
+                Console.WriteLine("  Дублирование: " + string.Join(" + ", names.ToArray()) + "  →  " + string.Join(" / ", states.ToArray()));
+                Console.WriteLine("  (в группе дублирования HDR должен быть одинаковым на всех выходах)");
+            }
+            return 0;
+        }
+
+        private static int ListProfiles()
+        {
+            Console.WriteLine();
+            var all = Store.LoadAll();
+            if (all.Count == 0) { Console.WriteLine("  профилей нет"); return 0; }
+            foreach (var l in all)
+            {
+                int on = 0;
+                foreach (var d in l.Displays) if (d.Enabled) on++;
+                Console.WriteLine("  " + l.Name + "   мониторов: " + on + "/" + l.Displays.Count +
+                                  (string.IsNullOrEmpty(l.Hotkey) ? "" : "   [" + l.Hotkey + "]"));
+            }
+            return 0;
+        }
+
+        private static int SaveCurrent(string[] args)
+        {
+            if (args.Length < 2) { Console.WriteLine("Укажите имя профиля."); return 2; }
+            var layout = Layout.FromCurrent(args[1]);
+            Store.Save(layout);
+            Console.WriteLine("Сохранено: " + layout.Name);
+            return 0;
+        }
+
+        private static int ApplyProfile(string[] args)
+        {
+            if (args.Length < 2) { Console.WriteLine("Укажите имя профиля."); return 2; }
+            var layout = Store.LoadByName(args[1]);
+            if (layout == null) { Console.WriteLine("Профиль не найден: " + args[1]); return 2; }
+            var res = Applier.Apply(layout);
+            foreach (string n in res.Notes) Console.WriteLine("  · " + n);
+            foreach (string w in res.Warnings) Console.WriteLine("  ! " + w);
+            if (!res.Success) { Console.WriteLine("Ошибка: " + res.Error); return 1; }
+            Console.WriteLine("Применено: " + layout.Name);
+            return 0;
+        }
+
+        private static int DeleteProfile(string[] args)
+        {
+            if (args.Length < 2) { Console.WriteLine("Укажите имя профиля."); return 2; }
+            var layout = Store.LoadByName(args[1]);
+            if (layout == null) { Console.WriteLine("Профиль не найден: " + args[1]); return 2; }
+            Store.Delete(layout);
+            Console.WriteLine("Удалено: " + layout.Name);
+            return 0;
+        }
+    }
+}

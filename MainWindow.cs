@@ -1,0 +1,899 @@
+using System;
+using System.Collections.Generic;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
+
+namespace Triptych
+{
+    internal class Item
+    {
+        public string Text;
+        public object Value;
+        public Item(string text, object value) { Text = text; Value = value; }
+        public override string ToString() { return Text; }
+    }
+
+    internal class MainWindow : Window
+    {
+        public event Action ProfilesChanged;
+
+        private readonly ListBox _profileList = new ListBox();
+        private readonly TextBox _nameBox = new TextBox();
+        private readonly Button _hotkeyButton = new Button();
+        private readonly Button _applyButton = new Button();
+        private readonly Button _saveButton = new Button();
+        private readonly MonitorCanvas _canvas = new MonitorCanvas();
+        private readonly TextBlock _status = new TextBlock();
+
+        private readonly CheckBox _enabledSwitch = new CheckBox();
+        private readonly CheckBox _primarySwitch = new CheckBox();
+        private readonly ComboBox _resCombo = new ComboBox();
+        private readonly ComboBox _hzCombo = new ComboBox();
+        private readonly ComboBox _rotCombo = new ComboBox();
+        private readonly ComboBox _cloneCombo = new ComboBox();
+        private readonly ComboBox _hdrCombo = new ComboBox();
+        private readonly TextBlock _monitorTitle = new TextBlock();
+        private readonly TextBlock _monitorSubtitle = new TextBlock();
+        private readonly Border _propsPanel = new Border();
+
+        private List<Layout> _profiles = new List<Layout>();
+        private Layout _current;
+        private string _currentOriginalName;
+        private Dictionary<string, MonitorInfo> _live = new Dictionary<string, MonitorInfo>();
+        private bool _updating;
+        private bool _dirty;
+        private bool _capturingHotkey;
+
+        public MainWindow()
+        {
+            Title = "Триптих — раскладки мониторов";
+            Width = 1180;
+            Height = 760;
+            MinWidth = 960;
+            MinHeight = 640;
+            WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            Background = (Brush)Application.Current.Resources["Bg"];
+            UseLayoutRounding = true;
+            TextOptions.SetTextFormattingMode(this, TextFormattingMode.Ideal);
+
+            Content = BuildUi();
+
+            SourceInitialized += delegate { Fluent.ApplyWindowStyling(this); };
+            PreviewKeyDown += OnPreviewKeyDown;
+            Closing += delegate(object s, System.ComponentModel.CancelEventArgs e)
+            {
+                if (_dirty) AskToSave();
+                e.Cancel = true;
+                Hide();
+            };
+
+            ReloadLive();
+            ReloadProfiles(null);
+        }
+
+        // ---------------------------------------------------------------- UI
+        private UIElement BuildUi()
+        {
+            var root = new Grid();
+            root.RowDefinitions.Add(new RowDefinition());
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            var body = new Grid();
+            body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(272) });
+            body.ColumnDefinitions.Add(new ColumnDefinition());
+            Grid.SetRow(body, 0);
+            root.Children.Add(body);
+
+            body.Children.Add(BuildSidebar());
+
+            var main = BuildMain();
+            Grid.SetColumn(main, 1);
+            body.Children.Add(main);
+
+            var statusBar = new Border();
+            statusBar.Padding = new Thickness(20, 8, 20, 12);
+            _status.Style = (Style)Application.Current.Resources["Caption"];
+            _status.TextTrimming = TextTrimming.CharacterEllipsis;
+            statusBar.Child = _status;
+            Grid.SetRow(statusBar, 1);
+            root.Children.Add(statusBar);
+
+            return root;
+        }
+
+        private UIElement BuildSidebar()
+        {
+            var panel = new Grid();
+            panel.Margin = new Thickness(16, 12, 8, 4);
+            panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            panel.RowDefinitions.Add(new RowDefinition());
+            panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            var header = new TextBlock();
+            header.Text = "ПРОФИЛИ";
+            header.Style = (Style)Application.Current.Resources["SectionHeader"];
+            header.Margin = new Thickness(10, 6, 0, 10);
+            panel.Children.Add(header);
+
+            _profileList.Background = Brushes.Transparent;
+            _profileList.BorderThickness = new Thickness(0);
+            _profileList.ItemContainerStyle = (Style)Application.Current.Resources["ProfileItem"];
+            _profileList.SelectionChanged += delegate
+            {
+                if (_updating) return;
+                var item = _profileList.SelectedItem as ListBoxItem;
+                if (item == null) return;
+                var layout = item.Tag as Layout;
+                if (layout != null && !ReferenceEquals(layout, _current)) SelectProfile(layout);
+            };
+            ScrollViewer.SetHorizontalScrollBarVisibility(_profileList, ScrollBarVisibility.Disabled);
+            Grid.SetRow(_profileList, 1);
+            panel.Children.Add(_profileList);
+
+            var buttons = new StackPanel();
+            buttons.Margin = new Thickness(0, 10, 0, 8);
+            Grid.SetRow(buttons, 2);
+
+            var newButton = new Button();
+            newButton.Style = (Style)Application.Current.Resources["Btn"];
+            newButton.Content = Glyph("", "Новый из текущей раскладки");
+            newButton.HorizontalContentAlignment = HorizontalAlignment.Left;
+            newButton.Margin = new Thickness(0, 0, 0, 6);
+            newButton.Click += delegate { NewFromCurrent(); };
+            buttons.Children.Add(newButton);
+
+            var deleteButton = new Button();
+            deleteButton.Style = (Style)Application.Current.Resources["BtnSubtle"];
+            deleteButton.Content = Glyph("", "Удалить профиль");
+            deleteButton.HorizontalContentAlignment = HorizontalAlignment.Left;
+            deleteButton.Click += delegate { DeleteCurrent(); };
+            buttons.Children.Add(deleteButton);
+
+            panel.Children.Add(buttons);
+            return panel;
+        }
+
+        private static UIElement Glyph(string glyph, string text)
+        {
+            var sp = new StackPanel();
+            sp.Orientation = Orientation.Horizontal;
+            var icon = new TextBlock();
+            icon.Text = glyph;
+            icon.FontFamily = (FontFamily)Application.Current.Resources["IconFont"];
+            icon.FontSize = 14;
+            icon.VerticalAlignment = VerticalAlignment.Center;
+            icon.Margin = new Thickness(0, 0, 10, 0);
+            sp.Children.Add(icon);
+            var t = new TextBlock();
+            t.Text = text;
+            t.VerticalAlignment = VerticalAlignment.Center;
+            sp.Children.Add(t);
+            return sp;
+        }
+
+        private UIElement BuildMain()
+        {
+            var grid = new Grid();
+            grid.Margin = new Thickness(8, 12, 20, 4);
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new RowDefinition());
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            // --- шапка ---
+            var header = new Grid();
+            header.Margin = new Thickness(4, 0, 0, 14);
+            header.ColumnDefinitions.Add(new ColumnDefinition());
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var nameStack = new StackPanel();
+            _nameBox.Style = (Style)Application.Current.Resources["Input"];
+            _nameBox.FontSize = 20;
+            _nameBox.FontWeight = FontWeights.SemiBold;
+            _nameBox.Height = 42;
+            _nameBox.HorizontalAlignment = HorizontalAlignment.Left;
+            _nameBox.MinWidth = 320;
+            _nameBox.TextChanged += delegate
+            {
+                if (_updating || _current == null) return;
+                _current.Name = _nameBox.Text;
+                MarkDirty();
+                RefreshProfileList();
+            };
+            nameStack.Children.Add(_nameBox);
+            header.Children.Add(nameStack);
+
+            var actions = new StackPanel();
+            actions.Orientation = Orientation.Horizontal;
+            Grid.SetColumn(actions, 1);
+
+            _hotkeyButton.Style = (Style)Application.Current.Resources["Btn"];
+            _hotkeyButton.Height = 42;
+            _hotkeyButton.Margin = new Thickness(0, 0, 8, 0);
+            _hotkeyButton.Click += delegate { BeginHotkeyCapture(); };
+            actions.Children.Add(_hotkeyButton);
+
+            _saveButton.Style = (Style)Application.Current.Resources["Btn"];
+            _saveButton.Height = 42;
+            _saveButton.Content = Glyph("", "Сохранить");
+            _saveButton.Margin = new Thickness(0, 0, 8, 0);
+            _saveButton.Click += delegate { SaveCurrent(true); };
+            actions.Children.Add(_saveButton);
+
+            _applyButton.Style = (Style)Application.Current.Resources["BtnAccent"];
+            _applyButton.Height = 42;
+            _applyButton.Content = Glyph("", "Применить");
+            _applyButton.Click += delegate { ApplyCurrent(); };
+            actions.Children.Add(_applyButton);
+
+            header.Children.Add(actions);
+            grid.Children.Add(header);
+
+            // --- холст ---
+            var canvasCard = new Border();
+            canvasCard.Style = (Style)Application.Current.Resources["Card"];
+            canvasCard.Margin = new Thickness(4, 0, 0, 14);
+            canvasCard.Child = _canvas;
+            _canvas.SelectionChanged += delegate { UpdateProperties(); };
+            _canvas.LayoutChanged += delegate { MarkDirty(); UpdateStatus(null); };
+            Grid.SetRow(canvasCard, 1);
+            grid.Children.Add(canvasCard);
+
+            // --- свойства выбранного монитора ---
+            _propsPanel.Style = (Style)Application.Current.Resources["Card"];
+            _propsPanel.Margin = new Thickness(4, 0, 0, 8);
+            _propsPanel.Padding = new Thickness(18, 14, 18, 16);
+            _propsPanel.Child = BuildProperties();
+            Grid.SetRow(_propsPanel, 2);
+            grid.Children.Add(_propsPanel);
+
+            return grid;
+        }
+
+        private UIElement BuildProperties()
+        {
+            var outer = new StackPanel();
+
+            var titleRow = new StackPanel();
+            titleRow.Orientation = Orientation.Horizontal;
+            titleRow.Margin = new Thickness(0, 0, 0, 12);
+            _monitorTitle.Style = (Style)Application.Current.Resources["Subtitle"];
+            _monitorTitle.FontSize = 16;
+            _monitorTitle.VerticalAlignment = VerticalAlignment.Center;
+            titleRow.Children.Add(_monitorTitle);
+            _monitorSubtitle.Style = (Style)Application.Current.Resources["Caption"];
+            _monitorSubtitle.Margin = new Thickness(12, 0, 0, 0);
+            _monitorSubtitle.VerticalAlignment = VerticalAlignment.Center;
+            titleRow.Children.Add(_monitorSubtitle);
+            outer.Children.Add(titleRow);
+
+            var row = new Grid();
+            for (int i = 0; i < 6; i++) row.ColumnDefinitions.Add(new ColumnDefinition());
+
+            row.Children.Add(Field("Использовать", WrapSwitch(_enabledSwitch, "Включён"), 0));
+            row.Children.Add(Field("Разрешение", _resCombo, 1));
+            row.Children.Add(Field("Частота", _hzCombo, 2));
+            row.Children.Add(Field("Поворот", _rotCombo, 3));
+            row.Children.Add(Field("Дублирование", _cloneCombo, 4));
+            row.Children.Add(Field("HDR", _hdrCombo, 5));
+            outer.Children.Add(row);
+
+            var row2 = new StackPanel();
+            row2.Orientation = Orientation.Horizontal;
+            row2.Margin = new Thickness(0, 14, 0, 0);
+            row2.Children.Add(WrapSwitch(_primarySwitch, "Основной монитор (панель задач и новые окна)"));
+            outer.Children.Add(row2);
+
+            _enabledSwitch.Checked += delegate { OnEnabledChanged(true); };
+            _enabledSwitch.Unchecked += delegate { OnEnabledChanged(false); };
+            _primarySwitch.Checked += delegate { OnPrimaryChanged(true); };
+            _primarySwitch.Unchecked += delegate { OnPrimaryChanged(false); };
+            _resCombo.SelectionChanged += delegate { OnResChanged(); };
+            _hzCombo.SelectionChanged += delegate { OnHzChanged(); };
+            _rotCombo.SelectionChanged += delegate { OnRotChanged(); };
+            _cloneCombo.SelectionChanged += delegate { OnCloneChanged(); };
+            _hdrCombo.SelectionChanged += delegate { OnHdrChanged(); };
+
+            foreach (var c in new[] { _resCombo, _hzCombo, _rotCombo, _cloneCombo, _hdrCombo })
+                c.Style = (Style)Application.Current.Resources["Combo"];
+
+            return outer;
+        }
+
+        private UIElement WrapSwitch(CheckBox box, string text)
+        {
+            box.Style = (Style)Application.Current.Resources["Switch"];
+            var t = new TextBlock();
+            t.Text = text;
+            box.Content = t;
+            box.VerticalAlignment = VerticalAlignment.Center;
+            box.Height = 34;
+            return box;
+        }
+
+        private UIElement Field(string label, UIElement control, int column)
+        {
+            var sp = new StackPanel();
+            sp.Margin = new Thickness(column == 0 ? 0 : 10, 0, 0, 0);
+            var l = new TextBlock();
+            l.Text = label;
+            l.Style = (Style)Application.Current.Resources["Caption"];
+            l.Margin = new Thickness(2, 0, 0, 6);
+            sp.Children.Add(l);
+            sp.Children.Add(control);
+            Grid.SetColumn(sp, column);
+            return sp;
+        }
+
+        // ---------------------------------------------------------------- данные
+        public void ReloadLive()
+        {
+            _live.Clear();
+            foreach (var m in Monitors.Enumerate()) _live[m.Identity] = m;
+            _canvas.Live = _live;
+        }
+
+        public void ReloadProfiles(string selectName)
+        {
+            _profiles = Store.LoadAll();
+            RefreshProfileList();
+
+            Layout target = null;
+            if (selectName != null)
+                foreach (var l in _profiles) if (l.Name == selectName) { target = l; break; }
+            if (target == null && _profiles.Count > 0) target = _profiles[0];
+
+            if (target != null) SelectProfile(target);
+            else
+            {
+                _current = null;
+                _canvas.Layout = null;
+                _canvas.Rebuild();
+                UpdateHeader();
+                UpdateProperties();
+                UpdateStatus("Профилей пока нет — нажмите «Новый из текущей раскладки».");
+            }
+        }
+
+        private void RefreshProfileList()
+        {
+            _updating = true;
+            _profileList.Items.Clear();
+            foreach (var l in _profiles)
+            {
+                var item = new ListBoxItem();
+                item.Style = (Style)Application.Current.Resources["ProfileItem"];
+                item.Tag = l;
+
+                var sp = new StackPanel();
+                var name = new TextBlock();
+                name.Text = l.Name;
+                name.FontWeight = FontWeights.SemiBold;
+                name.TextTrimming = TextTrimming.CharacterEllipsis;
+                sp.Children.Add(name);
+
+                var sub = new TextBlock();
+                sub.Style = (Style)Application.Current.Resources["Caption"];
+                sub.Margin = new Thickness(0, 2, 0, 0);
+                int on = 0;
+                foreach (var d in l.Displays) if (d.Enabled) on++;
+                sub.Text = string.IsNullOrEmpty(l.Hotkey)
+                    ? ("мониторов: " + on)
+                    : (l.Hotkey + "   ·   мониторов: " + on);
+                sp.Children.Add(sub);
+
+                item.Content = sp;
+                _profileList.Items.Add(item);
+                if (ReferenceEquals(l, _current)) _profileList.SelectedItem = item;
+            }
+            _updating = false;
+        }
+
+        private void SelectListItemFor(Layout layout)
+        {
+            _updating = true;
+            foreach (ListBoxItem item in _profileList.Items)
+                if (ReferenceEquals(item.Tag, layout)) { _profileList.SelectedItem = item; break; }
+            _updating = false;
+        }
+
+        private void SelectProfile(Layout layout)
+        {
+            // Раньше правки сохранялись молча при любом переключении — так профиль можно было
+            // перезаписать, сам того не заметив. Теперь решение всегда за пользователем.
+            if (_dirty && _current != null && !ReferenceEquals(layout, _current)) AskToSave();
+            _current = layout;
+            _currentOriginalName = layout.Name;
+            _dirty = false;
+            SyncLayoutWithLive(_current);
+            _canvas.Layout = _current;
+            _canvas.Selected = FirstInteresting(_current);
+            _canvas.Rebuild();
+            UpdateHeader();
+            UpdateProperties();
+            UpdateStatus(null);
+            SelectListItemFor(layout);
+        }
+
+        private static LayoutDisplay FirstInteresting(Layout layout)
+        {
+            foreach (var d in layout.Displays) if (d.Enabled && d.Primary) return d;
+            foreach (var d in layout.Displays) if (d.Enabled) return d;
+            return layout.Displays.Count > 0 ? layout.Displays[0] : null;
+        }
+
+        /// <summary>Добавляет в профиль мониторы, которых в нём ещё нет (подключили новый — он сразу виден).</summary>
+        private void SyncLayoutWithLive(Layout layout)
+        {
+            foreach (var kv in _live)
+            {
+                if (layout.Find(kv.Key) != null) continue;
+                var m = kv.Value;
+                var d = new LayoutDisplay();
+                d.Identity = m.Identity;
+                d.Name = m.Name;
+                d.Enabled = false;
+                d.Width = m.PreferredWidth > 0 ? m.PreferredWidth : 1920;
+                d.Height = m.PreferredHeight > 0 ? m.PreferredHeight : 1080;
+                d.Hz = m.PreferredHz > 0 ? m.PreferredHz : 60;
+                d.Hdr = -1;
+                PlaceRightOfAll(layout, d);
+                layout.Displays.Add(d);
+            }
+        }
+
+        private void PlaceRightOfAll(Layout layout, LayoutDisplay d)
+        {
+            int right = 0;
+            foreach (var o in layout.Displays) right = Math.Max(right, o.X + o.DesktopWidth);
+            d.X = right;
+            d.Y = 0;
+        }
+
+        // ---------------------------------------------------------------- действия
+        private void NewFromCurrent()
+        {
+            ReloadLive();
+            var layout = Layout.FromCurrent(Store.UniqueName("Новая раскладка"));
+            Store.Save(layout);
+            ReloadProfiles(layout.Name);
+            Raise(ProfilesChanged);
+            UpdateStatus("Создан профиль из текущей раскладки. Переименуйте и назначьте сочетание клавиш.");
+            _nameBox.Focus();
+            _nameBox.SelectAll();
+        }
+
+        private void DeleteCurrent()
+        {
+            if (_current == null) return;
+            var dialog = new ConfirmDialog("Удалить профиль?", "«" + _current.Name + "» будет удалён безвозвратно.", "Удалить");
+            dialog.Owner = this;
+            if (dialog.ShowDialog() != true) return;
+
+            Store.Delete(_current);
+            _dirty = false;
+            _current = null;
+            ReloadProfiles(null);
+            Raise(ProfilesChanged);
+        }
+
+        /// <summary>Спросить про несохранённые правки — молча перезаписывать профиль нельзя.</summary>
+        private void AskToSave()
+        {
+            if (_current == null || !_dirty) return;
+            var dialog = new ConfirmDialog("Сохранить изменения?",
+                "В профиле «" + _current.Name + "» есть несохранённые правки.", "Сохранить");
+            dialog.Owner = IsVisible ? this : null;
+            if (dialog.ShowDialog() == true) SaveCurrent(false);
+            else _dirty = false;
+        }
+
+        private void SaveCurrent(bool report)
+        {
+            if (_current == null) return;
+            if (string.IsNullOrEmpty(_current.Name.Trim())) _current.Name = Store.UniqueName("Раскладка");
+            _canvas.Normalize();
+            Store.Rename(_currentOriginalName, _current);
+            _currentOriginalName = _current.Name;
+            _dirty = false;
+            _saveButton.IsEnabled = false;
+            Raise(ProfilesChanged);
+            if (report) UpdateStatus("Сохранено.");
+        }
+
+        private void ApplyCurrent()
+        {
+            if (_current == null) return;
+            SaveCurrent(false);
+            var result = Applier.Apply(_current);
+            ReloadLive();
+            _canvas.Refresh();
+
+            var parts = new List<string>();
+            if (result.Success) parts.Add("Раскладка применена.");
+            else parts.Add("Не удалось: " + result.Error);
+            foreach (string w in result.Warnings) parts.Add(w);
+            UpdateStatus(string.Join("  ", parts.ToArray()));
+        }
+
+        public void ApplyByName(string name)
+        {
+            var layout = Store.LoadByName(name);
+            if (layout == null) return;
+            Applier.Apply(layout);
+        }
+
+        private static void Raise(Action a) { if (a != null) a(); }
+
+        // ---------------------------------------------------------------- свойства
+        private void UpdateHeader()
+        {
+            _updating = true;
+            _nameBox.Text = _current != null ? _current.Name : "";
+            _nameBox.IsEnabled = _current != null;
+            _applyButton.IsEnabled = _current != null;
+            _saveButton.IsEnabled = _current != null && _dirty;
+            _hotkeyButton.Content = Glyph("", _current != null && !string.IsNullOrEmpty(_current.Hotkey)
+                ? _current.Hotkey : "Сочетание клавиш");
+            _updating = false;
+        }
+
+        private void UpdateProperties()
+        {
+            _updating = true;
+            var d = _canvas.Selected;
+            bool has = d != null;
+            _propsPanel.IsEnabled = has;
+            _propsPanel.Opacity = has ? 1.0 : 0.45;
+
+            if (!has)
+            {
+                _monitorTitle.Text = "Выберите монитор";
+                _monitorSubtitle.Text = "";
+                _resCombo.ItemsSource = null;
+                _hzCombo.ItemsSource = null;
+                _updating = false;
+                return;
+            }
+
+            MonitorInfo live;
+            _live.TryGetValue(d.Identity, out live);
+
+            _monitorTitle.Text = d.Name;
+            string subtitle = live != null
+                ? (live.ConnectionType + " · " + (live.Active ? "сейчас включён" : "сейчас выключен"))
+                : "сейчас не подключён";
+            if (d.Enabled && d.CloneGroup >= 0) subtitle += " · при дублировании HDR недоступен";
+            _monitorSubtitle.Text = subtitle;
+
+            _enabledSwitch.IsChecked = d.Enabled;
+            _primarySwitch.IsChecked = d.Primary;
+            _primarySwitch.IsEnabled = d.Enabled;
+
+            // разрешения
+            var resItems = new List<Item>();
+            var resList = live != null ? live.Modes : new List<Resolution>();
+            bool found = false;
+            foreach (var r in resList)
+            {
+                resItems.Add(new Item(r.Width + " × " + r.Height, r));
+                if (r.Width == d.Width && r.Height == d.Height) found = true;
+            }
+            if (!found)
+            {
+                var custom = new Resolution();
+                custom.Width = d.Width; custom.Height = d.Height;
+                custom.Rates.Add(d.Hz > 0 ? d.Hz : 60);
+                resItems.Insert(0, new Item(d.Width + " × " + d.Height, custom));
+            }
+            _resCombo.ItemsSource = resItems;
+            foreach (Item it in resItems)
+            {
+                var r = (Resolution)it.Value;
+                if (r.Width == d.Width && r.Height == d.Height) { _resCombo.SelectedItem = it; break; }
+            }
+
+            FillRates(d, live);
+
+            var rotItems = new List<Item>();
+            rotItems.Add(new Item("Обычный", Native.DISPLAYCONFIG_ROTATION_IDENTITY));
+            rotItems.Add(new Item("90°", Native.DISPLAYCONFIG_ROTATION_ROTATE90));
+            rotItems.Add(new Item("180°", Native.DISPLAYCONFIG_ROTATION_ROTATE180));
+            rotItems.Add(new Item("270°", Native.DISPLAYCONFIG_ROTATION_ROTATE270));
+            _rotCombo.ItemsSource = rotItems;
+            foreach (Item it in rotItems) if ((uint)it.Value == d.Rotation) _rotCombo.SelectedItem = it;
+
+            var cloneItems = new List<Item>();
+            cloneItems.Add(new Item("Отдельно", null));
+            foreach (var other in _current.Displays)
+            {
+                if (ReferenceEquals(other, d) || !other.Enabled) continue;
+                cloneItems.Add(new Item("Дубль: " + other.Name, other));
+            }
+            _cloneCombo.ItemsSource = cloneItems;
+            _cloneCombo.SelectedItem = cloneItems[0];
+            if (d.CloneGroup >= 0)
+            {
+                foreach (Item it in cloneItems)
+                {
+                    var other = it.Value as LayoutDisplay;
+                    if (other != null && other.CloneGroup == d.CloneGroup) { _cloneCombo.SelectedItem = it; break; }
+                }
+            }
+            _cloneCombo.IsEnabled = d.Enabled;
+
+            var hdrItems = new List<Item>();
+            hdrItems.Add(new Item("Не менять", -1));
+            hdrItems.Add(new Item("Включить", 1));
+            hdrItems.Add(new Item("Выключить", 0));
+            _hdrCombo.ItemsSource = hdrItems;
+            foreach (Item it in hdrItems) if ((int)it.Value == d.Hdr) _hdrCombo.SelectedItem = it;
+
+            // Windows не предоставляет расширенный цвет выходам, объединённым в дублирование —
+            // проверено на LG UltraGear + Q80A и на 60, и на 120 Гц
+            bool cloned = d.CloneGroup >= 0;
+            _hdrCombo.IsEnabled = d.Enabled && !cloned;
+            _hdrCombo.ToolTip = cloned
+                ? "Windows отключает HDR на выходах, объединённых в дублирование, независимо от разрешения и частоты. Чтобы получить HDR на обоих экранах, разведите их как отдельные рабочие столы."
+                : null;
+
+            _updating = false;
+        }
+
+        private void FillRates(LayoutDisplay d, MonitorInfo live)
+        {
+            var rates = new List<double>();
+            if (live != null)
+            {
+                foreach (var r in live.Modes)
+                    if (r.Width == d.Width && r.Height == d.Height) { rates.AddRange(r.Rates); break; }
+            }
+            if (rates.Count == 0 && d.Hz > 0) rates.Add(d.Hz);
+            bool has = false;
+            foreach (double hz in rates) if (Math.Abs(hz - d.Hz) < 0.6) has = true;
+            if (!has && d.Hz > 0) rates.Insert(0, d.Hz);
+
+            var items = new List<Item>();
+            foreach (double hz in rates) items.Add(new Item(hz.ToString("0.##") + " Гц", hz));
+            _hzCombo.ItemsSource = items;
+            foreach (Item it in items) if (Math.Abs((double)it.Value - d.Hz) < 0.6) { _hzCombo.SelectedItem = it; break; }
+            if (_hzCombo.SelectedItem == null && items.Count > 0) _hzCombo.SelectedItem = items[0];
+        }
+
+        private void OnEnabledChanged(bool enabled)
+        {
+            if (_updating || _canvas.Selected == null) return;
+            var d = _canvas.Selected;
+            d.Enabled = enabled;
+            if (enabled)
+            {
+                bool overlaps = false;
+                foreach (var o in _current.Displays)
+                    if (!ReferenceEquals(o, d) && o.Enabled && o.X == d.X && o.Y == d.Y) overlaps = true;
+                if (overlaps || (d.X == 0 && d.Y == 0 && AnyOtherAtOrigin(d))) PlaceRightOfAll(_current, d);
+            }
+            else
+            {
+                d.Primary = false;
+                d.CloneGroup = -1;
+            }
+            EnsurePrimary();
+            _canvas.Normalize();
+            _canvas.Relayout();
+            MarkDirty();
+            UpdateProperties();
+            UpdateStatus(null);
+        }
+
+        private bool AnyOtherAtOrigin(LayoutDisplay d)
+        {
+            foreach (var o in _current.Displays)
+                if (!ReferenceEquals(o, d) && o.Enabled && o.X == 0 && o.Y == 0) return true;
+            return false;
+        }
+
+        private void EnsurePrimary()
+        {
+            bool any = false;
+            foreach (var o in _current.Displays) if (o.Enabled && o.Primary) any = true;
+            if (any) return;
+            foreach (var o in _current.Displays) if (o.Enabled) { o.Primary = true; return; }
+        }
+
+        private void OnPrimaryChanged(bool primary)
+        {
+            if (_updating || _canvas.Selected == null) return;
+            var d = _canvas.Selected;
+            if (!primary) { _updating = true; _primarySwitch.IsChecked = true; _updating = false; return; }
+            foreach (var o in _current.Displays) o.Primary = ReferenceEquals(o, d);
+            _canvas.Normalize();
+            _canvas.Relayout();
+            MarkDirty();
+            UpdateStatus(null);
+        }
+
+        private void OnResChanged()
+        {
+            if (_updating || _canvas.Selected == null) return;
+            var item = _resCombo.SelectedItem as Item;
+            if (item == null) return;
+            var r = (Resolution)item.Value;
+            var d = _canvas.Selected;
+            d.Width = r.Width;
+            d.Height = r.Height;
+            MonitorInfo live;
+            _live.TryGetValue(d.Identity, out live);
+            _updating = true;
+            FillRates(d, live);
+            _updating = false;
+            var sel = _hzCombo.SelectedItem as Item;
+            if (sel != null) d.Hz = (double)sel.Value;
+            SyncCloneGroup(d);
+            _canvas.Relayout();
+            MarkDirty();
+            UpdateStatus(null);
+        }
+
+        private void OnHzChanged()
+        {
+            if (_updating || _canvas.Selected == null) return;
+            var item = _hzCombo.SelectedItem as Item;
+            if (item == null) return;
+            _canvas.Selected.Hz = (double)item.Value;
+            _canvas.Refresh();
+            MarkDirty();
+        }
+
+        private void OnRotChanged()
+        {
+            if (_updating || _canvas.Selected == null) return;
+            var item = _rotCombo.SelectedItem as Item;
+            if (item == null) return;
+            _canvas.Selected.Rotation = (uint)item.Value;
+            SyncCloneGroup(_canvas.Selected);
+            _canvas.Relayout();
+            MarkDirty();
+            UpdateStatus(null);
+        }
+
+        private void OnCloneChanged()
+        {
+            if (_updating || _canvas.Selected == null) return;
+            var item = _cloneCombo.SelectedItem as Item;
+            if (item == null) return;
+            var d = _canvas.Selected;
+            var other = item.Value as LayoutDisplay;
+
+            if (other == null) { d.CloneGroup = -1; }
+            else
+            {
+                if (other.CloneGroup < 0) other.CloneGroup = NextCloneGroup();
+                d.CloneGroup = other.CloneGroup;
+                d.X = other.X; d.Y = other.Y;
+                if (d.DesktopWidth != other.DesktopWidth || d.DesktopHeight != other.DesktopHeight)
+                    UpdateStatus("Разрешения различаются — при дублировании Windows подгонит картинку под общий режим.");
+            }
+            CleanupCloneGroups();
+            _canvas.Relayout();
+            MarkDirty();
+            UpdateProperties();
+        }
+
+        private void SyncCloneGroup(LayoutDisplay d)
+        {
+            if (d.CloneGroup < 0) return;
+            foreach (var o in _current.Displays)
+                if (!ReferenceEquals(o, d) && o.CloneGroup == d.CloneGroup) { o.X = d.X; o.Y = d.Y; }
+        }
+
+        private int NextCloneGroup()
+        {
+            int max = -1;
+            foreach (var o in _current.Displays) max = Math.Max(max, o.CloneGroup);
+            return max + 1;
+        }
+
+        private void CleanupCloneGroups()
+        {
+            var counts = new Dictionary<int, int>();
+            foreach (var o in _current.Displays)
+            {
+                if (o.CloneGroup < 0 || !o.Enabled) continue;
+                int c; counts.TryGetValue(o.CloneGroup, out c); counts[o.CloneGroup] = c + 1;
+            }
+            foreach (var o in _current.Displays)
+                if (o.CloneGroup >= 0 && (!o.Enabled || counts[o.CloneGroup] < 2)) o.CloneGroup = -1;
+        }
+
+        private void OnHdrChanged()
+        {
+            if (_updating || _canvas.Selected == null) return;
+            var item = _hdrCombo.SelectedItem as Item;
+            if (item == null) return;
+            var d = _canvas.Selected;
+            d.Hdr = (int)item.Value;
+
+            // в группе дублирования HDR обязан быть одинаковым, иначе Windows уводит всю группу в SDR
+            if (d.CloneGroup >= 0)
+                foreach (var o in _current.Displays)
+                    if (o.CloneGroup == d.CloneGroup) o.Hdr = d.Hdr;
+
+            _canvas.Refresh();
+            MarkDirty();
+
+            if (d.Hdr == 1 && d.CloneGroup >= 0)
+                UpdateStatus("HDR не работает при дублировании: Windows не даёт расширенный цвет выходам, сидящим на одном рабочем столе. Разведите экраны — тогда HDR можно включить на каждом.");
+        }
+
+        private void MarkDirty()
+        {
+            _dirty = true;
+            _saveButton.IsEnabled = true;
+        }
+
+        private void UpdateStatus(string text)
+        {
+            if (text == null && _current != null)
+            {
+                string problem = _canvas.Validate();
+                text = problem ?? Summary();
+            }
+            _status.Text = text ?? "";
+        }
+
+        private string Summary()
+        {
+            if (_current == null) return "";
+            int on = 0;
+            var names = new List<string>();
+            foreach (var d in _current.Displays)
+                if (d.Enabled) { on++; names.Add(d.Name); }
+            return on == 0 ? "Ни один монитор не выбран." : ("Активны: " + string.Join(", ", names.ToArray()));
+        }
+
+        // ---------------------------------------------------------------- горячая клавиша
+        private void BeginHotkeyCapture()
+        {
+            if (_current == null) return;
+            _capturingHotkey = true;
+            _hotkeyButton.Content = Glyph("", "Нажмите сочетание…");
+            UpdateStatus("Нажмите сочетание клавиш. Esc — отмена, Delete — убрать сочетание.");
+        }
+
+        private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (!_capturingHotkey) return;
+            e.Handled = true;
+
+            Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+            if (key == Key.Escape) { _capturingHotkey = false; UpdateHeader(); UpdateStatus(null); return; }
+            if (key == Key.Delete || key == Key.Back)
+            {
+                _current.Hotkey = "";
+                _capturingHotkey = false;
+                MarkDirty(); SaveCurrent(false);
+                UpdateHeader(); RefreshProfileList();
+                UpdateStatus("Сочетание убрано.");
+                return;
+            }
+            if (key == Key.LeftCtrl || key == Key.RightCtrl || key == Key.LeftAlt || key == Key.RightAlt ||
+                key == Key.LeftShift || key == Key.RightShift || key == Key.LWin || key == Key.RWin) return;
+
+            string combo = Hotkey.Describe(Keyboard.Modifiers, key);
+            if (combo == null) { UpdateStatus("Такую клавишу назначить нельзя — выберите другую."); return; }
+
+            _capturingHotkey = false;
+            _current.Hotkey = combo;
+            MarkDirty();
+            SaveCurrent(false);
+            UpdateHeader();
+            RefreshProfileList();
+
+            uint mods, vk; string err;
+            if (Hotkey.TryParse(combo, out mods, out vk, out err))
+                UpdateStatus("Сочетание " + combo + " назначено профилю «" + _current.Name + "».");
+        }
+    }
+}
