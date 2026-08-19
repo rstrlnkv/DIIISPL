@@ -46,6 +46,7 @@ namespace Triptych
         private bool _updating;
         private bool _dirty;
         private bool _capturingHotkey;
+        private string _activeProfileName;
 
         public MainWindow()
         {
@@ -361,28 +362,59 @@ namespace Triptych
         {
             _updating = true;
             _profileList.Items.Clear();
+            var live = new List<MonitorInfo>(_live.Values);
+            _activeProfileName = null;
+
             foreach (var l in _profiles)
             {
+                bool isActive = l.MatchesCurrent(live);
+                if (isActive) _activeProfileName = l.Name;
+
                 var item = new ListBoxItem();
                 item.Style = (Style)Application.Current.Resources["ProfileItem"];
                 item.Tag = l;
 
                 var sp = new StackPanel();
+
+                var titleRow = new StackPanel();
+                titleRow.Orientation = Orientation.Horizontal;
+
+                // действующая раскладка помечена точкой акцентного цвета
+                var dot = new System.Windows.Shapes.Ellipse();
+                dot.Width = 7; dot.Height = 7;
+                dot.Margin = new Thickness(0, 0, 7, 0);
+                dot.VerticalAlignment = VerticalAlignment.Center;
+                dot.Fill = (Brush)Application.Current.Resources["Accent"];
+                dot.Visibility = isActive ? Visibility.Visible : Visibility.Collapsed;
+                titleRow.Children.Add(dot);
+
                 var name = new TextBlock();
                 name.Text = l.Name;
                 name.FontWeight = FontWeights.SemiBold;
                 name.TextTrimming = TextTrimming.CharacterEllipsis;
-                sp.Children.Add(name);
+                titleRow.Children.Add(name);
+                sp.Children.Add(titleRow);
 
                 var sub = new TextBlock();
                 sub.Style = (Style)Application.Current.Resources["Caption"];
-                sub.Margin = new Thickness(0, 2, 0, 0);
+                sub.Margin = new Thickness(isActive ? 14 : 0, 2, 0, 0);
                 int on = 0;
                 foreach (var d in l.Displays) if (d.Enabled) on++;
                 sub.Text = string.IsNullOrEmpty(l.Hotkey)
                     ? ("мониторов: " + on)
                     : (l.Hotkey + "   ·   мониторов: " + on);
                 sp.Children.Add(sub);
+
+                // отдельной строкой, иначе не влезает в колонку профилей
+                if (isActive)
+                {
+                    var now = new TextBlock();
+                    now.Style = (Style)Application.Current.Resources["Caption"];
+                    now.Text = "применена сейчас";
+                    now.Margin = new Thickness(14, 2, 0, 0);
+                    now.Foreground = (Brush)Application.Current.Resources["Accent"];
+                    sp.Children.Add(now);
+                }
 
                 item.Content = sp;
                 _profileList.Items.Add(item);
@@ -510,6 +542,7 @@ namespace Triptych
             var result = Applier.Apply(_current);
             ReloadLive();
             _canvas.Refresh();
+            RefreshProfileList();
 
             var parts = new List<string>();
             if (result.Success) parts.Add("Раскладка применена.");
@@ -846,11 +879,16 @@ namespace Triptych
         private string Summary()
         {
             if (_current == null) return "";
-            int on = 0;
             var names = new List<string>();
             foreach (var d in _current.Displays)
-                if (d.Enabled) { on++; names.Add(d.Name); }
-            return on == 0 ? "Ни один монитор не выбран." : ("Активны: " + string.Join(", ", names.ToArray()));
+                if (d.Enabled) names.Add(d.Name);
+
+            string now = _activeProfileName != null
+                ? ("Сейчас применена: «" + _activeProfileName + "»")
+                : "Сейчас применена раскладка, которой нет среди профилей";
+
+            if (names.Count == 0) return now + ".   В этом профиле не выбран ни один монитор.";
+            return now + ".   В профиле «" + _current.Name + "»: " + string.Join(", ", names.ToArray());
         }
 
         // ---------------------------------------------------------------- горячая клавиша

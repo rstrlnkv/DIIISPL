@@ -451,18 +451,25 @@ namespace Triptych
     <Setter Property='Template'>
       <Setter.Value>
         <ControlTemplate TargetType='MenuItem'>
-          <Border x:Name='Bd' Background='Transparent' CornerRadius='4' Padding='12,7' Margin='0,1'>
+          <Border x:Name='Bd' Background='Transparent' CornerRadius='4' Padding='10,7' Margin='0,1'>
             <Grid>
               <Grid.ColumnDefinitions>
+                <ColumnDefinition Width='18'/>
                 <ColumnDefinition Width='*'/>
                 <ColumnDefinition Width='Auto'/>
               </Grid.ColumnDefinitions>
-              <ContentPresenter ContentSource='Header' VerticalAlignment='Center'/>
-              <TextBlock Grid.Column='1' Text='{TemplateBinding InputGestureText}' Margin='18,0,0,0'
+              <Ellipse x:Name='Mark' Width='7' Height='7' Fill='{StaticResource Accent}'
+                       HorizontalAlignment='Left' VerticalAlignment='Center' Visibility='Collapsed'/>
+              <ContentPresenter Grid.Column='1' ContentSource='Header' VerticalAlignment='Center'/>
+              <TextBlock Grid.Column='2' Text='{TemplateBinding InputGestureText}' Margin='18,0,0,0'
                          Foreground='{StaticResource TextTer}' FontSize='12' VerticalAlignment='Center'/>
             </Grid>
           </Border>
           <ControlTemplate.Triggers>
+            <Trigger Property='IsChecked' Value='True'>
+              <Setter TargetName='Mark' Property='Visibility' Value='Visible'/>
+              <Setter Property='FontWeight' Value='SemiBold'/>
+            </Trigger>
             <Trigger Property='IsHighlighted' Value='True'>
               <Setter TargetName='Bd' Property='Background' Value='{StaticResource Hover}'/>
             </Trigger>
@@ -474,6 +481,18 @@ namespace Triptych
       </Setter.Value>
     </Setter>
   </Style>
+
+  <Style x:Key='MenuSeparator' TargetType='Separator'>
+    <Setter Property='Template'>
+      <Setter.Value>
+        <ControlTemplate TargetType='Separator'>
+          <Border Height='1' Background='{StaticResource Stroke}' Margin='10,5'/>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style TargetType='Separator' BasedOn='{StaticResource MenuSeparator}'/>
 
   <Style x:Key='FlyoutMenu' TargetType='ContextMenu'>
     <Setter Property='Template'>

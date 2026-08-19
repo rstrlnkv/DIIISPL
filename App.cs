@@ -96,19 +96,21 @@ namespace Triptych
             }
             else
             {
+                var live = Monitors.Enumerate();
                 foreach (var layout in profiles)
                 {
                     var item = new MenuItem();
                     item.Style = (Style)Resources["FlyoutMenuItem"];
                     item.Header = layout.Name;
                     item.InputGestureText = layout.Hotkey;
+                    item.IsChecked = layout.MatchesCurrent(live);   // точкой отмечена действующая раскладка
                     string name = layout.Name;
                     item.Click += delegate { ApplyByName(name); };
                     menu.Items.Add(item);
                 }
             }
 
-            menu.Items.Add(MenuLine());
+            menu.Items.Add(NewSeparator());
 
             var manager = new MenuItem();
             manager.Style = (Style)Resources["FlyoutMenuItem"];
@@ -118,11 +120,12 @@ namespace Triptych
 
             var auto = new MenuItem();
             auto.Style = (Style)Resources["FlyoutMenuItem"];
-            auto.Header = (AutoStartEnabled ? "✓  " : "     ") + "Запускать при входе в Windows";
+            auto.Header = "Запускать при входе в Windows";
+            auto.IsChecked = AutoStartEnabled;
             auto.Click += delegate { AutoStartEnabled = !AutoStartEnabled; };
             menu.Items.Add(auto);
 
-            menu.Items.Add(MenuLine());
+            menu.Items.Add(NewSeparator());
 
             var exit = new MenuItem();
             exit.Style = (Style)Resources["FlyoutMenuItem"];
@@ -135,13 +138,15 @@ namespace Triptych
             menu.IsOpen = true;
         }
 
-        private UIElement MenuLine()
+        /// <summary>
+        /// Разделитель именно как Separator, а не как произвольный элемент: меню оборачивает
+        /// посторонние элементы в обычные пункты, и в списке появляются пустые полосы.
+        /// </summary>
+        private Separator NewSeparator()
         {
-            var line = new Border();
-            line.Height = 1;
-            line.Margin = new Thickness(8, 5, 8, 5);
-            line.Background = (Brush)Resources["Stroke"];
-            return line;
+            var sep = new Separator();
+            sep.Style = (Style)Resources["MenuSeparator"];
+            return sep;
         }
 
         private void ShowManager()

@@ -48,6 +48,61 @@ namespace Triptych
         public string Hotkey = "";
         public List<LayoutDisplay> Displays = new List<LayoutDisplay>();
 
+        /// <summary>
+        /// Совпадает ли профиль с тем, что включено прямо сейчас. HDR не учитываем:
+        /// его можно переключить мимо программы, и раскладкой он не является.
+        /// </summary>
+        public bool MatchesCurrent(List<MonitorInfo> live)
+        {
+            var active = new Dictionary<string, MonitorInfo>();
+            foreach (var m in live) if (m.Active) active[m.Identity] = m;
+
+            int wanted = 0;
+            foreach (var d in Displays) if (d.Enabled) wanted++;
+            if (wanted == 0 || wanted != active.Count) return false;
+
+            var groupSource = new Dictionary<int, uint>();
+            var soloSources = new List<uint>();
+
+            foreach (var d in Displays)
+            {
+                if (!d.Enabled) continue;
+                MonitorInfo mon;
+                if (!active.TryGetValue(d.Identity, out mon)) return false;
+                if (mon.Width != d.Width || mon.Height != d.Height) return false;
+                if (mon.Rotation != d.Rotation) return false;
+                if (d.Hz > 0 && Math.Abs(mon.Hz - d.Hz) > 1.5) return false;
+
+                if (d.CloneGroup >= 0)
+                {
+                    uint src;
+                    if (!groupSource.TryGetValue(d.CloneGroup, out src)) groupSource[d.CloneGroup] = mon.SourceId;
+                    else if (src != mon.SourceId) return false;
+                }
+                else
+                {
+                    if (soloSources.Contains(mon.SourceId)) return false;
+                    soloSources.Add(mon.SourceId);
+                }
+            }
+
+            // позиции сверяем относительно основного экрана — сам сдвиг значения не имеет
+            LayoutDisplay origin = null;
+            foreach (var d in Displays) if (d.Enabled && d.Primary) { origin = d; break; }
+            if (origin == null) foreach (var d in Displays) if (d.Enabled) { origin = d; break; }
+            if (origin == null) return false;
+
+            MonitorInfo originMon = active[origin.Identity];
+            int dx = originMon.X - origin.X, dy = originMon.Y - origin.Y;
+            foreach (var d in Displays)
+            {
+                if (!d.Enabled) continue;
+                MonitorInfo mon = active[d.Identity];
+                if (mon.X != d.X + dx || mon.Y != d.Y + dy) return false;
+            }
+            return true;
+        }
+
         public LayoutDisplay Find(string identity)
         {
             foreach (var d in Displays) if (d.Identity == identity) return d;
