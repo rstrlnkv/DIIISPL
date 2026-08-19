@@ -25,13 +25,17 @@ namespace DIIIX.Tools
         // Поля узкие: значок должен заполнять отведённое место, иначе рядом с чужими
         // выглядит мелким. На 16 точках выходит 3+1+7+1+3 — всё ещё различимо.
         private const double SideW = 0.185, SideH = 0.720;
-        private const double MainW = 0.460, MainH = 0.360;
-        private const double Gap   = 0.050;
+        private const double MainW = 0.440, MainH = 0.360;
 
-        private static readonly Color MainTop    = Color.FromArgb(255, 0x5A, 0xB0, 0xFF);
-        private static readonly Color MainBottom = Color.FromArgb(255, 0x0B, 0x5C, 0xD6);
-        private static readonly Color SideTop    = Color.FromArgb(255, 0x4C, 0x86, 0xC8);
-        private static readonly Color SideBottom = Color.FromArgb(255, 0x2C, 0x5B, 0x96);
+        // Просвет между экранами обязателен: стоит им соприкоснуться, и знак читается
+        // одной фигурой — буквой «H», — а не тремя экранами. Ближе средний оказывается
+        // за счёт тени и цвета, а не за счёт перекрытия.
+        private const double Gap = 0.050;
+
+        private static readonly Color MainTop    = Color.FromArgb(255, 0x5C, 0xC8, 0xFF);
+        private static readonly Color MainBottom = Color.FromArgb(255, 0x0B, 0x62, 0xCE);
+        private static readonly Color SideTop    = Color.FromArgb(255, 0x6F, 0xA8, 0xD8);
+        private static readonly Color SideBottom = Color.FromArgb(255, 0x2E, 0x5F, 0x96);
 
         private static readonly int[] Sizes = { 16, 20, 24, 32, 40, 48, 64, 128, 256 };
 
@@ -57,7 +61,193 @@ namespace DIIIX.Tools
         }
 
         // ------------------------------------------------------------------ рисование
+        /// <summary>
+        /// Крупные размеры рисуются со всем оформлением, мелкие — плоско.
+        /// Так делает и сама Windows: в 16 точках мягкая тень и блик превращаются
+        /// в грязь, там нужен силуэт, а не материал.
+        /// </summary>
         private static Bitmap Draw(int size)
+        {
+            return size >= 32 ? DrawFluent(size) : DrawFlat(size);
+        }
+
+        /// <summary>
+        /// Оформление в духе Fluent: слои с мягкой тенью, диагональный градиент,
+        /// светящаяся кромка сверху и блик по верхней половине. Свет один на весь
+        /// знак и падает сверху слева — иначе слои перестают складываться в объём.
+        ///
+        /// Рисуется вчетверо крупнее и потом уменьшается: тени и градиенты от этого
+        /// становятся ровными, а скругления перестают лесенкой.
+        /// </summary>
+        private static Bitmap DrawFluent(int size)
+        {
+            const int Ss = 4;
+            int s = size * Ss;
+
+            var big = new Bitmap(s, s, PixelFormat.Format32bppArgb);
+            using (Graphics g = Graphics.FromImage(big))
+            {
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                g.Clear(Color.Transparent);
+
+                RectangleF[] plates = Plates(s);
+                float radius = (float)(0.045 * s);
+
+                // Тень: те же плиты, сдвинутые вниз и размытые. Боковые роняют свою,
+                // средняя — свою поверх них, оттого и читается, что она ближе.
+                using (Bitmap shadow = Shadow(s, plates, radius))
+                    g.DrawImageUnscaled(shadow, 0, 0);
+
+                Plate(g, plates[0], radius, SideTop, SideBottom);
+                Plate(g, plates[2], radius, SideTop, SideBottom);
+                Plate(g, plates[1], radius, MainTop, MainBottom);
+            }
+
+            var bmp = new Bitmap(size, size, PixelFormat.Format32bppArgb);
+            using (Graphics g = Graphics.FromImage(bmp))
+            {
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                g.Clear(Color.Transparent);
+                g.DrawImage(big, new Rectangle(0, 0, size, size));
+            }
+            big.Dispose();
+            return bmp;
+        }
+
+        /// <summary>Три плиты знака в точках холста заданного размера.</summary>
+        private static RectangleF[] Plates(float s)
+        {
+            double total = SideW + Gap + MainW + Gap + SideW;
+            double x = (1.0 - total) / 2.0;
+
+            var left  = new RectangleF((float)(x * s), (float)((1 - SideH) / 2 * s),
+                                       (float)(SideW * s), (float)(SideH * s));
+            x += SideW + Gap;
+            var main  = new RectangleF((float)(x * s), (float)((1 - MainH) / 2 * s),
+                                       (float)(MainW * s), (float)(MainH * s));
+            x += MainW + Gap;
+            var right = new RectangleF((float)(x * s), (float)((1 - SideH) / 2 * s),
+                                       (float)(SideW * s), (float)(SideH * s));
+            return new RectangleF[] { left, main, right };
+        }
+
+        /// <summary>Одна плита: заливка, блик по верхней половине и кромка света.</summary>
+        private static void Plate(Graphics g, RectangleF r, float radius, Color top, Color bottom)
+        {
+            using (GraphicsPath path = Rounded(r, radius))
+            {
+                // Градиент диагональный, а не сверху вниз: так плита выглядит освещённой,
+                // а не просто крашеной.
+                using (var fill = new LinearGradientBrush(
+                           new RectangleF(r.X - 1, r.Y - 1, r.Width + 2, r.Height + 2),
+                           top, bottom, 55f))
+                    g.FillPath(fill, path);
+
+                // Блик: светлое пятно по верхней половине, сходящее на нет.
+                var glossArea = new RectangleF(r.X, r.Y, r.Width, r.Height * 0.62f);
+                using (var gloss = new LinearGradientBrush(
+                           new RectangleF(glossArea.X, glossArea.Y - 1, glossArea.Width, glossArea.Height + 2),
+                           Color.FromArgb(42, 255, 255, 255), Color.FromArgb(0, 255, 255, 255), 90f))
+                {
+                    GraphicsState saved = g.Save();
+                    g.SetClip(path);
+                    g.FillRectangle(gloss, glossArea);
+                    g.Restore(saved);
+                }
+
+                // Кромка: сверху почти белая, книзу исчезает — свет ложится на верхний край.
+                float pen = Math.Max(1f, r.Width * 0.035f);
+                using (var edge = new LinearGradientBrush(
+                           new RectangleF(r.X, r.Y - 1, r.Width, r.Height + 2),
+                           Color.FromArgb(105, 255, 255, 255), Color.FromArgb(8, 255, 255, 255), 90f))
+                using (var p = new Pen(edge, pen))
+                {
+                    p.Alignment = System.Drawing.Drawing2D.PenAlignment.Inset;
+                    g.DrawPath(p, path);
+                }
+            }
+        }
+
+        /// <summary>Мягкая тень под плитами: силуэт со сдвигом вниз, размытый по кругу.</summary>
+        private static Bitmap Shadow(int s, RectangleF[] plates, float radius)
+        {
+            float offset = 0.022f * s;
+            var layer = new Bitmap(s, s, PixelFormat.Format32bppArgb);
+            using (Graphics g = Graphics.FromImage(layer))
+            {
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                using (var brush = new SolidBrush(Color.FromArgb(90, 0, 0, 0)))
+                    foreach (RectangleF r in plates)
+                    {
+                        var moved = new RectangleF(r.X, r.Y + offset, r.Width, r.Height);
+                        using (GraphicsPath path = Rounded(moved, radius)) g.FillPath(brush, path);
+                    }
+            }
+            Blur(layer, (int)Math.Round(0.020 * s));
+            return layer;
+        }
+
+        /// <summary>
+        /// Размытие прямоугольным окном в три прохода — этого достаточно, чтобы тень
+        /// выглядела мягкой; настоящего гауссова размытия в GDI+ нет.
+        /// </summary>
+        private static void Blur(Bitmap bmp, int radius)
+        {
+            if (radius < 1) return;
+            int w = bmp.Width, h = bmp.Height;
+
+            BitmapData data = bmp.LockBits(new Rectangle(0, 0, w, h),
+                                           ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
+            var pixels = new byte[Math.Abs(data.Stride) * h];
+            System.Runtime.InteropServices.Marshal.Copy(data.Scan0, pixels, 0, pixels.Length);
+
+            for (int pass = 0; pass < 3; pass++)
+            {
+                BlurPass(pixels, w, h, data.Stride, radius, true);
+                BlurPass(pixels, w, h, data.Stride, radius, false);
+            }
+
+            System.Runtime.InteropServices.Marshal.Copy(pixels, 0, data.Scan0, pixels.Length);
+            bmp.UnlockBits(data);
+        }
+
+        private static void BlurPass(byte[] px, int w, int h, int stride, int radius, bool horizontal)
+        {
+            int outer = horizontal ? h : w;
+            int inner = horizontal ? w : h;
+            var line = new byte[inner * 4];
+
+            for (int o = 0; o < outer; o++)
+            {
+                for (int i = 0; i < inner; i++)
+                {
+                    int sum0 = 0, sum1 = 0, sum2 = 0, sum3 = 0, n = 0;
+                    for (int k = -radius; k <= radius; k++)
+                    {
+                        int j = i + k;
+                        if (j < 0 || j >= inner) continue;
+                        int idx = horizontal ? o * stride + j * 4 : j * stride + o * 4;
+                        sum0 += px[idx]; sum1 += px[idx + 1]; sum2 += px[idx + 2]; sum3 += px[idx + 3];
+                        n++;
+                    }
+                    line[i * 4] = (byte)(sum0 / n);
+                    line[i * 4 + 1] = (byte)(sum1 / n);
+                    line[i * 4 + 2] = (byte)(sum2 / n);
+                    line[i * 4 + 3] = (byte)(sum3 / n);
+                }
+                for (int i = 0; i < inner; i++)
+                {
+                    int idx = horizontal ? o * stride + i * 4 : i * stride + o * 4;
+                    px[idx] = line[i * 4]; px[idx + 1] = line[i * 4 + 1];
+                    px[idx + 2] = line[i * 4 + 2]; px[idx + 3] = line[i * 4 + 3];
+                }
+            }
+        }
+
+        /// <summary>Плоский вариант для мелких размеров: только силуэт, точка в точку.</summary>
+        private static Bitmap DrawFlat(int size)
         {
             var bmp = new Bitmap(size, size, PixelFormat.Format32bppArgb);
             using (Graphics g = Graphics.FromImage(bmp))
@@ -70,24 +260,21 @@ namespace DIIIX.Tools
                 double total = SideW + Gap + MainW + Gap + SideW;
                 double x = (1.0 - total) / 2.0;
 
-                // На мелких размерах скруглять нечего: радиус меньше точки превращает
-                // углы в грязь, поэтому там полосы остаются прямыми.
-                float radius = size >= 32 ? (float)(0.038 * s) : 0f;
-
-                Bar(g, s, x, (1.0 - SideH) / 2.0, SideW, SideH, radius, SideTop, SideBottom);
+                Bar(g, s, x, (1.0 - SideH) / 2.0, SideW, SideH, SideTop, SideBottom);
                 x += SideW + Gap;
-                Bar(g, s, x, (1.0 - MainH) / 2.0, MainW, MainH, radius, MainTop, MainBottom);
+                Bar(g, s, x, (1.0 - MainH) / 2.0, MainW, MainH, MainTop, MainBottom);
                 x += MainW + Gap;
-                Bar(g, s, x, (1.0 - SideH) / 2.0, SideW, SideH, radius, SideTop, SideBottom);
+                Bar(g, s, x, (1.0 - SideH) / 2.0, SideW, SideH, SideTop, SideBottom);
             }
             return bmp;
         }
 
         private static void Bar(Graphics g, double s, double x, double y, double w, double h,
-                                float radius, Color top, Color bottom)
+                                Color top, Color bottom)
         {
             // Полосы прижимаются к сетке точек: иначе на 16 точках края размываются
-            // на полтона и знак выглядит грязным.
+            // на полтона и знак выглядит грязным. Скруглять тут нечего — радиус
+            // меньше точки превращает углы в грязь.
             float left = (float)Math.Round(x * s);
             float width = Math.Max(1f, (float)Math.Round(w * s));
             float topY = (float)Math.Round(y * s);
@@ -96,8 +283,7 @@ namespace DIIIX.Tools
 
             using (var brush = new LinearGradientBrush(
                        new RectangleF(left, topY - 1, width, height + 2), top, bottom, 90f))
-            using (GraphicsPath path = Rounded(rect, radius))
-                g.FillPath(brush, path);
+                g.FillRectangle(brush, rect);
         }
 
         private static GraphicsPath Rounded(RectangleF r, float radius)
