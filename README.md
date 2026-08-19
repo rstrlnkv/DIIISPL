@@ -182,4 +182,8 @@ tests\run-tests.cmd
 
 ## Лицензия
 
-MIT — см. [LICENSE](LICENSE).
+**GNU General Public License v3 или новее** — см. [LICENSE](LICENSE).
+
+Проект переведён с MIT на GPLv3 сознательно: в него планируется перенести работу
+[TranslucentTB](https://github.com/TranslucentTB/TranslucentTB), распространяемую под GPLv3,
+а копилефт требует, чтобы производное произведение шло под той же лицензией.

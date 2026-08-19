@@ -1,3 +1,7 @@
+// DIIIX — менеджер раскладок мониторов для Windows.
+// Copyright (C) 2026 r.strlnkv
+// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+
 using System;
 using System.Collections.Generic;
 
