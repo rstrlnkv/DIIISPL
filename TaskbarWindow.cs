@@ -65,6 +65,7 @@ namespace DIIIX
             var head = new StackPanel();
             head.Children.Add(title);
             head.Children.Add(sub);
+            head.Children.Add(BuildTransfer());
             root.Children.Add(head);
 
             var card = new Border();
@@ -99,6 +100,100 @@ namespace DIIIX
 
             root.Children.Add(bottom);
             return root;
+        }
+
+        /// <summary>
+        /// Перенос настроек между профилями: настроив вид один раз, незачем повторять
+        /// его вручную в каждом профиле.
+        /// </summary>
+        private UIElement BuildTransfer()
+        {
+            var row = new StackPanel();
+            row.Orientation = Orientation.Horizontal;
+            row.Margin = new Thickness(2, 0, 0, 14);
+
+            var label = new TextBlock();
+            label.Style = (Style)Application.Current.Resources["Caption"];
+            label.Text = "Взять настройки из профиля:";
+            label.VerticalAlignment = VerticalAlignment.Center;
+            label.Margin = new Thickness(0, 0, 10, 0);
+            row.Children.Add(label);
+
+            var others = new List<Layout>();
+            foreach (var l in Store.LoadAll())
+                if (!string.Equals(l.Name, _profileName, StringComparison.Ordinal)) others.Add(l);
+
+            var picker = new ComboBox();
+            picker.Style = (Style)Application.Current.Resources["Combo"];
+            picker.Width = 240;
+            picker.IsEnabled = others.Count > 0;
+            var items = new List<Item>();
+            items.Add(new Item(others.Count > 0 ? "— выберите профиль —" : "других профилей нет", null));
+            foreach (var l in others) items.Add(new Item(l.Name, l));
+            picker.ItemsSource = items;
+            picker.SelectedItem = items[0];
+            picker.SelectionChanged += delegate
+            {
+                if (_updating) return;
+                var chosen = picker.SelectedItem as Item;
+                var source = chosen != null ? chosen.Value as Layout : null;
+                if (source == null) return;
+
+                foreach (TaskbarState s in TaskbarSettings.Order)
+                    _settings.States[s] = source.Taskbar[s].Copy();
+
+                BuildRows();
+                Preview();
+                _hint.Text = "Настройки скопированы из «" + source.Name + "».";
+                _updating = true;
+                picker.SelectedItem = items[0];
+                _updating = false;
+            };
+            row.Children.Add(picker);
+
+            var toAll = new Button();
+            toAll.Style = (Style)Application.Current.Resources["Btn"];
+            toAll.Content = "Применить ко всем профилям";
+            toAll.Height = 34;
+            toAll.Margin = new Thickness(10, 0, 0, 0);
+            toAll.IsEnabled = others.Count > 0;
+            toAll.Click += delegate { CopyToAllProfiles(); };
+            row.Children.Add(toAll);
+
+            return row;
+        }
+
+        private void CopyToAllProfiles()
+        {
+            var others = new List<Layout>();
+            foreach (var l in Store.LoadAll())
+                if (!string.Equals(l.Name, _profileName, StringComparison.Ordinal)) others.Add(l);
+            if (others.Count == 0) return;
+
+            var dialog = new ConfirmDialog("Применить ко всем профилям?",
+                "Вид панели задач из «" + _profileName + "» заменит настройки в остальных профилях (" +
+                others.Count + " шт.). Раскладки мониторов не изменятся.", "Применить");
+            dialog.Owner = this;
+            if (dialog.ShowDialog() != true) return;
+
+            foreach (var l in others)
+            {
+                foreach (TaskbarState s in TaskbarSettings.Order)
+                    l.Taskbar.States[s] = _settings[s].Copy();
+                Store.Save(l);
+            }
+
+            // Свой профиль закрепляем тоже: остальные уже записаны на диск, и если этот
+            // останется только в памяти, «ко всем» обернётся «ко всем, кроме этого».
+            var mine = Store.LoadByName(_profileName);
+            if (mine != null)
+            {
+                foreach (TaskbarState s in TaskbarSettings.Order)
+                    mine.Taskbar.States[s] = _settings[s].Copy();
+                Store.Save(mine);
+            }
+
+            _hint.Text = "Настройки записаны во все профили: " + (others.Count + (mine != null ? 1 : 0)) + ".";
         }
 
         private void BuildRows()
@@ -172,8 +267,8 @@ namespace DIIIX
                 var chosen = accent.SelectedItem as Item;
                 if (chosen != null) look.Accent = (string)chosen.Value;
                 uint parsed;
-                if (uint.TryParse(color.Text.Trim().TrimStart('#'), NumberStyles.HexNumber,
-                                  CultureInfo.InvariantCulture, out parsed)) look.Color = parsed;
+                if (ExplorerTap.TryParseColor(color.Text, out parsed)) look.Color = parsed;
+                color.Text = look.Color.ToString("X8", CultureInfo.InvariantCulture);   // вернуть непонятое к прежнему
                 look.ShowLine = line.IsChecked == true;
 
                 accent.IsEnabled = look.Enabled;

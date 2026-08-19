@@ -65,10 +65,9 @@ namespace DIIIX
             if (_settings == null || !ExplorerTap.Available) return;
 
             bool battery = BatterySaverOn();
-            IntPtr foreground = GetForegroundWindow();
-            bool start = IsShellWindow(foreground, "StartMenuExperienceHost");
-            bool search = IsShellWindow(foreground, "SearchHost");
-            bool taskView = IsTaskView(foreground);
+            bool start = StartOpened();
+            bool search = SearchOpened();
+            bool taskView = TaskViewOpened();
 
             foreach (IntPtr bar in ExplorerTap.FindTaskbars())
             {
@@ -88,6 +87,40 @@ namespace DIIIX
                     _appliedPerBar[bar] = signature;
                 }
             }
+        }
+
+        /// <summary>Что программа видит прямо сейчас — для проверки настроек.</summary>
+        public static string Report(TaskbarSettings settings)
+        {
+            var sb = new StringBuilder();
+            bool battery = BatterySaverOn();
+            bool start = StartOpened();
+            bool search = SearchOpened();
+            bool taskView = TaskViewOpened();
+
+            sb.AppendLine("  сигналы: экономия заряда=" + (battery ? "да" : "нет") +
+                          ", «Пуск»=" + (start ? "да" : "нет") +
+                          ", поиск=" + (search ? "да" : "нет") +
+                          ", представление задач=" + (taskView ? "да" : "нет"));
+
+            var bars = ExplorerTap.FindTaskbars();
+            sb.AppendLine("  панелей задач: " + bars.Count);
+
+            var saved = _settings;
+            _settings = settings ?? new TaskbarSettings();
+            foreach (IntPtr bar in bars)
+            {
+                IntPtr monitor = MonitorFromWindow(bar, MONITOR_DEFAULTTONEAREST);
+                var state = Evaluate(monitor, battery, start, search, taskView);
+                var look = _settings[state];
+                sb.AppendLine("  панель 0x" + bar.ToInt64().ToString("X") +
+                              ": развёрнутое окно=" + (HasWindow(monitor, true) ? "да" : "нет") +
+                              ", открытое окно=" + (HasWindow(monitor, false) ? "да" : "нет") +
+                              "  →  " + TaskbarSettings.Describe(state) +
+                              " (" + (look.Enabled ? ExplorerTap.Describe(look.Accent) : "состояние выключено") + ")");
+            }
+            _settings = saved;
+            return sb.ToString();
         }
 
         private static TaskbarState Evaluate(IntPtr monitor, bool battery, bool start, bool search, bool taskView)
@@ -110,14 +143,31 @@ namespace DIIIX
         }
 
         // ---------------------------------------------------------------- окна
+        /// <summary>
+        /// Есть ли на этом мониторе окно (любое или только развёрнутое).
+        ///
+        /// Перечисление окон может оборваться, если во время обхода какое-то окно закрылось;
+        /// тогда «ничего не нашли» — не ответ, а неудача, и попытку надо повторить.
+        /// </summary>
         private static bool HasWindow(IntPtr monitor, bool maximizedOnly)
         {
-            bool found = false;
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                bool found;
+                if (TryFindWindow(monitor, maximizedOnly, out found)) return found;
+            }
+            return false;
+        }
+
+        /// <summary>Возвращает false, если обход оборвался и ответу верить нельзя.</summary>
+        private static bool TryFindWindow(IntPtr monitor, bool maximizedOnly, out bool found)
+        {
+            bool hit = false;
             var buffer = new StringBuilder(64);
 
-            Native.EnumWindows(delegate(IntPtr hwnd, IntPtr param)
+            bool ok = Native.EnumWindows(delegate(IntPtr hwnd, IntPtr param)
             {
-                if (found) return false;
+                if (hit) return false;
                 if (!IsWindowVisible(hwnd) || IsIconic(hwnd)) return true;
                 if (MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST) != monitor) return true;
 
@@ -140,14 +190,34 @@ namespace DIIIX
 
                 if (maximizedOnly && !IsZoomed(hwnd)) return true;
 
-                found = true;
+                hit = true;
                 return false;
             }, IntPtr.Zero);
 
-            return found;
+            found = hit;
+            return hit || ok;         // нашли — ответ есть; дошли до конца — «нет» тоже ответ
         }
 
-        private static bool IsShellWindow(IntPtr hwnd, string processName)
+        /// <summary>
+        /// Есть ли у названного процесса открытое окно этого класса.
+        ///
+        /// Окно в фокусе для этого не годится: на нынешних сборках Windows 11 «Пуск» отдаёт
+        /// фокус окну SearchHost, и по фокусу «Пуск» с поиском неразличимы. Зато открытый
+        /// «Пуск» — это видимое окно StartMenuExperienceHost во всю ширину экрана, а поиск
+        /// сам по себе — только окно SearchHost.
+        /// </summary>
+        private static bool HasShellWindow(string className, string processName)
+        {
+            IntPtr hwnd = IntPtr.Zero;
+            while ((hwnd = Native.FindWindowEx(IntPtr.Zero, hwnd, className, null)) != IntPtr.Zero)
+            {
+                if (!IsWindowVisible(hwnd) || IsCloaked(hwnd)) continue;
+                if (BelongsTo(hwnd, processName)) return true;
+            }
+            return false;
+        }
+
+        private static bool BelongsTo(IntPtr hwnd, string processName)
         {
             if (hwnd == IntPtr.Zero) return false;
             try
@@ -160,13 +230,21 @@ namespace DIIIX
             catch { return false; }
         }
 
-        private static bool IsTaskView(IntPtr hwnd)
+        private static bool StartOpened()
         {
-            if (hwnd == IntPtr.Zero) return false;
-            var buffer = new StringBuilder(64);
-            Native.GetClassName(hwnd, buffer, buffer.Capacity);
-            string cls = buffer.ToString();
-            return cls == "Windows.UI.Core.CoreWindow" && IsShellWindow(hwnd, "explorer");
+            return HasShellWindow("Windows.UI.Core.CoreWindow", "StartMenuExperienceHost");
+        }
+
+        /// <summary>Поиск сам по себе: окно SearchHost есть, а «Пуска» над ним нет.</summary>
+        private static bool SearchOpened()
+        {
+            return HasShellWindow("Windows.UI.Core.CoreWindow", "SearchHost") && !StartOpened();
+        }
+
+        /// <summary>Представление задач — отдельное окно проводника, а не CoreWindow.</summary>
+        private static bool TaskViewOpened()
+        {
+            return HasShellWindow("XamlExplorerHostIslandWindow", "explorer");
         }
 
         private static bool BatterySaverOn()
@@ -203,7 +281,6 @@ namespace DIIIX
             public uint BatteryFullLifeTime;
         }
 
-        [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hwnd);
         [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr hwnd);
         [DllImport("user32.dll")] private static extern bool IsZoomed(IntPtr hwnd);

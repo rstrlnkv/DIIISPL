@@ -385,6 +385,14 @@ namespace DIIIX
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         public static extern int GetClassName(IntPtr hwnd, System.Text.StringBuilder buffer, int max);
 
+        /// <summary>
+        /// Поиск окна по классу. Нужен там, где EnumWindows ненадёжен: пока открыт «Пуск»,
+        /// поиск или представление задач, окна оболочки появляются и исчезают, перечисление
+        /// обрывается на полпути и панель задач в него просто не попадает.
+        /// </summary>
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string className, string title);
+
         [DllImport("user32.dll")]
         public static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 

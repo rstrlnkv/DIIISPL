@@ -21,6 +21,7 @@ namespace DIIIX
                     case "hdr": return DumpHdr();
                     case "state": return DumpState();
                     case "taskbar": return SetTaskbar(args);
+                    case "taskbar-state": return DumpTaskbarState(args);
                     case "list": return ListProfiles();
                     case "save": return SaveCurrent(args);
                     case "apply":
@@ -48,6 +49,8 @@ namespace DIIIX
             Console.WriteLine("  DIIIX.exe /delete \"Имя\"   удалить профиль");
             Console.WriteLine("  DIIIX.exe /monitors       что подключено и как опознано");
             Console.WriteLine("  DIIIX.exe /hdr            состояние HDR на каждом выходе");
+            Console.WriteLine("  DIIIX.exe /taskbar вид [AARRGGBB] [line]   вид панели задач сейчас");
+            Console.WriteLine("  DIIIX.exe /taskbar-state [\"Имя\"]           что видно на экранах и какой вид из этого следует");
             return 0;
         }
 
@@ -87,6 +90,31 @@ namespace DIIIX
             return 0;
         }
 
+        /// <summary>Что программа видит на экранах и какой вид панели из этого следует.</summary>
+        private static int DumpTaskbarState(string[] args)
+        {
+            Console.WriteLine();
+            TaskbarSettings settings = null;
+            if (args.Length > 1)
+            {
+                var layout = Store.LoadByName(args[1]);
+                if (layout == null) { Console.WriteLine("  профиль не найден: " + args[1]); return 2; }
+                settings = layout.Taskbar;
+                Console.WriteLine("  профиль: " + layout.Name);
+                foreach (TaskbarState s in TaskbarSettings.Order)
+                {
+                    var a = settings[s];
+                    Console.WriteLine("    " + TaskbarSettings.Describe(s).PadRight(24) +
+                                      (a.Enabled ? ExplorerTap.Describe(a.Accent) + ", цвет " + a.Color.ToString("X8") +
+                                                   ", линия " + (a.ShowLine ? "да" : "нет")
+                                                 : "выключено"));
+                }
+                Console.WriteLine();
+            }
+            Console.Write(TaskbarWatcher.Report(settings));
+            return 0;
+        }
+
         /// <summary>Вид панели задач: default, opaque, clear, blur, acrylic.</summary>
         private static int SetTaskbar(string[] args)
         {
@@ -109,13 +137,14 @@ namespace DIIIX
 
             var look = ExplorerTap.Parse(args[1]);
             uint color = 0x00000000;
-            if (args.Length > 2)
+            if (args.Length > 2 && !ExplorerTap.TryParseColor(args[2], out color))
             {
-                try { color = Convert.ToUInt32(args[2].TrimStart('#', '0', 'x'), 16); }
-                catch { Console.WriteLine("  цвет должен быть в виде AARRGGBB"); return 2; }
+                Console.WriteLine("  цвет должен быть в виде AARRGGBB");
+                return 2;
             }
+            bool showLine = args.Length > 3 && args[3].Trim().ToLowerInvariant() == "line";
 
-            bool ok = ExplorerTap.Apply(look, color, 9.0f);
+            bool ok = ExplorerTap.ApplyAll(look, color, 9.0f, showLine);
             Console.WriteLine(ok
                 ? "  применено: " + ExplorerTap.Describe(args[1].ToLowerInvariant())
                 : "  не удалось: " + ExplorerTap.LastError);

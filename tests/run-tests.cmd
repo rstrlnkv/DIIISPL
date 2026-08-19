@@ -12,8 +12,11 @@ if not exist "%NETDIR%\csc.exe" (
 "%NETDIR%\csc.exe" /nologo /target:exe /codepage:65001 ^
   /out:"%~dp0selftest.exe" ^
   /r:System.dll /r:System.Core.dll ^
+  /r:"%NETDIR%\WPF\WindowsBase.dll" ^
   "%~dp0..\Native.cs" "%~dp0..\Edid.cs" "%~dp0..\Monitors.cs" ^
-  "%~dp0..\Layout.cs" "%~dp0..\Applier.cs" "%~dp0Harness.cs"
+  "%~dp0..\Layout.cs" "%~dp0..\Applier.cs" ^
+  "%~dp0..\ExplorerTap.cs" "%~dp0..\TaskbarSettings.cs" "%~dp0..\TaskbarWatcher.cs" ^
+  "%~dp0Harness.cs"
 if errorlevel 1 exit /b 1
 
 echo.

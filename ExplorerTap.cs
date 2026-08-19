@@ -182,22 +182,25 @@ namespace DIIIX
             return bars.Count > 0 ? bars[0] : IntPtr.Zero;
         }
 
-        /// <summary>Панель основного экрана и панели на остальных мониторах.</summary>
+        /// <summary>
+        /// Панель основного экрана и панели на остальных мониторах.
+        ///
+        /// Ищем окна по классу напрямую, а не перечислением всех окон: пока открыт «Пуск»,
+        /// поиск или представление задач, окна оболочки быстро создаются и уничтожаются,
+        /// EnumWindows обрывается на середине и панели в списке не оказывается вовсе —
+        /// а это ровно те состояния, ради которых всё и затевалось.
+        /// </summary>
         public static List<IntPtr> FindTaskbars()
         {
             var found = new List<IntPtr>();
-            var buffer = new System.Text.StringBuilder(64);
-            Native.EnumWindows(delegate(IntPtr hwnd, IntPtr param)
-            {
-                buffer.Length = 0;
-                if (Native.GetClassName(hwnd, buffer, buffer.Capacity) > 0)
-                {
-                    string cls = buffer.ToString();
-                    if (cls == "Shell_TrayWnd") found.Insert(0, hwnd);          // основная — первой
-                    else if (cls == "Shell_SecondaryTrayWnd") found.Add(hwnd);
-                }
-                return true;
-            }, IntPtr.Zero);
+
+            IntPtr primary = Native.FindWindowEx(IntPtr.Zero, IntPtr.Zero, "Shell_TrayWnd", null);
+            if (primary != IntPtr.Zero) found.Add(primary);                     // основная — первой
+
+            IntPtr next = IntPtr.Zero;
+            while ((next = Native.FindWindowEx(IntPtr.Zero, next, "Shell_SecondaryTrayWnd", null)) != IntPtr.Zero)
+                found.Add(next);
+
             return found;
         }
 
@@ -208,6 +211,25 @@ namespace DIIIX
         private static uint ToAbgr(uint argb)
         {
             return (argb & 0xFF00FF00) | ((argb & 0x00FF0000) >> 16) | ((argb & 0x000000FF) << 16);
+        }
+
+        /// <summary>
+        /// Разобрать цвет вида AARRGGBB (допустимы «#» и «0x» впереди, а также короткая
+        /// запись RRGGBB — тогда цвет непрозрачный). Отдельный разбор нужен потому, что
+        /// обрезать нули по краям нельзя: «00000000» — вполне законный прозрачный цвет.
+        /// </summary>
+        public static bool TryParseColor(string text, out uint color)
+        {
+            color = 0;
+            if (text == null) return false;
+            string s = text.Trim();
+            if (s.StartsWith("#", StringComparison.Ordinal)) s = s.Substring(1);
+            else if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) s = s.Substring(2);
+            if (s.Length != 6 && s.Length != 8) return false;
+            if (!uint.TryParse(s, System.Globalization.NumberStyles.HexNumber,
+                               System.Globalization.CultureInfo.InvariantCulture, out color)) return false;
+            if (s.Length == 6) color |= 0xFF000000;
+            return true;
         }
 
         /// <summary>Задать вид одной панели задач.</summary>
@@ -258,48 +280,20 @@ namespace DIIIX
             catch { _service = null; }
         }
 
-        /// <summary>Задать вид всем панелям задач. Возвращает false, если не вышло.</summary>
-        public static bool Apply(TaskbarLook look, uint color, float blurRadius)
+        /// <summary>
+        /// Задать вид сразу всем панелям задач. Намеренно сделано через ApplyTo, а не своим
+        /// проходом по службе: иначе легко разъезжаются мелочи — раньше здесь терялся перевод
+        /// цвета в ABGR, и одна и та же настройка из окна и из командной строки давала разный цвет.
+        /// </summary>
+        public static bool ApplyAll(TaskbarLook look, uint colorArgb, float blurRadius, bool showLine)
         {
-            var service = Service();
-            if (service == null) return false;
-
             var bars = FindTaskbars();
             if (bars.Count == 0) { _lastError = "не найдена панель задач"; return false; }
 
-            try
-            {
-                foreach (IntPtr bar in bars)
-                {
-                    switch (look)
-                    {
-                        case TaskbarLook.Opaque:
-                            service.SetTaskbarAppearance(bar, BrushSolidColor, color | 0xFF000000);
-                            break;
-                        case TaskbarLook.Clear:
-                            service.SetTaskbarAppearance(bar, BrushSolidColor, color & 0x00FFFFFF);
-                            break;
-                        case TaskbarLook.Acrylic:
-                            service.SetTaskbarAppearance(bar, BrushAcrylic, color);
-                            break;
-                        case TaskbarLook.Blur:
-                            service.SetTaskbarBlur(bar, color, blurRadius);
-                            break;
-                        default:
-                            service.ReturnTaskbarToDefaultAppearance(bar);
-                            break;
-                    }
-                }
-                _lastError = null;
-                return true;
-            }
-            catch (Exception ex)
-            {
-                // проводник мог перезапуститься — сбрасываем связь, следующая попытка её поднимет
-                _lastError = ex.Message;
-                _service = null;
-                return false;
-            }
+            bool all = true;
+            foreach (IntPtr bar in bars)
+                if (!ApplyTo(bar, look, colorArgb, blurRadius, showLine)) all = false;
+            return all;
         }
 
         /// <summary>Вернуть панелям системный вид.</summary>
