@@ -5,7 +5,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 
-namespace Triptych
+namespace DIIIX
 {
     /// <summary>Диалог в стиле Fluent: карточка со скруглением и тенью, без системной рамки.</summary>
     internal class ConfirmDialog : Window

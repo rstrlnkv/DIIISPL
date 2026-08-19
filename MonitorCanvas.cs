@@ -5,7 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace Triptych
+namespace DIIIX
 {
     /// <summary>Холст раскладки: мониторы перетаскиваются мышью и прилипают друг к другу.</summary>
     internal class MonitorCanvas : Canvas

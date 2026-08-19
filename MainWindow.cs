@@ -6,7 +6,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 
-namespace Triptych
+namespace DIIIX
 {
     internal class Item
     {
@@ -52,7 +52,7 @@ namespace Triptych
 
         public MainWindow()
         {
-            Title = "Триптих — раскладки мониторов";
+            Title = "DIIIX — раскладки мониторов";
             Width = 1180;
             Height = 760;
             MinWidth = 960;

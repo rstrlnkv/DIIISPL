@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace Triptych
+namespace DIIIX
 {
     internal static class Store
     {
-        public const string AppFolder = "Triptych";
+        public const string AppFolder = "DIIIX";
 
         public static string DataDir
         {

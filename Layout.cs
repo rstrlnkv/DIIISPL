@@ -4,7 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 
-namespace Triptych
+namespace DIIIX
 {
     /// <summary>Один монитор внутри профиля. Привязка — по EDID, а не по номеру дисплея Windows.</summary>
     internal class LayoutDisplay

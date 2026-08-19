@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Triptych
+namespace DIIIX
 {
     /// <summary>
     /// Автотест раскладок: строит схему, применяет её и сверяет фактическое состояние

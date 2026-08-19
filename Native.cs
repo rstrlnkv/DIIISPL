@@ -2,7 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 
-namespace Triptych
+namespace DIIIX
 {
     internal static class Native
     {

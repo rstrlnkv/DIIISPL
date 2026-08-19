@@ -8,12 +8,12 @@ using System.Windows.Media;
 using Microsoft.Win32;
 using Forms = System.Windows.Forms;
 
-namespace Triptych
+namespace DIIIX
 {
     internal class App : Application
     {
-        public const string AppName = "Triptych";
-        public const string AppTitle = "Триптих";
+        public const string AppName = "DIIIX";
+        public const string AppTitle = "DIIIX";
 
         private Forms.NotifyIcon _tray;
         private MainWindow _window;
@@ -25,13 +25,13 @@ namespace Triptych
         [STAThread]
         private static int Main(string[] args)
         {
-            _showMessage = Native.RegisterWindowMessage("TriptychShowManager");
+            _showMessage = Native.RegisterWindowMessage("DIIIXShowManager");
 
             if (args.Length > 0 && args[0].TrimStart('-', '/').ToLowerInvariant() != "tray")
                 return Cli.Run(args);
 
             bool created;
-            _mutex = new Mutex(true, "Local\\Triptych.SingleInstance", out created);
+            _mutex = new Mutex(true, "Local\\DIIIX.SingleInstance", out created);
             if (!created)
             {
                 // уже запущено — просто показываем окно работающей копии
@@ -68,7 +68,7 @@ namespace Triptych
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
             Resources.MergedDictionaries.Add(Theme.Build());
 
-            _messageWindow = new HwndSource(0, 0, 0, 0, 0, "TriptychMessages", IntPtr.Zero);
+            _messageWindow = new HwndSource(0, 0, 0, 0, 0, "DIIIXMessages", IntPtr.Zero);
             _messageWindow.AddHook(WndProc);
 
             _window = new MainWindow();

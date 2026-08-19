@@ -2,7 +2,7 @@ using System;
 using System.Text;
 using Microsoft.Win32;
 
-namespace Triptych
+namespace DIIIX
 {
     /// <summary>
     /// Разбор EDID монитора. Даёт устойчивую идентификацию, не зависящую от того,

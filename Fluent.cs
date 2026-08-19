@@ -5,7 +5,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Gdi = System.Drawing;
 
-namespace Triptych
+namespace DIIIX
 {
     /// <summary>Мелочи, которые делают окно похожим на родное окно Windows 11.</summary>
     internal static class Fluent

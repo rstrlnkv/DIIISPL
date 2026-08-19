@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Triptych
+namespace DIIIX
 {
     internal static class Cli
     {
@@ -34,15 +34,15 @@ namespace Triptych
         private static int Help()
         {
             Console.WriteLine();
-            Console.WriteLine("Triptych — раскладки мониторов");
+            Console.WriteLine("DIIIX — раскладки мониторов");
             Console.WriteLine();
-            Console.WriteLine("  Triptych.exe                 открыть окно менеджера");
-            Console.WriteLine("  Triptych.exe /apply \"Имя\"    применить профиль");
-            Console.WriteLine("  Triptych.exe /save \"Имя\"     записать текущую раскладку в профиль");
-            Console.WriteLine("  Triptych.exe /list           список профилей");
-            Console.WriteLine("  Triptych.exe /delete \"Имя\"   удалить профиль");
-            Console.WriteLine("  Triptych.exe /monitors       что подключено и как опознано");
-            Console.WriteLine("  Triptych.exe /hdr            состояние HDR на каждом выходе");
+            Console.WriteLine("  DIIIX.exe                 открыть окно менеджера");
+            Console.WriteLine("  DIIIX.exe /apply \"Имя\"    применить профиль");
+            Console.WriteLine("  DIIIX.exe /save \"Имя\"     записать текущую раскладку в профиль");
+            Console.WriteLine("  DIIIX.exe /list           список профилей");
+            Console.WriteLine("  DIIIX.exe /delete \"Имя\"   удалить профиль");
+            Console.WriteLine("  DIIIX.exe /monitors       что подключено и как опознано");
+            Console.WriteLine("  DIIIX.exe /hdr            состояние HDR на каждом выходе");
             return 0;
         }
 

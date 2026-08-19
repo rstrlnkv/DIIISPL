@@ -9,7 +9,7 @@ if not exist "%NETDIR%\csc.exe" (
 set WPF=%NETDIR%\WPF
 
 "%NETDIR%\csc.exe" /nologo /target:winexe /optimize+ /platform:anycpu /codepage:65001 ^
-  /out:"%~dp0Triptych.exe" ^
+  /out:"%~dp0DIIIX.exe" ^
   /r:System.dll /r:System.Core.dll /r:System.Xml.dll ^
   /r:System.Drawing.dll /r:System.Windows.Forms.dll ^
   /r:"%NETDIR%\System.Xaml.dll" ^
@@ -19,4 +19,4 @@ set WPF=%NETDIR%\WPF
   "%~dp0MonitorCanvas.cs" "%~dp0ConfirmDialog.cs" "%~dp0MainWindow.cs" "%~dp0App.cs"
 
 if errorlevel 1 exit /b 1
-echo Готово: %~dp0Triptych.exe
+echo Готово: %~dp0DIIIX.exe

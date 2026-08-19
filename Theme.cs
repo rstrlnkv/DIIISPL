@@ -4,7 +4,7 @@ using System.Windows.Markup;
 using System.Windows.Media;
 using Microsoft.Win32;
 
-namespace Triptych
+namespace DIIIX
 {
     /// <summary>Оформление в духе Windows 11: акцент и светлая/тёмная тема берутся из системы.</summary>
     internal static class Theme
@@ -463,9 +463,26 @@ namespace Triptych
               <ContentPresenter Grid.Column='1' ContentSource='Header' VerticalAlignment='Center'/>
               <TextBlock Grid.Column='2' Text='{TemplateBinding InputGestureText}' Margin='18,0,0,0'
                          Foreground='{StaticResource TextTer}' FontSize='12' VerticalAlignment='Center'/>
+              <TextBlock x:Name='Chevron' Grid.Column='2' Text='&#xE76C;' FontFamily='{StaticResource IconFont}'
+                         FontSize='10' Margin='18,0,0,0' Foreground='{StaticResource TextSec}'
+                         VerticalAlignment='Center' Visibility='Collapsed'/>
+              <Popup x:Name='PART_Popup' Placement='Right' HorizontalOffset='2' AllowsTransparency='True'
+                     Focusable='False' PopupAnimation='Fade'
+                     IsOpen='{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}'>
+                <Border Background='{StaticResource Flyout}' BorderBrush='{StaticResource Stroke}'
+                        BorderThickness='1' CornerRadius='8' Padding='4' MinWidth='200' Margin='0,0,8,8'>
+                  <Border.Effect>
+                    <DropShadowEffect BlurRadius='20' ShadowDepth='4' Opacity='0.3' Color='#000000'/>
+                  </Border.Effect>
+                  <StackPanel IsItemsHost='True'/>
+                </Border>
+              </Popup>
             </Grid>
           </Border>
           <ControlTemplate.Triggers>
+            <Trigger Property='HasItems' Value='True'>
+              <Setter TargetName='Chevron' Property='Visibility' Value='Visible'/>
+            </Trigger>
             <Trigger Property='IsChecked' Value='True'>
               <Setter TargetName='Mark' Property='Visibility' Value='Visible'/>
               <Setter Property='FontWeight' Value='SemiBold'/>
