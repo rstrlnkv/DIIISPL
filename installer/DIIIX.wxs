@@ -1,0 +1,119 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+  DIIIX — менеджер раскладок мониторов для Windows.
+  Copyright (C) 2026 r.strlnkv
+  Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+
+  Установщик. Собирается installer\build-msi.cmd.
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+
+  <?define Version = "1.0.0" ?>
+
+  <Product Id="*"
+           Name="DIIIX"
+           Language="1049"
+           Codepage="1251"
+           Version="$(var.Version)"
+           Manufacturer="r.strlnkv"
+           UpgradeCode="0E2BE8B0-FF5F-4590-9D0A-F7D9E6C6BDC1">
+
+    <Package InstallerVersion="500"
+             Compressed="yes"
+             InstallScope="perMachine"
+             Description="DIIIX — раскладки мониторов"
+             Comments="Свободная программа под GNU GPL v3 или новее"
+             Languages="1049"
+             SummaryCodepage="1251" />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Новая версия заменяет прежнюю, а не встаёт рядом с ней. -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="Уже установлена более новая версия DIIIX." />
+
+    <!--
+      Программа живёт в трее и держит открытой библиотеку внутри проводника.
+      Если её не закрыть, файлы окажутся занятыми и установка потребует перезагрузки.
+    -->
+    <util:CloseApplication Id="CloseDIIIX"
+                           Target="DIIIX.exe"
+                           CloseMessage="yes"
+                           TerminateProcess="1"
+                           RebootPrompt="no" />
+
+    <Icon Id="DIIIX.ico" SourceFile="$(var.SourceDir)\DIIIX.ico" />
+    <Property Id="ARPPRODUCTICON" Value="DIIIX.ico" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/rstrlnkv/DIIIX" />
+
+    <!-- Иначе в списке установленных программ расположение и размер остаются пустыми. -->
+    <SetProperty Id="ARPINSTALLLOCATION" Value="[INSTALLFOLDER]" After="CostFinalize" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="DIIIX" />
+      </Directory>
+      <Directory Id="ProgramMenuFolder" />
+    </Directory>
+
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="MainProgram" Guid="*" Win64="yes">
+        <File Id="DIIIX.exe" Source="$(var.SourceDir)\DIIIX.exe" KeyPath="yes">
+          <Shortcut Id="StartMenuShortcut"
+                    Directory="ProgramMenuFolder"
+                    Name="DIIIX"
+                    Description="Раскладки мониторов"
+                    Icon="DIIIX.ico"
+                    Advertise="yes" />
+        </File>
+      </Component>
+
+      <!--
+        Библиотека оформления панели задач. Отдельным компонентом: без неё программа
+        работает, поэтому она вынесена в свою возможность, которую можно не ставить.
+      -->
+      <Component Id="TaskbarLibrary" Guid="*" Win64="yes">
+        <File Id="DIIIX.ExplorerTAP.dll" Source="$(var.SourceDir)\DIIIX.ExplorerTAP.dll" KeyPath="yes" />
+      </Component>
+
+      <!-- По компоненту на файл: у обоих нет версии, а такие в один не складываются. -->
+      <Component Id="License" Guid="*" Win64="yes">
+        <File Id="LICENSE.txt" Source="$(var.SourceDir)\LICENSE" Name="LICENSE.txt" KeyPath="yes" />
+      </Component>
+
+      <Component Id="Readme" Guid="*" Win64="yes">
+        <File Id="README.md" Source="$(var.SourceDir)\README.md" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <Feature Id="Main" Title="DIIIX" Level="1" Absent="disallow"
+             Description="Менеджер раскладок мониторов.">
+      <ComponentRef Id="MainProgram" />
+      <ComponentRef Id="License" />
+      <ComponentRef Id="Readme" />
+
+      <Feature Id="Taskbar" Title="Оформление панели задач" Level="1"
+               Description="Позволяет профилю задавать вид панели задач.">
+        <ComponentRef Id="TaskbarLibrary" />
+      </Feature>
+    </Feature>
+
+    <!-- Предложить запуск сразу после установки. -->
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Запустить DIIIX" />
+    <Property Id="WixShellExecTarget" Value="[#DIIIX.exe]" />
+    <CustomAction Id="LaunchApplication" BinaryKey="WixCA" DllEntry="WixShellExec"
+                  Impersonate="yes" Return="ignore" />
+
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+    <UIRef Id="WixUI_InstallDir" />
+
+    <UI>
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication">
+        WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed
+      </Publish>
+    </UI>
+
+  </Product>
+</Wix>

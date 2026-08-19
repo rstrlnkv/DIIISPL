@@ -17,3 +17,10 @@ desktop.ini
 *.dll
 native/packages/
 native/nuget.exe
+
+# установщик: скачиваемый набор WiX и результат сборки
+installer/wix/
+installer/obj/
+installer/LICENSE.rtf
+*.msi
+*.wixpdb
