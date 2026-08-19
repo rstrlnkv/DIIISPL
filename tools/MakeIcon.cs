@@ -246,44 +246,59 @@ namespace DIIIX.Tools
             }
         }
 
-        /// <summary>Плоский вариант для мелких размеров: только силуэт, точка в точку.</summary>
+        /// <summary>
+        /// Плоский вариант для мелких размеров: только силуэт, точка в точку.
+        ///
+        /// Раскладка считается сразу в целых точках, а не округлением каждого экрана
+        /// по отдельности. Иначе просветы съедаются: доли точки набегают, соседние
+        /// края сходятся в одну координату — и на 16 точках знак слипается в одну
+        /// фигуру, причём с разных сторон по-разному.
+        /// </summary>
         private static Bitmap DrawFlat(int size)
         {
+            int gap   = Math.Max(1, (int)Math.Ceiling(Gap * size));   // просвет важнее долей точки
+            int sideW = Math.Max(2, (int)Math.Round(SideW * size));
+            int mainW = Math.Max(3, (int)Math.Round(MainW * size));
+            int sideH = Math.Max(4, (int)Math.Round(SideH * size));
+            int mainH = Math.Max(3, (int)Math.Round(MainH * size));
+
+            // Если не влезло — ужимаем средний экран, потом боковые, но не просветы:
+            // без просвета знак перестаёт читаться, без пары точек ширины — нет.
+            int total = sideW * 2 + gap * 2 + mainW;
+            while (total > size && mainW > 3) { mainW--; total--; }
+            while (total > size && sideW > 2) { sideW--; total -= 2; }
+
+            // Остаток нечётный — знак встанет на точку левее середины. Отдаём точку
+            // среднему экрану: лишняя точка его ширины незаметна, смещение всего знака —
+            // заметно. То же по высоте, для каждого экрана отдельно.
+            if ((size - total) % 2 != 0 && mainW > 3) { mainW--; total--; }
+            if ((size - sideH) % 2 != 0) sideH--;
+            if ((size - mainH) % 2 != 0) mainH--;
+
             var bmp = new Bitmap(size, size, PixelFormat.Format32bppArgb);
             using (Graphics g = Graphics.FromImage(bmp))
             {
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
                 g.Clear(Color.Transparent);
 
-                double s = size;
-                double total = SideW + Gap + MainW + Gap + SideW;
-                double x = (1.0 - total) / 2.0;
+                int x = (size - total) / 2;
+                int sideY = (size - sideH) / 2;
+                int mainY = (size - mainH) / 2;
 
-                Bar(g, s, x, (1.0 - SideH) / 2.0, SideW, SideH, SideTop, SideBottom);
-                x += SideW + Gap;
-                Bar(g, s, x, (1.0 - MainH) / 2.0, MainW, MainH, MainTop, MainBottom);
-                x += MainW + Gap;
-                Bar(g, s, x, (1.0 - SideH) / 2.0, SideW, SideH, SideTop, SideBottom);
+                Bar(g, x, sideY, sideW, sideH, SideTop, SideBottom);
+                x += sideW + gap;
+                Bar(g, x, mainY, mainW, mainH, MainTop, MainBottom);
+                x += mainW + gap;
+                Bar(g, x, sideY, sideW, sideH, SideTop, SideBottom);
             }
             return bmp;
         }
 
-        private static void Bar(Graphics g, double s, double x, double y, double w, double h,
-                                Color top, Color bottom)
+        /// <summary>Один экран целыми точками: без сглаживания и без скруглений.</summary>
+        private static void Bar(Graphics g, int x, int y, int w, int h, Color top, Color bottom)
         {
-            // Полосы прижимаются к сетке точек: иначе на 16 точках края размываются
-            // на полтона и знак выглядит грязным. Скруглять тут нечего — радиус
-            // меньше точки превращает углы в грязь.
-            float left = (float)Math.Round(x * s);
-            float width = Math.Max(1f, (float)Math.Round(w * s));
-            float topY = (float)Math.Round(y * s);
-            float height = Math.Max(1f, (float)Math.Round(h * s));
-            var rect = new RectangleF(left, topY, width, height);
-
             using (var brush = new LinearGradientBrush(
-                       new RectangleF(left, topY - 1, width, height + 2), top, bottom, 90f))
-                g.FillRectangle(brush, rect);
+                       new Rectangle(x, y - 1, w, h + 2), top, bottom, 90f))
+                g.FillRectangle(brush, new Rectangle(x, y, w, h));
         }
 
         private static GraphicsPath Rounded(RectangleF r, float radius)
