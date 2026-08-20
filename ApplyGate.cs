@@ -133,7 +133,20 @@ namespace DIIISPL
         /// <summary>Выдержать паузу с прошлого перестроения. Звать перед тем, как трогать дисплеи.</summary>
         public void Wait()
         {
-            MarkBusy();
+            // Не смогли записать пометку — значит и отметку времени записать не
+            // сможем, а без них обоих затвор не защищает ни от чего: смерть соседа
+            // посреди перестроения станет невидимой, и следующее применение уйдёт
+            // в драйвер сразу за оборвавшимся. Измерено: 6 мс вместо 1200.
+            //
+            // Тогда ждём всегда. Папка данных может оказаться на сетевом диске или
+            // закрытой на запись; лишняя секунда там — плата за то, что защита
+            // остаётся, а не исчезает молча.
+            if (!MarkBusy())
+            {
+                _forceFullPause = false;
+                Thread.Sleep(MinIntervalMs);
+                return;
+            }
 
             if (_forceFullPause)
             {
@@ -208,11 +221,18 @@ namespace DIIISPL
             get { return Path.Combine(Store.DataDir, "apply-busy"); }
         }
 
-        /// <summary>Пометить, что дисплеи вот-вот тронут. Снимает пометку Stamp.</summary>
-        private static void MarkBusy()
+        /// <summary>
+        /// Пометить, что дисплеи вот-вот тронут. Снимает пометку Stamp.
+        /// Ложь — записать не удалось.
+        /// </summary>
+        private static bool MarkBusy()
         {
-            try { File.WriteAllText(BusyPath, DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture)); }
-            catch { }
+            try
+            {
+                File.WriteAllText(BusyPath, DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture));
+                return true;
+            }
+            catch { return false; }
         }
 
         private static DateTime Read()
