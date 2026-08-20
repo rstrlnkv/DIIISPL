@@ -515,22 +515,7 @@ namespace DIIISPL
         /// </summary>
         public string OverlapProblem()
         {
-            if (Layout == null) return null;
-            var enabled = new List<LayoutDisplay>();
-            foreach (var d in Layout.Displays) if (d.Enabled) enabled.Add(d);
-
-            for (int i = 0; i < enabled.Count; i++)
-                for (int j = i + 1; j < enabled.Count; j++)
-                {
-                    var a = enabled[i];
-                    var b = enabled[j];
-                    if (a.CloneGroup >= 0 && a.CloneGroup == b.CloneGroup) continue;   // дубль лежит поверх намеренно
-                    if (a.X < b.X + b.DesktopWidth && b.X < a.X + a.DesktopWidth &&
-                        a.Y < b.Y + b.DesktopHeight && b.Y < a.Y + a.DesktopHeight)
-                        return "«" + a.Name + "» и «" + b.Name + "» налезают друг на друга — разведите их: " +
-                               "рабочие столы наложенными быть не могут.";
-                }
-            return null;
+            return Layout == null ? null : Layout.OverlapProblem();
         }
 
         private static bool Touches(LayoutDisplay a, LayoutDisplay b)

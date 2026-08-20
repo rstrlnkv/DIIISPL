@@ -103,13 +103,14 @@ namespace DIIISPL
                 if (releases == null) { error = "GitHub ответил непонятным"; return null; }
 
                 Release best = null;
+                bool skippedEarly = false;
                 foreach (var item in releases)
                 {
                     Release r = Read(item);
                     if (r == null) continue;
                     if (Truthy(item, "draft")) continue;
                     // на канале Stable сборки Dev не предлагаем
-                    if (r.Early && channel != Settings.Dev) continue;
+                    if (r.Early && channel != Settings.Dev) { skippedEarly = true; continue; }
                     if (best == null || r.Version > best.Version) best = r;
                 }
 
@@ -118,7 +119,16 @@ namespace DIIISPL
                 // ставилась только при находке, и на пустом канале строка «когда
                 // проверяли» не менялась никогда.
                 Settings.LastCheck = DateTime.UtcNow;
-                if (best == null) { error = "выпусков пока нет"; return null; }
+                if (best == null)
+                {
+                    // «Выпусков нет» и «есть, но только предварительные» — разные
+                    // вещи, и вторая иначе предлагает жать «Ещё раз» на том, что
+                    // не изменится.
+                    error = skippedEarly
+                        ? "готовых выпусков пока нет — то, что вышло, помечено предварительным. Такие приходят на канале Dev"
+                        : "выпусков пока нет";
+                    return null;
+                }
                 return best.Version > Current ? best : null;
             }
             catch (WebException ex)

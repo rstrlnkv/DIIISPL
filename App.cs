@@ -260,7 +260,7 @@ namespace DIIISPL
             // Посреди перестроения не выходим: работа идёт в фоновом потоке, и
             // Shutdown оборвал бы её на середине вызовов в драйвер, не дав
             // поставить отметку затвора.
-            if (_applying)
+            if (ApplyBusy.Active)
             {
                 Balloon("Идёт перестроение экранов — подождите несколько секунд.", Forms.ToolTipIcon.Info);
                 return;
@@ -294,19 +294,25 @@ namespace DIIISPL
                 if (string.IsNullOrEmpty(layout.Hotkey)) continue;
                 uint mods, vk; string err;
                 if (!Hotkey.TryParse(layout.Hotkey, out mods, out vk, out err)) { problems.Add(layout.Hotkey + " — " + err); continue; }
+                // Тёзку среди своих же профилей ищем ДО попытки регистрации: она
+                // на втором профиле заведомо не пройдёт — сочетание уже занял
+                // первый, из этого же окна, — и в подсказку уехали бы обе строки,
+                // первая из которых валит на постороннюю программу то, чего она
+                // не делала.
+                string already;
+                if (taken.TryGetValue(layout.Hotkey, out already))
+                {
+                    problems.Add(layout.Hotkey + " — одно сочетание у «" + already + "» и «" + layout.Name + "»");
+                    continue;
+                }
+                taken[layout.Hotkey] = layout.Name;
+
                 if (Native.RegisterHotKey(_messageWindow.Handle, id, mods, vk))
                 {
                     _hotkeyProfiles[id] = layout.Name;
                     id++;
                 }
                 else problems.Add(layout.Hotkey + " — занято другой программой");
-
-                // Тёзка среди своих же профилей. Прежде про него говорилось
-                // «занято другой программой» — а другой программы нет.
-                string already;
-                if (taken.TryGetValue(layout.Hotkey, out already))
-                    problems.Add(layout.Hotkey + " — одно сочетание у «" + already + "» и «" + layout.Name + "»");
-                else taken[layout.Hotkey] = layout.Name;
             }
 
             if (problems.Count > 0)
@@ -332,15 +338,19 @@ namespace DIIISPL
         /// Пока перестроение идёт, второе не начинаем: затвор его всё равно не
         /// пустит, а очередь из ждущих потоков не нужна никому.
         /// </summary>
-        private bool _applying;
-
         private void ApplyByName(string name)
         {
-            if (_applying) return;
             var layout = Store.LoadByName(name);
             if (layout == null) return;
 
-            _applying = true;
+            // Признак занятости один на всю программу: применять умеет и окно.
+            // Отказ молчаливым быть не должен — из меню значка щелчок иначе
+            // выглядит как «ничего не произошло».
+            if (!ApplyBusy.Begin())
+            {
+                Balloon("Идёт перестроение экранов — подождите несколько секунд.", Forms.ToolTipIcon.Info);
+                return;
+            }
             ThreadPool.QueueUserWorkItem(delegate
             {
                 ApplyResult result;
@@ -350,10 +360,10 @@ namespace DIIISPL
                     result = new ApplyResult();
                     result.Error = ex.Message;
                 }
+                finally { ApplyBusy.End(); }
 
                 Dispatcher.BeginInvoke(new Action(delegate
                 {
-                    _applying = false;
 
                     if (!result.Success)
                         Balloon(layout.Name + ": " + result.Error, Forms.ToolTipIcon.Error);

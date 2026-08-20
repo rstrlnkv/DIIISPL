@@ -284,7 +284,7 @@ namespace DIIISPL
                 // уходил старый вызов — а на сборках 24H2+ он управляет уже не
                 // HDR, а расширенным цветовым охватом, который никто не просил
                 // трогать и который программа не умеет вернуть.
-                System.Threading.Thread.Sleep(400);
+                System.Threading.Thread.Sleep(700);   // столько же, сколько сверка в Applier
 
                 var check = new MonitorInfo();
                 check.Adapter = adapter;

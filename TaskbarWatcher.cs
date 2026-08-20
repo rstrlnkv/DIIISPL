@@ -36,7 +36,17 @@ namespace DIIISPL
 
             if (_timer == null)
             {
-                _timer = new System.Windows.Threading.DispatcherTimer();
+                // Таймер привязываем к диспетчеру окна, а не к тому потоку, где
+                // случился первый вызов. Применение раскладки теперь работает в
+                // потоке пула, а там диспетчер никто не крутит: созданный оттуда
+                // таймер рождается мёртвым и не оживает до перезапуска — измерено,
+                // ноль тиков за 700 мс при интервале 50. Наблюдатель существует
+                // ровно потому, что панели пересоздаются, и молчащий он бесполезен.
+                _timer = new System.Windows.Threading.DispatcherTimer(
+                    System.Windows.Threading.DispatcherPriority.Normal,
+                    System.Windows.Application.Current != null
+                        ? System.Windows.Application.Current.Dispatcher
+                        : System.Windows.Threading.Dispatcher.CurrentDispatcher);
                 _timer.Interval = TimeSpan.FromMilliseconds(250);
                 _timer.Tick += delegate { Tick(); };
             }

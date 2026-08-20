@@ -49,8 +49,20 @@ namespace DIIISPL
                 if (!gate.Held)
                 {
                     var busy = new ApplyResult();
-                    busy.Error = "другая копия сейчас перестраивает экраны — попробуйте ещё раз";
+                    busy.Error = "экраны уже перестраиваются — подождите и повторите";
                     return busy;
+                }
+
+                // Наложенную раскладку Windows не примет: она расставит экраны
+                // по-своему, а профиль останется с невозможными координатами.
+                // Проверка стоит здесь, а не только в окне: горячая клавиша, меню
+                // значка и файл, поправленный руками, идут мимо окна.
+                string overlap = layout.OverlapProblem();
+                if (overlap != null)
+                {
+                    var bad = new ApplyResult();
+                    bad.Error = overlap;
+                    return bad;
                 }
 
                 try { return Apply(layout, gate); }
@@ -126,7 +138,7 @@ namespace DIIISPL
             if (missing.Count > 0)
             {
                 res.Warnings.Clear();
-                Submit(layout, res);
+                NoteLate(Submit(layout, res), res);
                 missing = Missing(layout, res, 900);
             }
 
@@ -140,7 +152,7 @@ namespace DIIISPL
                 Native.SetDisplayTopology(0, IntPtr.Zero, 0, IntPtr.Zero, Native.SDC_APPLY | topology);
                 System.Threading.Thread.Sleep(1500);
                 res.Warnings.Clear();
-                Submit(layout, res);
+                NoteLate(Submit(layout, res), res);
                 System.Threading.Thread.Sleep(600);
             }
 
@@ -148,6 +160,21 @@ namespace DIIISPL
             ApplyHdr(layout, res, gate);
             ApplyTaskbar(layout, res);
             return res;
+        }
+
+        /// <summary>
+        /// Уточняющие заявки идут уже после того, как Success выставлен, и их код
+        /// возврата прежде не читал никто: раскладка могла остаться расставленной
+        /// самой Windows, а `DIIISPL.exe apply X` в скрипте всё равно печатал
+        /// «Применено» и возвращал ноль. Опустить Success тут нельзя — часть
+        /// раскладки применена, — но промолчать тоже нельзя.
+        /// </summary>
+        private static void NoteLate(int err, ApplyResult res)
+        {
+            if (res.Error != null) { res.Warnings.Add(res.Error); res.Error = null; }
+            if (err == 0) return;
+            res.Warnings.Add("Windows отклонила уточнение раскладки: " + Native.ErrorText(err) +
+                             " — на экране может стоять не то, что в профиле.");
         }
 
         /// <summary>
@@ -523,6 +550,16 @@ namespace DIIISPL
             // не сверял: в окне писалось «Раскладка применена», а на столе стояло
             // не то, и профиль после этого никогда не отмечался точкой «применён
             // сейчас» — потому что применено было другое.
+            // Про невключившиеся и невыключившиеся говорим здесь, до выбора начала
+            // координат. Прежде эти две строки стояли ниже, а между ними и набором
+            // был выход «сверять нечего» — и профиль, у которого не зажёгся ни один
+            // монитор, уходил вообще без предупреждений: «Раскладка применена» и всё.
+            if (notTurnedOn.Count > 0)
+                res.Warnings.Add("Не включились: " + string.Join(", ", notTurnedOn.ToArray()) +
+                                 ". Чаще всего монитор обесточен или спит так, что видеокарта его не видит.");
+            if (notTurnedOff.Count > 0)
+                res.Warnings.Add("Остались включёнными вопреки профилю: " + string.Join(", ", notTurnedOff.ToArray()) + ".");
+
             // Начало координат выбираем тем же правилом, каким его выбирает Submit:
             // основной, если он подключён и горит, иначе первый горящий. Иначе
             // получаются два разных начала на одну раскладку, и сверка ругается
@@ -565,11 +602,6 @@ namespace DIIISPL
                 res.Warnings.Add("Windows расставила по-своему: " + string.Join(", ", movedNames.ToArray()) +
                                  ". На экране теперь не то, что записано в профиле, — поправьте раскладку и примените заново.");
 
-            if (notTurnedOn.Count > 0)
-                res.Warnings.Add("Не включились: " + string.Join(", ", notTurnedOn.ToArray()) +
-                                 ". Чаще всего монитор обесточен или спит так, что видеокарта его не видит.");
-            if (notTurnedOff.Count > 0)
-                res.Warnings.Add("Остались включёнными вопреки профилю: " + string.Join(", ", notTurnedOff.ToArray()) + ".");
         }
 
         /// <summary>

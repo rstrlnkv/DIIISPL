@@ -64,7 +64,6 @@ namespace DIIISPL
         private bool _dirty;
         private bool _capturingHotkey;
         private bool _renaming;
-        private bool _applying;          // идёт перестроение экранов — второй раз не пускаем
 
         public MainWindow()
         {
@@ -95,6 +94,11 @@ namespace DIIISPL
             Closing += delegate(object s, System.ComponentModel.CancelEventArgs e)
             {
                 e.Cancel = true;                  // окно не закрывается, а прячется в трей
+
+                // Набранное имя принимаем, а не выбрасываем: человек его набрал,
+                // и молча терять это при закрытии окна не за что. Делаем до
+                // вопроса о сохранении — иначе имя в него не попадёт.
+                if (_renaming) CommitRename(true, true);
                 if (_dirty && !AskToSave()) return;
 
                 // Незавершённые режимы окно с собой в трей не уносит: иначе при
@@ -528,15 +532,24 @@ namespace DIIISPL
             // Пока идёт перестроение, список не трогаем вовсе: смену картинки
             // экранов вызывает само перестроение, а перечитывание списка гасит
             // и надпись «Перестраиваю экраны…», и признак занятости кнопки.
-            if (_applying) return;
+            if (ApplyBusy.Active) return;
 
             if (_dirty)
             {
-                // Несохранённое чужими руками не трогаем: список строк освежим,
-                // а профиль на холсте оставим как есть.
+                // Несохранённое чужими руками не трогаем — но только несохранённое.
+                // Только что подключённый монитор попадает в раскладку лишь здесь,
+                // и без этого вызова он не появлялся ни в профиле, ни в нижнем ряду
+                // до перехода на другой профиль и обратно.
+                if (_current != null)
+                {
+                    SyncLayoutWithLive(_current);
+                    _canvas.Live = _live;
+                    _canvas.Rebuild();
+                }
                 RefreshProfileList();
                 SelectListItemFor(_current);
                 UpdateHeader();
+                UpdateProperties();
                 return;
             }
             ReloadProfiles(_current != null ? _current.Name : null);
@@ -850,7 +863,17 @@ namespace DIIISPL
             _dirty = false;
             if (_current == null) return;
 
-            Layout fresh = Store.LoadByName(_currentOriginalName);
+            // Читаем свой файл, а не первого попавшегося тёзку по имени: имя внутри
+            // файла и имя самого файла могут разойтись, и тогда «Не сохранять»
+            // вернуло бы содержимое чужого профиля.
+            Layout fresh = null;
+            try
+            {
+                if (!string.IsNullOrEmpty(_current.SourcePath) && System.IO.File.Exists(_current.SourcePath))
+                    fresh = Layout.Load(_current.SourcePath);
+            }
+            catch { }
+            if (fresh == null) fresh = Store.LoadByName(_currentOriginalName);
             if (fresh == null) return;   // на диске его ещё нет — возвращать не к чему
 
             _current.RestoreFrom(fresh);
@@ -889,7 +912,7 @@ namespace DIIISPL
         /// </summary>
         private void ApplyCurrent()
         {
-            if (_current == null || _applying) return;
+            if (_current == null) return;
 
             // Наложенную раскладку Windows не примет — она расставит экраны
             // по-своему, а профиль останется с невозможными координатами. Прежде
@@ -906,17 +929,33 @@ namespace DIIISPL
             // экраны уехала бы раскладка, которой нет ни на диске, ни на холсте;
             // в худшем — исключение в потоке пула, где его никто не ловит, то
             // есть тихая смерть процесса посреди перестроения дисплеев.
+            // Признак занятости один на всю программу: применять умеет и трей.
+            if (!ApplyBusy.Begin())
+            {
+                UpdateStatus("Идёт перестроение экранов — подождите несколько секунд.");
+                return;
+            }
+
             Layout layout = _current.DeepCopy();
-            _applying = true;
             _applyButton.IsEnabled = false;
             UpdateStatus("Перестраиваю экраны…");
 
             System.Threading.ThreadPool.QueueUserWorkItem(delegate
             {
-                ApplyResult result = Applier.Apply(layout);
+                ApplyResult result;
+                // Перехват обязателен: это поток пула, и вылетевшее отсюда
+                // исключение уносит весь процесс — вместе со значком в трее и
+                // горячими клавишами, посреди перестроения дисплеев.
+                try { result = Applier.Apply(layout); }
+                catch (Exception ex)
+                {
+                    result = new ApplyResult();
+                    result.Error = ex.Message;
+                }
+                finally { ApplyBusy.End(); }
+
                 Dispatcher.BeginInvoke(new Action(delegate
                 {
-                    _applying = false;
                     _applyButton.IsEnabled = _current != null;
 
                     ReloadLive();
@@ -935,7 +974,16 @@ namespace DIIISPL
                     foreach (string w in result.Warnings) parts.Add(w);
                     string text = string.Join("  ", parts.ToArray());
                     UpdateStatus(text);
-                    if (!IsVisible) Raise(ApplyReported, text, !result.Success);
+
+                    // В подсказку трея — только первое предложение и счёт остальных:
+                    // она живёт несколько секунд, обрезается на 255 знаках и молча,
+                    // а весь набор предупреждений за 255 уходит легко.
+                    if (!IsVisible)
+                    {
+                        string brief = parts[0];
+                        if (parts.Count > 1) brief += " Ещё замечаний: " + (parts.Count - 1) + " — откройте окно.";
+                        Raise(ApplyReported, brief, !result.Success);
+                    }
                 }));
             });
         }
@@ -983,7 +1031,9 @@ namespace DIIISPL
                     string clash = Store.NameInUse(name, _currentOriginalName);
                     if (clash != null)
                     {
-                        UpdateStatus("Профиль «" + clash + "» уже есть — придумайте другое имя. Esc — оставить прежнее.");
+                        UpdateStatus(fromFocusLoss
+                            ? "Имя не изменилось: «" + clash + "» уже занят."
+                            : "Профиль «" + clash + "» уже есть — придумайте другое имя. Esc — оставить прежнее.");
 
                         // Фокус возвращаем только если правку подтвердили сами —
                         // Enter. По уходу мышью не держим: тянуть фокус обратно
@@ -1082,7 +1132,7 @@ namespace DIIISPL
             _updating = true;
             _nameText.Text = _current != null ? _current.Name : "";
             _nameHint.Text = DescribeCurrent();
-            _applyButton.IsEnabled = _current != null && !_applying;
+            _applyButton.IsEnabled = _current != null && !ApplyBusy.Active;
 #if DEV
             UpdateTaskbarButton();
 #endif

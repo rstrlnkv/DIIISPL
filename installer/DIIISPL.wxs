@@ -80,8 +80,14 @@
                       Name="StartMenuShortcut" Type="raw" Win64="yes" />
     </Property>
 
+    <!--
+      SHORTCUTCHOSEN ставит окно с вопросом про ярлык. Пока его не было, ответ
+      человека затирался: действие стоит в обеих последовательностях, и во
+      второй раз выполняется уже после окон.
+    -->
+    <Property Id="SHORTCUTCHOSEN" Secure="yes" />
     <SetProperty Id="INSTALLSHORTCUT" Value="0" After="AppSearch" Sequence="both">
-      (WIX_UPGRADE_DETECTED OR Installed) AND NOT PREVSHORTCUT
+      (WIX_UPGRADE_DETECTED OR Installed) AND NOT PREVSHORTCUT AND NOT SHORTCUTCHOSEN
     </SetProperty>
 
     <Directory Id="TARGETDIR" Name="SourceDir">

@@ -86,7 +86,18 @@
       <Publish Dialog="InstallDirDlg" Control="ChangeFolder" Event="SpawnDialog" Value="BrowseDlg" Order="2">1</Publish>
 
       <Publish Dialog="ShortcutDlg" Control="Back" Event="NewDialog" Value="InstallDirDlg">1</Publish>
-      <Publish Dialog="ShortcutDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg">1</Publish>
+
+      <!--
+        Отметка «человек ответил про ярлык сам».
+
+        Без неё ответ из этого окна пропадал при «Изменить» и при обновлении:
+        SetINSTALLSHORTCUT стоит в обеих последовательностях и во второй раз
+        выполняется уже после окон — то есть затирает выбранное умолчанием
+        «ярлыка не было, значит и не надо». Выключить ярлык так получалось,
+        а включить обратно — нет, и окно при этом отвечало «готово».
+      -->
+      <Publish Dialog="ShortcutDlg" Control="Next" Property="SHORTCUTCHOSEN" Value="1" Order="1">1</Publish>
+      <Publish Dialog="ShortcutDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="2">1</Publish>
 
       <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="ShortcutDlg" Order="1">NOT Installed</Publish>
       <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="2">Installed AND NOT PATCH</Publish>

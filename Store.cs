@@ -182,9 +182,16 @@ namespace DIIISPL
             return null;
         }
 
+        /// <summary>
+        /// Записать профиль туда, откуда он прочитан. Прежде путь всегда считался
+        /// из имени — и профиль, пришедший из файла с другим именем внутри, при
+        /// первом же «Сохранить» уезжал в новый файл: старый оставался двойником
+        /// со старой раскладкой, а если файл нового имени был занят чужим
+        /// профилем, тот затирался целиком.
+        /// </summary>
         public static void Save(Layout layout)
         {
-            string path = PathFor(layout.Name);
+            string path = !string.IsNullOrEmpty(layout.SourcePath) ? layout.SourcePath : PathFor(layout.Name);
             layout.Save(path);
             layout.SourcePath = path;
         }
@@ -213,12 +220,21 @@ namespace DIIISPL
         /// </summary>
         public static void Rename(string oldName, Layout layout)
         {
-            // Тот же довод, что и в Delete: откуда прочитали, оттуда и убираем.
-            string oldPath = !string.IsNullOrEmpty(layout.SourcePath) ? layout.SourcePath : PathFor(oldName);
-            Save(layout);
+            // Имя не менялось — это обычное сохранение, и уезжать из своего файла
+            // профилю незачем.
+            if (string.Equals(oldName, layout.Name, StringComparison.Ordinal)) { Save(layout); return; }
 
-            if (string.Equals(oldName, layout.Name, StringComparison.Ordinal)) return;
-            if (string.Equals(oldPath, PathFor(layout.Name), StringComparison.OrdinalIgnoreCase)) return;
+            string oldPath = !string.IsNullOrEmpty(layout.SourcePath) ? layout.SourcePath : PathFor(oldName);
+            string newPath = PathFor(layout.Name);
+
+            // Новое имя дало тот же файл — переносить нечего.
+            if (string.Equals(oldPath, newPath, StringComparison.OrdinalIgnoreCase)) { Save(layout); return; }
+
+            // Сначала пишем новый файл, потом убираем старый: обратный порядок
+            // на неудачной записи не оставлял ни того, ни другого.
+            layout.SourcePath = newPath;
+            layout.Save(newPath);
+
             try { if (File.Exists(oldPath)) File.Delete(oldPath); }
             catch { /* не удалился — останется лишний файл, но профиль цел */ }
         }

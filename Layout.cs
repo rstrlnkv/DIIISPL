@@ -87,6 +87,34 @@ namespace DIIISPL
         public string SourcePath;
 
         /// <summary>
+        /// Налезают ли включённые мониторы друг на друга. Возвращает объяснение
+        /// или null.
+        ///
+        /// Живёт здесь, а не на холсте, потому что спрашивают об этом двое: окно —
+        /// чтобы не дать применить, и Applier — чтобы не применить то, что пришло
+        /// мимо окна: горячей клавишей, из меню значка, из файла, поправленного
+        /// руками. Windows такую раскладку не примет и расставит экраны по-своему.
+        /// </summary>
+        public string OverlapProblem()
+        {
+            var on = new List<LayoutDisplay>();
+            foreach (var d in Displays) if (d.Enabled) on.Add(d);
+
+            for (int i = 0; i < on.Count; i++)
+                for (int j = i + 1; j < on.Count; j++)
+                {
+                    var a = on[i];
+                    var b = on[j];
+                    if (a.CloneGroup >= 0 && a.CloneGroup == b.CloneGroup) continue;   // дубль лежит поверх намеренно
+                    if (a.X < b.X + b.DesktopWidth && b.X < a.X + a.DesktopWidth &&
+                        a.Y < b.Y + b.DesktopHeight && b.Y < a.Y + a.DesktopHeight)
+                        return "«" + a.Name + "» и «" + b.Name + "» налезают друг на друга — разведите их: " +
+                               "рабочие столы наложенными быть не могут.";
+                }
+            return null;
+        }
+
+        /// <summary>
         /// Описывает ли профиль то, что стоит на экранах прямо сейчас. Этим
         /// отмечается действующая раскладка — точкой в списке и в меню значка.
         ///
@@ -243,6 +271,11 @@ namespace DIIISPL
             _taskbarRaw.Clear();
             _taskbarRaw.AddRange(old._taskbarRaw);
             _taskbarLegacy = old._taskbarLegacy;
+
+            // И файл, в котором профиль лежит: он тоже «не раскладка». Без этого
+            // пересъёмка профиля, пришедшего из файла с другим именем внутри,
+            // плодила двойника.
+            SourcePath = old.SourcePath;
         }
 
         /// <summary>
