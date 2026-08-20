@@ -645,19 +645,13 @@ namespace DIIISPL
             _dirty = false;
             SyncLayoutWithLive(_current);
             _canvas.Layout = _current;
-            _canvas.Selected = FirstInteresting(_current);
+            // Кого выбрать, решает сам холст: он же следит, чтобы выбранный был
+            // всегда — иначе панель свойств внизу оставалась бы пустой.
             _canvas.Rebuild();
             UpdateHeader();
             UpdateProperties();
             UpdateStatus(null);
             SelectListItemFor(layout);
-        }
-
-        private static LayoutDisplay FirstInteresting(Layout layout)
-        {
-            foreach (var d in layout.Displays) if (d.Enabled && d.Primary) return d;
-            foreach (var d in layout.Displays) if (d.Enabled) return d;
-            return layout.Displays.Count > 0 ? layout.Displays[0] : null;
         }
 
         /// <summary>Добавляет в профиль мониторы, которых в нём ещё нет (подключили новый — он сразу виден).</summary>

@@ -43,10 +43,30 @@ namespace DIIISPL
             Background = Brushes.Transparent;
             ClipToBounds = true;
             SizeChanged += delegate { Relayout(); };
-            MouseLeftButtonDown += delegate(object s, MouseButtonEventArgs e)
+            // Щелчок мимо карточек ничего не снимает. Прежде он оставлял холст
+            // без выбранного, и панель свойств внизу превращалась в ряд серых
+            // полей с надписью «Выберите монитор» — состояние, в котором окно
+            // ничего не показывает и ничего не даёт сделать.
+        }
+
+        /// <summary>
+        /// Выбранным всегда должен быть кто-то: панели свойств иначе нечего
+        /// показывать. Зовётся при каждой перестройке — профиль мог смениться,
+        /// монитор мог выпасть из списка, а ссылка на него осталась бы висеть.
+        /// </summary>
+        private bool EnsureSelection()
+        {
+            LayoutDisplay was = Selected;
+            if (Layout == null || Layout.Displays.Count == 0) Selected = null;
+            else if (Selected == null || !Layout.Displays.Contains(Selected))
             {
-                if (e.OriginalSource == this) { Selected = null; Refresh(); Raise(SelectionChanged); }
-            };
+                Selected = null;
+                foreach (var d in Layout.Displays) if (d.Enabled && d.Primary) { Selected = d; break; }
+                if (Selected == null)
+                    foreach (var d in Layout.Displays) if (d.Enabled) { Selected = d; break; }
+                if (Selected == null) Selected = Layout.Displays[0];
+            }
+            return !ReferenceEquals(was, Selected);
         }
 
         private static void Raise(Action a) { if (a != null) a(); }
@@ -55,7 +75,8 @@ namespace DIIISPL
         {
             Children.Clear();
             _cards.Clear();
-            if (Layout == null) return;
+            bool changed = EnsureSelection();
+            if (Layout == null) { if (changed) Raise(SelectionChanged); return; }
 
             // Полоса разрывается подписью: два отрезка по бокам и текст между ними.
             foreach (Border line in new[] { _dockLineLeft, _dockLineRight })
@@ -76,6 +97,10 @@ namespace DIIISPL
                 Children.Add(card);
             }
             Relayout();
+
+            // После перестройки, а не до: обработчик пойдёт читать свойства
+            // выбранного, и карточки к тому времени должны стоять на местах.
+            if (changed) Raise(SelectionChanged);
         }
 
         private Border BuildCard(LayoutDisplay d)
