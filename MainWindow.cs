@@ -46,6 +46,10 @@ namespace DIIIX
         private readonly TextBlock _monitorSubtitle = new TextBlock();
         private readonly Border _propsPanel = new Border();
 
+        private readonly WrapPanel _fieldsRow = new WrapPanel();
+        private readonly TextBlock _offNote = new TextBlock();
+        private UIElement _fieldRes, _fieldHz, _fieldRot, _fieldClone, _fieldHdr;
+
         private List<Layout> _profiles = new List<Layout>();
         private Layout _current;
         private string _currentOriginalName;
@@ -327,6 +331,11 @@ namespace DIIIX
             canvasCard.Child = _canvas;
             _canvas.SelectionChanged += delegate { UpdateProperties(); };
             _canvas.LayoutChanged += delegate { MarkDirty(); UpdateStatus(null); };
+            _canvas.ToggleRequested += delegate
+            {
+                var d = _canvas.Selected;
+                if (d != null) OnEnabledChanged(!d.Enabled);
+            };
             Grid.SetRow(canvasCard, 1);
             grid.Children.Add(canvasCard);
 
@@ -341,6 +350,14 @@ namespace DIIIX
             return grid;
         }
 
+        /// <summary>
+        /// Свойства выбранного монитора.
+        ///
+        /// Поля не прибиты к сетке, а собираются под конкретный монитор: у выключенного
+        /// настраивать нечего, у выхода в дублировании HDR невозможен, а частоту
+        /// незачем спрашивать, если она у разрешения одна. Показывать всё всегда —
+        /// значит заставлять глазами отсеивать неприменимое.
+        /// </summary>
         private UIElement BuildProperties()
         {
             var outer = new StackPanel();
@@ -358,22 +375,27 @@ namespace DIIIX
             titleRow.Children.Add(_monitorSubtitle);
             outer.Children.Add(titleRow);
 
-            var row = new Grid();
-            for (int i = 0; i < 6; i++) row.ColumnDefinitions.Add(new ColumnDefinition());
+            // Переключатели держатся вместе слева, поля — справа от них.
+            var switches = new StackPanel();
+            switches.Margin = new Thickness(0, 0, 18, 0);
+            switches.VerticalAlignment = VerticalAlignment.Center;
+            switches.Children.Add(WrapSwitch(_enabledSwitch, "Включён"));
+            _primarySwitch.ToolTip = "На основном мониторе живут панель задач и новые окна";
+            switches.Children.Add(WrapSwitch(_primarySwitch, "Основной"));
 
-            row.Children.Add(Field("Использовать", WrapSwitch(_enabledSwitch, "Включён"), 0));
-            row.Children.Add(Field("Разрешение", _resCombo, 1));
-            row.Children.Add(Field("Частота", _hzCombo, 2));
-            row.Children.Add(Field("Поворот", _rotCombo, 3));
-            row.Children.Add(Field("Дублирование", _cloneCombo, 4));
-            row.Children.Add(Field("HDR", _hdrCombo, 5));
-            outer.Children.Add(row);
+            _fieldRes = Field("Разрешение", _resCombo, 150);
+            _fieldHz = Field("Частота", _hzCombo, 100);
+            _fieldRot = Field("Поворот", _rotCombo, 120);
+            _fieldClone = Field("Дублирование", _cloneCombo, 170);
+            _fieldHdr = Field("HDR", _hdrCombo, 120);
 
-            var row2 = new StackPanel();
-            row2.Orientation = Orientation.Horizontal;
-            row2.Margin = new Thickness(0, 14, 0, 0);
-            row2.Children.Add(WrapSwitch(_primarySwitch, "Основной монитор (панель задач и новые окна)"));
-            outer.Children.Add(row2);
+            _offNote.Style = (Style)Application.Current.Resources["Caption"];
+            _offNote.Text = "Включите монитор, чтобы настроить его в этом профиле.";
+            _offNote.VerticalAlignment = VerticalAlignment.Center;
+
+            _fieldsRow.Orientation = Orientation.Horizontal;
+            outer.Children.Add(_fieldsRow);
+            _fieldsRow.Children.Add(switches);
 
             _enabledSwitch.Checked += delegate { OnEnabledChanged(true); };
             _enabledSwitch.Unchecked += delegate { OnEnabledChanged(false); };
@@ -402,18 +424,25 @@ namespace DIIIX
             return box;
         }
 
-        private UIElement Field(string label, UIElement control, int column)
+        private UIElement Field(string label, UIElement control, double width)
         {
             var sp = new StackPanel();
-            sp.Margin = new Thickness(column == 0 ? 0 : 10, 0, 0, 0);
+            sp.Width = width;
+            sp.Margin = new Thickness(0, 0, 8, 0);
             var l = new TextBlock();
             l.Text = label;
             l.Style = (Style)Application.Current.Resources["Caption"];
             l.Margin = new Thickness(2, 0, 0, 6);
             sp.Children.Add(l);
             sp.Children.Add(control);
-            Grid.SetColumn(sp, column);
             return sp;
+        }
+
+        /// <summary>Оставить в строке свойств только то, что к этому монитору применимо.</summary>
+        private void ShowFields(params UIElement[] fields)
+        {
+            while (_fieldsRow.Children.Count > 1) _fieldsRow.Children.RemoveAt(1);
+            foreach (UIElement f in fields) if (f != null) _fieldsRow.Children.Add(f);
         }
 
         // ---------------------------------------------------------------- данные
@@ -821,6 +850,7 @@ namespace DIIIX
                 _monitorSubtitle.Text = "";
                 _resCombo.ItemsSource = null;
                 _hzCombo.ItemsSource = null;
+                ShowFields();
                 _updating = false;
                 return;
             }
@@ -905,6 +935,27 @@ namespace DIIIX
             _hdrCombo.ToolTip = cloned
                 ? "Windows отключает HDR на выходах, объединённых в дублирование, независимо от разрешения и частоты. Чтобы получить HDR на обоих экранах, разведите их как отдельные рабочие столы."
                 : null;
+
+            // Что показать: у выключенного монитора настраивать нечего, частота нужна
+            // только при выборе, дублирование — только если есть с чем, HDR — только
+            // там, где он в принципе возможен. Причина отсутствия HDR в дубле уже
+            // написана строкой выше, под названием монитора.
+            if (!d.Enabled)
+            {
+                ShowFields(_offNote);
+            }
+            else
+            {
+                int others = 0;
+                foreach (var other in _current.Displays)
+                    if (!ReferenceEquals(other, d) && other.Enabled) others++;
+
+                ShowFields(_fieldRes,
+                           _hzCombo.Items.Count > 1 ? _fieldHz : null,
+                           _fieldRot,
+                           others > 0 ? _fieldClone : null,
+                           cloned ? null : _fieldHdr);
+            }
 
             _updating = false;
         }

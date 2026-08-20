@@ -21,6 +21,9 @@ namespace DIIIX
         public event Action SelectionChanged;
         public event Action LayoutChanged;
 
+        /// <summary>Двойной щелчок по монитору: включить его в раскладку или убрать.</summary>
+        public event Action ToggleRequested;
+
         private readonly Dictionary<LayoutDisplay, Border> _cards = new Dictionary<LayoutDisplay, Border>();
         private double _scale = 0.1;
         private double _offX, _offY;
@@ -49,7 +52,7 @@ namespace DIIIX
             _cards.Clear();
             if (Layout == null) return;
 
-            _dockLabel.Text = "НЕ ИСПОЛЬЗУЮТСЯ В ЭТОМ ПРОФИЛЕ";
+            _dockLabel.Text = "НЕ В ПРОФИЛЕ · ДВОЙНОЙ ЩЕЛЧОК ДОБАВИТ";
             _dockLabel.Style = (Style)Application.Current.Resources["SectionHeader"];
             Children.Add(_dockLabel);
 
@@ -256,6 +259,11 @@ namespace DIIIX
             Selected = d;
             Raise(SelectionChanged);
             Refresh();
+
+            // Двойной щелчок добавляет монитор в раскладку и убирает обратно. Проверка
+            // стоит здесь, а не отдельным обработчиком: для выключенных карточек событие
+            // ниже помечается обработанным, и до второго обработчика дело не доходит.
+            if (e.ClickCount == 2) { Raise(ToggleRequested); e.Handled = true; return; }
 
             if (!d.Enabled) { e.Handled = true; return; }   // выключенные лежат в нижнем ряду, их не двигают
 
