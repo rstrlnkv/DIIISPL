@@ -21,8 +21,11 @@ namespace DIIIX
         public event Action SelectionChanged;
         public event Action LayoutChanged;
 
-        /// <summary>Двойной щелчок по монитору: включить его в раскладку или убрать.</summary>
-        public event Action ToggleRequested;
+        /// <summary>
+        /// Монитор из нижнего ряда перетащили в раскладку. Координаты ему уже проставлены —
+        /// остаётся включить его в профиле.
+        /// </summary>
+        public event Action DropRequested;
 
         private readonly Dictionary<LayoutDisplay, Border> _cards = new Dictionary<LayoutDisplay, Border>();
         private double _scale = 0.1;
@@ -32,6 +35,8 @@ namespace DIIIX
         private Point _dragStart;
         private readonly Dictionary<LayoutDisplay, Point> _dragOrigin = new Dictionary<LayoutDisplay, Point>();
         private bool _moved;
+        private bool _fromDock;      // тащат монитор из нижнего ряда, а не по раскладке
+        private Point _grab;         // за какую точку карточки взялись
 
         public MonitorCanvas()
         {
@@ -52,8 +57,13 @@ namespace DIIIX
             _cards.Clear();
             if (Layout == null) return;
 
-            _dockLabel.Text = "НЕ В ПРОФИЛЕ · ДВОЙНОЙ ЩЕЛЧОК ДОБАВИТ";
+            _dockLine.Height = 1;
+            _dockLine.Background = (Brush)Application.Current.Resources["Stroke"];
+            Children.Add(_dockLine);
+
+            _dockLabel.Text = "НЕ В ПРОФИЛЕ · ПЕРЕТАЩИТЕ НАВЕРХ, ЧТОБЫ ДОБАВИТЬ";
             _dockLabel.Style = (Style)Application.Current.Resources["SectionHeader"];
+            _dockLabel.TextAlignment = TextAlignment.Center;
             Children.Add(_dockLabel);
 
             foreach (var d in Layout.Displays)
@@ -161,8 +171,10 @@ namespace DIIIX
             var disabled = new List<LayoutDisplay>();
             foreach (var d in Layout.Displays) { if (d.Enabled) enabled.Add(d); else disabled.Add(d); }
 
-            double dockHeight = disabled.Count > 0 ? DockHeight + 26 : 0;
-            _dockLabel.Visibility = disabled.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            double dockHeight = disabled.Count > 0 ? DockHeight + 56 : 0;
+            Visibility dockVisible = disabled.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            _dockLabel.Visibility = dockVisible;
+            _dockLine.Visibility = dockVisible;
 
             double pad = 26;
             double areaH = Math.Max(60, ActualHeight - dockHeight);
@@ -185,17 +197,27 @@ namespace DIIIX
                 _offY = pad + (areaH - pad * 2 - h * _scale) / 2 - minY * _scale;
             }
 
-            // выключенные складываем в отдельный ряд внизу — иначе они прячутся под включёнными
+            // Выключенные складываем в отдельный ряд внизу — иначе они прячутся под
+            // включёнными. Ряд по центру, над ним черта и заголовок: так видно, что это
+            // не часть раскладки, а запас.
             _dockSlots.Clear();
-            double x = pad;
-            double y = ActualHeight - DockHeight - 12;
-            SetLeft(_dockLabel, pad);
-            SetTop(_dockLabel, y - 22);
+            double y = ActualHeight - DockHeight - 14;
+            _dockTop = y - 44;
+
+            _dockLine.Width = Math.Max(1, ActualWidth - pad * 2);
+            SetLeft(_dockLine, pad);
+            SetTop(_dockLine, _dockTop);
+
+            _dockLabel.Width = Math.Max(1, ActualWidth);
+            SetLeft(_dockLabel, 0);
+            SetTop(_dockLabel, _dockTop + 12);
+
+            double total = disabled.Count * DockWidth + Math.Max(0, disabled.Count - 1) * 12;
+            double x = Math.Max(pad, (ActualWidth - total) / 2);
             foreach (var d in disabled)
             {
-                if (x + DockWidth > ActualWidth - pad) { x = pad; }
                 _dockSlots[d] = new Point(x, y);
-                x += DockWidth + 10;
+                x += DockWidth + 12;
             }
 
             Refresh();
@@ -203,8 +225,10 @@ namespace DIIIX
 
         private const double DockWidth = 150;
         private const double DockHeight = 84;
+        private double _dockTop = double.MaxValue;
         private readonly Dictionary<LayoutDisplay, Point> _dockSlots = new Dictionary<LayoutDisplay, Point>();
         private readonly TextBlock _dockLabel = new TextBlock();
+        private readonly Border _dockLine = new Border();
 
         /// <summary>Обновить позиции и оформление без пересоздания.</summary>
         public void Refresh()
@@ -260,19 +284,16 @@ namespace DIIIX
             Raise(SelectionChanged);
             Refresh();
 
-            // Двойной щелчок добавляет монитор в раскладку и убирает обратно. Проверка
-            // стоит здесь, а не отдельным обработчиком: для выключенных карточек событие
-            // ниже помечается обработанным, и до второго обработчика дело не доходит.
-            if (e.ClickCount == 2) { Raise(ToggleRequested); e.Handled = true; return; }
-
-            if (!d.Enabled) { e.Handled = true; return; }   // выключенные лежат в нижнем ряду, их не двигают
-
             _drag = d;
             _moved = false;
+            _fromDock = !d.Enabled;
             _dragStart = e.GetPosition(this);
+            _grab = e.GetPosition(card);
+
             _dragOrigin.Clear();
-            foreach (var other in Layout.Displays)
-                if (MovesWith(d, other)) _dragOrigin[other] = new Point(other.X, other.Y);
+            if (!_fromDock)
+                foreach (var other in Layout.Displays)
+                    if (MovesWith(d, other)) _dragOrigin[other] = new Point(other.X, other.Y);
 
             card.CaptureMouse();
             e.Handled = true;
@@ -288,10 +309,22 @@ namespace DIIIX
         {
             if (_drag == null || e.LeftButton != MouseButtonState.Pressed) return;
             Point p = e.GetPosition(this);
-            double ddx = (p.X - _dragStart.X) / _scale;
-            double ddy = (p.Y - _dragStart.Y) / _scale;
             if (!_moved && Math.Abs(p.X - _dragStart.X) < 3 && Math.Abs(p.Y - _dragStart.Y) < 3) return;
             _moved = true;
+
+            // Монитор из нижнего ряда просто едет за курсором: в раскладке его ещё нет,
+            // и пересчитывать координаты рабочего стола пока не из чего.
+            if (_fromDock)
+            {
+                Border dragged = (Border)sender;
+                SetLeft(dragged, p.X - _grab.X);
+                SetTop(dragged, p.Y - _grab.Y);
+                Panel.SetZIndex(dragged, 200);
+                return;
+            }
+
+            double ddx = (p.X - _dragStart.X) / _scale;
+            double ddy = (p.Y - _dragStart.Y) / _scale;
 
             Point origin = _dragOrigin[_drag];
             int nx = (int)Math.Round(origin.X + ddx);
@@ -311,13 +344,36 @@ namespace DIIIX
         {
             var card = (Border)sender;
             card.ReleaseMouseCapture();
-            if (_drag != null && _moved)
+
+            if (_drag != null && _moved && _fromDock)
+            {
+                Point p = e.GetPosition(this);
+                if (p.Y < _dockTop)
+                {
+                    // Бросили выше черты — монитор входит в раскладку. Ставим его туда,
+                    // куда бросили, и подтягиваем к краям соседей, как при обычном перетаскивании.
+                    var d = _drag;
+                    int nx = (int)Math.Round((p.X - _grab.X - _offX) / _scale);
+                    int ny = (int)Math.Round((p.Y - _grab.Y - _offY) / _scale);
+                    Snap(d, ref nx, ref ny);
+                    d.X = nx;
+                    d.Y = ny;
+                    _drag = null;
+                    _fromDock = false;
+                    Raise(DropRequested);
+                    return;
+                }
+                Relayout();     // бросили в том же ряду — карточка возвращается на место
+            }
+            else if (_drag != null && _moved)
             {
                 Normalize();
                 Relayout();
                 Raise(LayoutChanged);
             }
+
             _drag = null;
+            _fromDock = false;
         }
 
         /// <summary>Прилипание к краям соседей — как в параметрах экрана Windows, только честнее.</summary>

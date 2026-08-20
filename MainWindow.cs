@@ -331,10 +331,10 @@ namespace DIIIX
             canvasCard.Child = _canvas;
             _canvas.SelectionChanged += delegate { UpdateProperties(); };
             _canvas.LayoutChanged += delegate { MarkDirty(); UpdateStatus(null); };
-            _canvas.ToggleRequested += delegate
+            _canvas.DropRequested += delegate
             {
                 var d = _canvas.Selected;
-                if (d != null) OnEnabledChanged(!d.Enabled);
+                if (d != null) OnEnabledChanged(true, true);
             };
             Grid.SetRow(canvasCard, 1);
             grid.Children.Add(canvasCard);
@@ -362,26 +362,36 @@ namespace DIIIX
         {
             var outer = new StackPanel();
 
-            var titleRow = new StackPanel();
-            titleRow.Orientation = Orientation.Horizontal;
+            // Название слева, «Основной» — справа в той же строке: это свойство самого
+            // монитора в раскладке, а не настройка режима, и рядом с именем ему уместнее.
+            var titleRow = new Grid();
             titleRow.Margin = new Thickness(0, 0, 0, 12);
+            titleRow.ColumnDefinitions.Add(new ColumnDefinition());
+            titleRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var titleLeft = new StackPanel();
+            titleLeft.Orientation = Orientation.Horizontal;
             _monitorTitle.Style = (Style)Application.Current.Resources["Subtitle"];
             _monitorTitle.FontSize = 16;
             _monitorTitle.VerticalAlignment = VerticalAlignment.Center;
-            titleRow.Children.Add(_monitorTitle);
+            titleLeft.Children.Add(_monitorTitle);
             _monitorSubtitle.Style = (Style)Application.Current.Resources["Caption"];
             _monitorSubtitle.Margin = new Thickness(12, 0, 0, 0);
             _monitorSubtitle.VerticalAlignment = VerticalAlignment.Center;
-            titleRow.Children.Add(_monitorSubtitle);
+            titleLeft.Children.Add(_monitorSubtitle);
+            titleRow.Children.Add(titleLeft);
+
+            _primarySwitch.ToolTip = "На основном мониторе живут панель задач и новые окна";
+            UIElement primary = WrapSwitch(_primarySwitch, "Основной");
+            Grid.SetColumn(primary, 1);
+            titleRow.Children.Add(primary);
+
             outer.Children.Add(titleRow);
 
-            // Переключатели держатся вместе слева, поля — справа от них.
             var switches = new StackPanel();
             switches.Margin = new Thickness(0, 0, 18, 0);
             switches.VerticalAlignment = VerticalAlignment.Center;
             switches.Children.Add(WrapSwitch(_enabledSwitch, "Включён"));
-            _primarySwitch.ToolTip = "На основном мониторе живут панель задач и новые окна";
-            switches.Children.Add(WrapSwitch(_primarySwitch, "Основной"));
 
             _fieldRes = Field("Разрешение", _resCombo, 150);
             _fieldHz = Field("Частота", _hzCombo, 100);
@@ -397,8 +407,8 @@ namespace DIIIX
             outer.Children.Add(_fieldsRow);
             _fieldsRow.Children.Add(switches);
 
-            _enabledSwitch.Checked += delegate { OnEnabledChanged(true); };
-            _enabledSwitch.Unchecked += delegate { OnEnabledChanged(false); };
+            _enabledSwitch.Checked += delegate { OnEnabledChanged(true, false); };
+            _enabledSwitch.Unchecked += delegate { OnEnabledChanged(false, false); };
             _primarySwitch.Checked += delegate { OnPrimaryChanged(true); };
             _primarySwitch.Unchecked += delegate { OnPrimaryChanged(false); };
             _resCombo.SelectionChanged += delegate { OnResChanged(); };
@@ -640,10 +650,21 @@ namespace DIIIX
             }
         }
 
+        /// <summary>
+        /// Поставить монитор вплотную справа от раскладки.
+        ///
+        /// Считаем только по включённым: у выключенных в профиле остаются координаты
+        /// с тех времён, когда они были в раскладке, и по ним место находилось далеко
+        /// правее — между мониторами оставался разрыв на пустом месте.
+        /// </summary>
         private void PlaceRightOfAll(Layout layout, LayoutDisplay d)
         {
             int right = 0;
-            foreach (var o in layout.Displays) right = Math.Max(right, o.X + o.DesktopWidth);
+            foreach (var o in layout.Displays)
+            {
+                if (ReferenceEquals(o, d) || !o.Enabled) continue;
+                right = Math.Max(right, o.X + o.DesktopWidth);
+            }
             d.X = right;
             d.Y = 0;
         }
@@ -980,17 +1001,29 @@ namespace DIIIX
             if (_hzCombo.SelectedItem == null && items.Count > 0) _hzCombo.SelectedItem = items[0];
         }
 
-        private void OnEnabledChanged(bool enabled)
+        /// <param name="keepPosition">
+        /// Монитор перетащили на холст — координаты уже выбраны пользователем, и
+        /// подбирать их заново не нужно.
+        /// </param>
+        private void OnEnabledChanged(bool enabled, bool keepPosition)
         {
             if (_updating || _canvas.Selected == null) return;
             var d = _canvas.Selected;
             d.Enabled = enabled;
             if (enabled)
             {
+                // Наложение проверяем всегда, даже когда место выбрал пользователь:
+                // уронить монитор поверх соседа легко, а рабочие столы наложенными
+                // быть не могут — Windows такую раскладку не примет.
                 bool overlaps = false;
                 foreach (var o in _current.Displays)
-                    if (!ReferenceEquals(o, d) && o.Enabled && o.X == d.X && o.Y == d.Y) overlaps = true;
-                if (overlaps || (d.X == 0 && d.Y == 0 && AnyOtherAtOrigin(d))) PlaceRightOfAll(_current, d);
+                {
+                    if (ReferenceEquals(o, d) || !o.Enabled) continue;
+                    if (d.X < o.X + o.DesktopWidth && o.X < d.X + d.DesktopWidth &&
+                        d.Y < o.Y + o.DesktopHeight && o.Y < d.Y + d.DesktopHeight) { overlaps = true; break; }
+                }
+                if (overlaps || (!keepPosition && d.X == 0 && d.Y == 0 && AnyOtherAtOrigin(d)))
+                    PlaceRightOfAll(_current, d);
             }
             else
             {

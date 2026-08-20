@@ -175,17 +175,7 @@ namespace DIIIX
                 layout.Displays.Add(d);
             }
 
-            // группы, где остался один участник, дублированием не считаются
-            var counts = new Dictionary<int, int>();
-            foreach (var d in layout.Displays)
-            {
-                if (d.CloneGroup < 0) continue;
-                int c; counts.TryGetValue(d.CloneGroup, out c); counts[d.CloneGroup] = c + 1;
-            }
-            foreach (var d in layout.Displays)
-            {
-                if (d.CloneGroup >= 0 && counts[d.CloneGroup] < 2) d.CloneGroup = -1;
-            }
+            layout.DropLoneCloneGroups();
             // основной ровно один: при дублировании в (0,0) стоят сразу несколько выходов
             bool primarySeen = false;
             foreach (var d in layout.Displays)
@@ -299,7 +289,30 @@ namespace DIIIX
                 }
             }
             if (string.IsNullOrEmpty(layout.Name)) layout.Name = Path.GetFileNameWithoutExtension(file);
+            layout.DropLoneCloneGroups();
             return layout;
+        }
+
+        /// <summary>
+        /// Группа дублирования из одного монитора — не дублирование.
+        ///
+        /// Такое остаётся в профилях, записанных прежними версиями: выход выбывал
+        /// из группы, а номер у соседа сохранялся, и одинокий монитор потом всю жизнь
+        /// ходил с меткой «Дубль». Чистится и при чтении файла, и при снятии раскладки
+        /// с системы — иначе достаточно одного старого профиля, чтобы метка вернулась.
+        /// </summary>
+        public void DropLoneCloneGroups()
+        {
+            foreach (var d in Displays) if (!d.Enabled) d.CloneGroup = -1;
+
+            var counts = new Dictionary<int, int>();
+            foreach (var d in Displays)
+            {
+                if (d.CloneGroup < 0) continue;
+                int c; counts.TryGetValue(d.CloneGroup, out c); counts[d.CloneGroup] = c + 1;
+            }
+            foreach (var d in Displays)
+                if (d.CloneGroup >= 0 && counts[d.CloneGroup] < 2) d.CloneGroup = -1;
         }
 
         private static int ParseInt(string s) { return ParseInt(s, 0); }
