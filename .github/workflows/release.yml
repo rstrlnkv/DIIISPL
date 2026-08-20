@@ -40,9 +40,13 @@ jobs:
           if ($number -notmatch '^\d+\.\d+\.\d+$') { throw "Непонятная версия: $version" }
           $early = $version -match '-'
 
-          "DIIISPL_VERSION=$number"      | Out-File $env:GITHUB_ENV -Append -Encoding utf8
-          "DIIISPL_TAG=$version"         | Out-File $env:GITHUB_ENV -Append -Encoding utf8
-          "DIIISPL_EARLY=$early"         | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          # Именно ToString().ToLower(). PowerShell пишет булево как «True», а
+          # действие выпуска сравнивает строку с «true» — с заглавной буквы
+          # предварительный выпуск не пометится предварительным и уйдёт всем,
+          # включая тех, кто ранний канал не выбирал.
+          "DIIISPL_VERSION=$number"                    | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "DIIISPL_TAG=$version"                       | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "DIIISPL_EARLY=$($early.ToString().ToLower())" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
 
           # версия внутри программы — та же, что в теге
           $file = 'AssemblyInfo.cs'
@@ -88,3 +92,6 @@ jobs:
           prerelease: ${{ env.DIIISPL_EARLY }}
           generate_release_notes: true
           files: DIIISPL-${{ env.DIIISPL_VERSION }}-x64.msi
+          # Без этого выпуск без пакета создаётся молча и шаг зеленеет. А выпуск
+          # без пакета программа не поставит: она ищет вложение с «.msi».
+          fail_on_unmatched_files: true

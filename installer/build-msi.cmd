@@ -48,7 +48,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%HERE%make-license-rtf.ps1"
 echo === Сборка пакета ===
 if not exist "%HERE%obj" mkdir "%HERE%obj"
 "%WIX%\candle.exe" -nologo -arch x64 ^
-  -dSourceDir="%ROOT%" -dBinDir="%HERE%obj\stage" -dLicenseRtf="%HERE%LICENSE.rtf" -dArtDir="%HERE%obj" ^
+  -dVersion=%VERSION% -dSourceDir="%ROOT%" -dBinDir="%HERE%obj\stage" -dLicenseRtf="%HERE%LICENSE.rtf" -dArtDir="%HERE%obj" ^
   -ext WixUtilExtension -ext WixUIExtension ^
   -out "%HERE%obj\\" "%HERE%DIIISPL.wxs" "%HERE%DIIISPLUI.wxs" || exit /b 1
 
