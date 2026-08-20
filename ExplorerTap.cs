@@ -86,7 +86,7 @@ namespace DIIISPL
             if (_service != null) return _service;
 
             IntPtr taskbar = PrimaryTaskbar();
-            if (taskbar == IntPtr.Zero) { _lastError = "не найдена панель задач"; return null; }
+            if (taskbar == IntPtr.Zero) { _lastError = Text.TbNoTaskbar; return null; }
 
             try
             {
@@ -103,7 +103,7 @@ namespace DIIISPL
                 }
                 if (hr != 0 || raw == IntPtr.Zero)
                 {
-                    _lastError = "не удалось подключиться к проводнику";
+                    _lastError = Text.TbNoExplorer;
                     return null;
                 }
 
@@ -124,7 +124,7 @@ namespace DIIISPL
             }
             catch (Exception)
             {
-                _lastError = "связь с проводником потеряна";
+                _lastError = Text.TbLostExplorer;
                 _service = null;
                 return null;
             }
@@ -225,7 +225,7 @@ namespace DIIISPL
             }
             catch (Exception)
             {
-                _lastError = "связь с проводником потеряна";
+                _lastError = Text.TbLostExplorer;
                 _service = null;         // проводник мог перезапуститься
                 return false;
             }
@@ -248,7 +248,7 @@ namespace DIIISPL
         public static bool ApplyAll(TaskbarLook look, uint colorArgb, float blurRadius, bool showLine)
         {
             var bars = FindTaskbars();
-            if (bars.Count == 0) { _lastError = "не найдена панель задач"; return false; }
+            if (bars.Count == 0) { _lastError = Text.TbNoTaskbar; return false; }
 
             bool all = true;
             foreach (IntPtr bar in bars)
@@ -271,12 +271,12 @@ namespace DIIISPL
         {
             switch (name)
             {
-                case "default": return "Как в системе";
-                case "opaque": return "Непрозрачная";
-                case "clear": return "Прозрачная";
-                case "blur": return "Размытие";
-                case "acrylic": return "Акрил";
-                default: return "Не менять";
+                case "default": return Text.TbLook("default");
+                case "opaque": return Text.TbLook("opaque");
+                case "clear": return Text.TbLook("clear");
+                case "blur": return Text.TbLook("blur");
+                case "acrylic": return Text.TbLook("acrylic");
+                default: return Text.TbLook("keep");
             }
         }
 

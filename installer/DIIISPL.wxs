@@ -17,10 +17,21 @@
   <?define Version = "0.1.0" ?>
   <?endif ?>
 
-  <Product Id="*"
+  <!--
+       Код продукта задан, а не выписан звёздочкой. Пакет собирается дважды —
+       по разу на язык, — и перевод внутрь встаёт разницей между этими сборками.
+       Со звёздочкой каждая сборка получала бы свой код, и «перевод» первым делом
+       подменял бы продукт целиком. Код выводится из номера версии, так что новая
+       версия по-прежнему заменяет прежнюю, а пересборка той же версии даёт тот
+       же пакет; см. build-msi.cmd.
+  -->
+  <?ifndef ProductCode ?>
+  <?define ProductCode = "*" ?>
+  <?endif ?>
+
+  <Product Id="$(var.ProductCode)"
            Name="DIIISPL"
-           Language="1049"
-           Codepage="1251"
+           Language="!(loc.Language)"
            Version="$(var.Version)"
            Manufacturer="Rostislav Strelnikov"
            UpgradeCode="0E2BE8B0-FF5F-4590-9D0A-F7D9E6C6BDC1">
@@ -28,16 +39,16 @@
     <Package InstallerVersion="500"
              Compressed="yes"
              InstallScope="perMachine"
-             Description="DIIISPL — раскладки мониторов"
-             Comments="Свободная программа под GNU GPL v3 или новее"
-             Languages="1049"
-             SummaryCodepage="1251" />
+             Description="!(loc.PackageDescription)"
+             Comments="!(loc.PackageComments)"
+             Languages="!(loc.Language)"
+             SummaryCodepage="!(loc.SummaryCodepage)" />
 
     <MediaTemplate EmbedCab="yes" />
 
     <!-- Новая версия заменяет прежнюю, а не встаёт рядом с ней. -->
     <MajorUpgrade AllowSameVersionUpgrades="yes"
-                  DowngradeErrorMessage="Уже установлена более новая версия DIIISPL." />
+                  DowngradeErrorMessage="!(loc.DowngradeError)" />
 
     <!--
       Программа живёт в трее и держит открытой библиотеку внутри проводника.
@@ -147,7 +158,7 @@
         <Condition>INSTALLSHORTCUT = "1"</Condition>
         <Shortcut Id="DIIISPLShortcut"
                   Name="DIIISPL"
-                  Description="Раскладки мониторов"
+                  Description="!(loc.ShortcutDescription)"
                   Target="[INSTALLFOLDER]DIIISPL.exe"
                   WorkingDirectory="INSTALLFOLDER"
                   Icon="DIIISPL.ico" />
@@ -156,9 +167,9 @@
       </Component>
     </DirectoryRef>
 
-    <Feature Id="Main" Title="DIIISPL" Level="1" Absent="disallow"
+    <Feature Id="Main" Title="!(loc.FeatureTitle)" Level="1" Absent="disallow"
              ConfigurableDirectory="INSTALLFOLDER"
-             Description="Менеджер раскладок мониторов.">
+             Description="!(loc.FeatureDescription)">
       <ComponentRef Id="MainProgram" />
       <?if $(var.Channel) = "dev" ?>
       <ComponentRef Id="TaskbarLibrary" />
@@ -170,7 +181,7 @@
     </Feature>
 
     <!-- Предложить запуск сразу после установки. -->
-    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Запустить DIIISPL" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="!(loc.LaunchCheckbox)" />
     <Property Id="WixShellExecTarget" Value="[#DIIISPL.exe]" />
     <CustomAction Id="LaunchApplication" BinaryKey="WixCA" DllEntry="WixShellExec"
                   Impersonate="yes" Return="ignore" />

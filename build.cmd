@@ -45,7 +45,7 @@ for /f "delims=" %%I in ('git -C "%~dp0." rev-list --count HEAD 2^>nul') do set 
   /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Web.Extensions.dll ^
   /r:"%NETDIR%\System.Xaml.dll" ^
   /r:"%WPF%\WindowsBase.dll" /r:"%WPF%\PresentationCore.dll" /r:"%WPF%\PresentationFramework.dll" ^
-  "%~dp0AssemblyInfo.cs" "%~dp0BuildInfo.g.cs" "%~dp0Lang.cs" "%~dp0Text.cs" "%~dp0Native.cs" "%~dp0Edid.cs" "%~dp0Monitors.cs" "%~dp0Layout.cs" "%~dp0Applier.cs" ^
+  "%~dp0AssemblyInfo.cs" "%~dp0BuildInfo.g.cs" "%~dp0Lang.cs" "%~dp0LangFile.cs" "%~dp0Text.cs" "%~dp0Native.cs" "%~dp0Edid.cs" "%~dp0Monitors.cs" "%~dp0Layout.cs" "%~dp0Applier.cs" ^
   "%~dp0Store.cs" "%~dp0Settings.cs" "%~dp0ApplyGate.cs" "%~dp0Updater.cs" "%~dp0Hotkey.cs" %TASKBAR% ^
   "%~dp0Cli.cs" "%~dp0Theme.cs" "%~dp0Fluent.cs" ^
   "%~dp0MonitorCanvas.cs" "%~dp0ConfirmDialog.cs" "%~dp0Ui.cs" "%~dp0AboutWindow.cs" "%~dp0MainWindow.cs" "%~dp0App.cs"

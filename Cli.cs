@@ -24,6 +24,7 @@ namespace DIIISPL
                     case "taskbar": return SetTaskbar(args);
                     case "taskbar-state": return DumpTaskbarState(args);
 #endif
+                    case "lang": return WriteLangTemplate(args);
                     case "list": return ListProfiles();
                     case "save": return SaveCurrent(args);
                     case "apply":
@@ -34,14 +35,14 @@ namespace DIIISPL
                         // `/aply "Кино"` печатал справку и возвращал 0, и ни
                         // человек, ни скрипт не узнавали, что ничего не применено.
                         Console.WriteLine();
-                        Console.WriteLine("Не знаю команды «" + cmd + "». Вот что есть:");
+                        Console.WriteLine(Text.CliUnknownCmd(cmd));
                         Help();
                         return 2;
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Ошибка: " + ex.Message);
+                Console.WriteLine(Text.CliError(ex.Message));
                 return 1;
             }
         }
@@ -49,18 +50,19 @@ namespace DIIISPL
         private static int Help()
         {
             Console.WriteLine();
-            Console.WriteLine("DIIISPL — раскладки мониторов");
+            Console.WriteLine(Text.CliTitle);
             Console.WriteLine();
-            Console.WriteLine("  DIIISPL.exe                 открыть окно менеджера");
-            Console.WriteLine("  DIIISPL.exe /apply \"Имя\"    применить профиль");
-            Console.WriteLine("  DIIISPL.exe /save \"Имя\"     записать текущую раскладку в профиль");
-            Console.WriteLine("  DIIISPL.exe /list           список профилей");
-            Console.WriteLine("  DIIISPL.exe /delete \"Имя\"   удалить профиль");
-            Console.WriteLine("  DIIISPL.exe /monitors       что подключено и как опознано");
-            Console.WriteLine("  DIIISPL.exe /hdr            состояние HDR на каждом выходе");
+            Console.WriteLine(Text.CliHelpWindow);
+            Console.WriteLine(Text.CliHelpApply);
+            Console.WriteLine(Text.CliHelpSave);
+            Console.WriteLine(Text.CliHelpList);
+            Console.WriteLine(Text.CliHelpDelete);
+            Console.WriteLine(Text.CliHelpMonitors);
+            Console.WriteLine(Text.CliHelpHdr);
+            Console.WriteLine(Text.CliHelpLang);
 #if DEV
-            Console.WriteLine("  DIIISPL.exe /taskbar вид [AARRGGBB] [line]   вид панели задач сейчас");
-            Console.WriteLine("  DIIISPL.exe /taskbar-state [\"Имя\"]           что видно на экранах и какой вид из этого следует");
+            Console.WriteLine(Text.CliHelpTaskbar);
+            Console.WriteLine(Text.CliHelpTaskbarState);
 #endif
             return 0;
         }
@@ -69,18 +71,18 @@ namespace DIIISPL
         {
             Console.WriteLine();
             var list = Monitors.Enumerate();
-            if (list.Count == 0) { Console.WriteLine("  мониторы не найдены"); return 1; }
+            if (list.Count == 0) { Console.WriteLine(Text.CliNoMonitors); return 1; }
 
             foreach (var m in list)
             {
                 Console.WriteLine("  " + m.Name + "   [" + m.ConnectionType + "]");
-                Console.WriteLine("    ключ:      " + m.Identity);
-                Console.WriteLine("    состояние: " + (m.Active
-                    ? ("включён, " + m.Width + "x" + m.Height + " @ " + m.X + "," + m.Y + ", " + m.Hz.ToString("0.###") + " Гц, source " + m.SourceId + (m.Primary ? ", основной" : ""))
-                    : "выключен"));
-                Console.WriteLine("    HDR:       " + (m.HdrSupported ? (m.HdrEnabled ? "поддерживается, включён" : "поддерживается, выключен") : "недоступен"));
-                Console.WriteLine("    предпочт.: " + m.PreferredWidth + "x" + m.PreferredHeight + " " + m.PreferredHz.ToString("0.###") + " Гц");
-                Console.WriteLine("    режимов:   " + m.Modes.Count + (m.ModesAreApproximate ? " (список приблизительный)" : ""));
+                Console.WriteLine(Text.CliKey(m.Identity));
+                Console.WriteLine(Text.CliState(m.Active
+                    ? Text.CliOn(m.Width, m.Height, m.X, m.Y, m.Hz.ToString("0.###"), m.SourceId, m.Primary)
+                    : Text.CliOff));
+                Console.WriteLine(Text.CliHdrLine(Text.CliHdrState(m.HdrSupported, m.HdrEnabled)));
+                Console.WriteLine(Text.CliPreferred(m.PreferredWidth, m.PreferredHeight, m.PreferredHz.ToString("0.###")));
+                Console.WriteLine(Text.CliModes(m.Modes.Count, m.ModesAreApproximate));
                 if (m.Modes.Count > 0)
                 {
                     var top = new List<string>();
@@ -95,7 +97,7 @@ namespace DIIISPL
                 }
                 var sids = new List<string>();
                 foreach (uint s in m.ValidSourceIds) sids.Add(s.ToString());
-                Console.WriteLine("    выходы:    source " + string.Join(",", sids.ToArray()));
+                Console.WriteLine(Text.CliOutputs(string.Join(",", sids.ToArray())));
                 Console.WriteLine();
             }
             return 0;
@@ -110,16 +112,15 @@ namespace DIIISPL
             if (args.Length > 1)
             {
                 var layout = Store.LoadByName(args[1]);
-                if (layout == null) { Console.WriteLine("  профиль не найден: " + args[1]); return 2; }
+                if (layout == null) { Console.WriteLine(Text.CliProfileNotFound(args[1])); return 2; }
                 settings = layout.Taskbar;
-                Console.WriteLine("  профиль: " + layout.Name);
+                Console.WriteLine(Text.CliProfileIs(layout.Name));
                 foreach (TaskbarState s in TaskbarSettings.Order)
                 {
                     var a = settings[s];
                     Console.WriteLine("    " + TaskbarSettings.Describe(s).PadRight(24) +
-                                      (a.Enabled ? ExplorerTap.Describe(a.Accent) + ", цвет " + a.Color.ToString("X8") +
-                                                   ", линия " + (a.ShowLine ? "да" : "нет")
-                                                 : "выключено"));
+                                      (a.Enabled ? Text.CliColorLine(ExplorerTap.Describe(a.Accent), a.Color.ToString("X8"), a.ShowLine)
+                                                 : Text.CliStateOff));
                 }
                 Console.WriteLine();
             }
@@ -133,31 +134,31 @@ namespace DIIISPL
             Console.WriteLine();
             if (!ExplorerTap.Available)
             {
-                Console.WriteLine("  В программе не хватает файла для оформления панели задач.");
+                Console.WriteLine(Text.CliNoTaskbarFile);
                 return 1;
             }
             if (args.Length < 2)
             {
-                Console.WriteLine("  Укажите вид: " + string.Join(", ", ExplorerTap.Names));
+                Console.WriteLine(Text.CliPickLook(string.Join(", ", ExplorerTap.Names)));
                 return 2;
             }
 
             var bars = ExplorerTap.FindTaskbars();
-            Console.WriteLine("  панелей задач: " + bars.Count);
+            Console.WriteLine(Text.CliBarsFound(bars.Count));
 
             var look = ExplorerTap.Parse(args[1]);
             uint color = 0x00000000;
             if (args.Length > 2 && !ExplorerTap.TryParseColor(args[2], out color))
             {
-                Console.WriteLine("  цвет пишется как AARRGGBB или короче — RRGGBB");
+                Console.WriteLine(Text.CliColorFormat);
                 return 2;
             }
             bool showLine = args.Length > 3 && args[3].Trim().ToLowerInvariant() == "line";
 
             bool ok = ExplorerTap.ApplyAll(look, color, 9.0f, showLine);
             Console.WriteLine(ok
-                ? "  применено: " + ExplorerTap.Describe(args[1].ToLowerInvariant())
-                : "  не удалось: " + ExplorerTap.LastError);
+                ? Text.CliApplied(ExplorerTap.Describe(args[1].ToLowerInvariant()))
+                : Text.CliFailed(ExplorerTap.LastError));
             return ok ? 0 : 1;
         }
 #endif
@@ -201,13 +202,11 @@ namespace DIIISPL
             {
                 bool inCloneGroup = m.Active && bySource.ContainsKey(m.Adapter.Key + "/" + m.SourceId)
                                     && bySource[m.Adapter.Key + "/" + m.SourceId].Count > 1;
-                string mode = m.Active ? (m.Width + "x" + m.Height + " " + m.Hz.ToString("0.###") + " Гц") : "выключен";
-                string hdr = !m.Active ? "—"
-                    : (m.HdrSupported ? (m.HdrEnabled ? "ВКЛЮЧЁН" : "поддерживается, выключен")
-                                      : (inCloneGroup ? "недоступен: выход в дублировании" : "недоступен на этом режиме"));
+                string mode = m.Active ? (m.Width + "x" + m.Height + " " + m.Hz.ToString("0.###") + " " + Text.Hz) : Text.CliOff;
+                string hdr = Text.CliHdrDetail(m.Active, m.HdrSupported, m.HdrEnabled, inCloneGroup);
                 Console.WriteLine("  " + m.Name + "  [" + m.ConnectionType + "]");
-                Console.WriteLine("    режим: " + mode);
-                Console.WriteLine("    HDR:   " + hdr);
+                Console.WriteLine(Text.CliModeLine(mode));
+                Console.WriteLine(Text.CliHdrShort(hdr));
             }
 
             foreach (var kv in bySource)
@@ -221,9 +220,32 @@ namespace DIIISPL
                     states.Add(m.HdrEnabled ? "HDR" : "SDR");
                 }
                 Console.WriteLine();
-                Console.WriteLine("  Дублирование: " + string.Join(" + ", names.ToArray()) + "  →  " + string.Join(" / ", states.ToArray()));
-                Console.WriteLine("  (в группе дублирования HDR должен быть одинаковым на всех выходах)");
+                Console.WriteLine(Text.CliCloneLine(string.Join(" + ", names.ToArray()), string.Join(" / ", states.ToArray())));
+                Console.WriteLine(Text.CliCloneNote);
             }
+            return 0;
+        }
+
+        /// <summary>
+        /// Записать образец перевода: все ключи с английскими значениями, а строки,
+        /// которые уже переведены, — переведёнными. Без такого образца человек не
+        /// знает ни списка ключей, ни того, что вообще можно перевести.
+        /// </summary>
+        private static int WriteLangTemplate(string[] args)
+        {
+            Console.WriteLine();
+            if (args.Length < 2) { Console.WriteLine(Text.CliLangNeedCode); return 2; }
+
+            string code = args[1].Trim().ToLowerInvariant();
+            if (code.Length == 0 || code.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) >= 0)
+            {
+                Console.WriteLine(Text.CliLangBadCode);
+                return 2;
+            }
+
+            string path = LangFile.WriteTemplate(code);
+            Console.WriteLine(Text.CliLangWritten(path));
+            Console.WriteLine(Text.CliLangHowTo);
             return 0;
         }
 
@@ -231,20 +253,19 @@ namespace DIIISPL
         {
             Console.WriteLine();
             var all = Store.LoadAll();
-            if (all.Count == 0) { Console.WriteLine("  профилей нет"); return 0; }
+            if (all.Count == 0) { Console.WriteLine(Text.CliNoProfiles); return 0; }
             foreach (var l in all)
             {
                 int on = 0;
                 foreach (var d in l.Displays) if (d.Enabled) on++;
-                Console.WriteLine("  " + l.Name + "   мониторов: " + on + "/" + l.Displays.Count +
-                                  (string.IsNullOrEmpty(l.Hotkey) ? "" : "   [" + l.Hotkey + "]"));
+                Console.WriteLine(Text.CliProfileRow(l.Name, on, l.Displays.Count, l.Hotkey));
             }
             return 0;
         }
 
         private static int SaveCurrent(string[] args)
         {
-            if (args.Length < 2) { Console.WriteLine("Укажите имя профиля."); return 2; }
+            if (args.Length < 2) { Console.WriteLine(Text.CliNeedName); return 2; }
             var layout = Layout.FromCurrent(args[1]);
 
             // Сохранение поверх существующего профиля переснимает **раскладку**, а не
@@ -263,37 +284,37 @@ namespace DIIISPL
                 string clash = Store.NameInUse(args[1], null);
                 if (clash != null)
                 {
-                    Console.WriteLine("«" + args[1] + "» и «" + clash + "» — для программы одно и то же имя.");
-                    Console.WriteLine("Возьмите другое имя или переснимите существующий: /save \"" + clash + "\"");
+                    Console.WriteLine(Text.CliSameName(args[1], clash));
+                    Console.WriteLine(Text.CliSameNameHint(clash));
                     return 2;
                 }
             }
             else layout.AdoptSettingsFrom(existing);
 
             Store.Save(layout);
-            Console.WriteLine((existing != null ? "Переснято: " : "Сохранено: ") + layout.Name);
+            Console.WriteLine(existing != null ? Text.CliRetaken(layout.Name) : Text.CliSaved(layout.Name));
             return 0;
         }
 
         private static int ApplyProfile(string[] args)
         {
-            if (args.Length < 2) { Console.WriteLine("Укажите имя профиля."); return 2; }
+            if (args.Length < 2) { Console.WriteLine(Text.CliNeedName); return 2; }
             var layout = Store.LoadByName(args[1]);
-            if (layout == null) { Console.WriteLine("Профиль не найден: " + args[1]); return 2; }
+            if (layout == null) { Console.WriteLine(Text.CliNotFound(args[1])); return 2; }
             var res = Applier.Apply(layout);
             foreach (string w in res.Warnings) Console.WriteLine("  ! " + w);
-            if (!res.Success) { Console.WriteLine("Ошибка: " + res.Error); return 1; }
-            Console.WriteLine("Применено: " + layout.Name);
+            if (!res.Success) { Console.WriteLine(Text.CliError(res.Error)); return 1; }
+            Console.WriteLine(Text.CliAppliedName(layout.Name));
             return 0;
         }
 
         private static int DeleteProfile(string[] args)
         {
-            if (args.Length < 2) { Console.WriteLine("Укажите имя профиля."); return 2; }
+            if (args.Length < 2) { Console.WriteLine(Text.CliNeedName); return 2; }
             var layout = Store.LoadByName(args[1]);
-            if (layout == null) { Console.WriteLine("Профиль не найден: " + args[1]); return 2; }
+            if (layout == null) { Console.WriteLine(Text.CliNotFound(args[1])); return 2; }
             Store.Delete(layout);
-            Console.WriteLine("Удалено: " + layout.Name);
+            Console.WriteLine(Text.CliDeleted(layout.Name));
             return 0;
         }
     }

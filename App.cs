@@ -258,6 +258,41 @@ namespace DIIISPL
         }
 #endif
 
+        /// <summary>
+        /// Перезапустить программу — так меняется язык.
+        ///
+        /// Мьютекс единственного экземпляра отпускаем до запуска новой копии:
+        /// иначе она увидит занятое имя, покажет окно этой копии и выйдет, а
+        /// смена языка не случится вовсе.
+        /// </summary>
+        public void RestartForLanguage()
+        {
+            if (ApplyBusy.Active)
+            {
+                Balloon(Text.BusyWait, Forms.ToolTipIcon.Info);
+                return;
+            }
+            if (_window != null && !_window.AskBeforeClosing()) return;
+
+            try
+            {
+                if (_mutex != null)
+                {
+                    try { _mutex.ReleaseMutex(); } catch { }
+                    _mutex.Close();
+                    _mutex = null;
+                }
+                var start = new System.Diagnostics.ProcessStartInfo(
+                    System.Reflection.Assembly.GetExecutingAssembly().Location);
+                start.UseShellExecute = true;
+                System.Diagnostics.Process.Start(start);
+            }
+            catch { /* не запустилась — по крайней мере не закрываем эту */ }
+
+            Cleanup();
+            Shutdown();
+        }
+
         private void Quit()
         {
             // Посреди перестроения не выходим: работа идёт в фоновом потоке, и
@@ -274,14 +309,19 @@ namespace DIIISPL
             // не менял, и правки пропадали вместе с программой.
             if (_window != null && !_window.AskBeforeClosing()) return;
 
+            Cleanup();
+            Shutdown();
+        }
+
+        /// <summary>Убрать за собой: вид панели, горячие клавиши, значок в трее.</summary>
+        private void Cleanup()
+        {
 #if DEV
             TaskbarWatcher.Stop();
             if (ExplorerTap.Available) ExplorerTap.RestoreAll();
 #endif
-
             UnregisterHotkeys();
-            if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
-            Shutdown();
+            if (_tray != null) { _tray.Visible = false; _tray.Dispose(); _tray = null; }
         }
 
         // ---------------------------------------------------------------- горячие клавиши

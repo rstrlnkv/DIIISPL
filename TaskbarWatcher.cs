@@ -108,13 +108,10 @@ namespace DIIISPL
             bool search = SearchOpened();
             bool taskView = TaskViewOpened();
 
-            sb.AppendLine("  сигналы: экономия заряда=" + (battery ? "да" : "нет") +
-                          ", «Пуск»=" + (start ? "да" : "нет") +
-                          ", поиск=" + (search ? "да" : "нет") +
-                          ", представление задач=" + (taskView ? "да" : "нет"));
+            sb.AppendLine(Text.TbSignals(battery, start, search, taskView));
 
             var bars = ExplorerTap.FindTaskbars();
-            sb.AppendLine("  панелей задач: " + bars.Count);
+            sb.AppendLine(Text.TbBarsFound(bars.Count));
 
             var saved = _settings;
             _settings = settings ?? new TaskbarSettings();
@@ -123,11 +120,10 @@ namespace DIIISPL
                 IntPtr monitor = MonitorFromWindow(bar, MONITOR_DEFAULTTONEAREST);
                 var state = Evaluate(monitor, battery, start, search, taskView);
                 var look = _settings[state];
-                sb.AppendLine("  панель 0x" + bar.ToInt64().ToString("X") +
-                              ": развёрнутое окно=" + (HasWindow(monitor, true) ? "да" : "нет") +
-                              ", открытое окно=" + (HasWindow(monitor, false) ? "да" : "нет") +
-                              "  →  " + TaskbarSettings.Describe(state) +
-                              " (" + (look.Enabled ? ExplorerTap.Describe(look.Accent) : "состояние выключено") + ")");
+                sb.AppendLine(Text.TbBarLine(bar.ToInt64().ToString("X"),
+                                             HasWindow(monitor, true), HasWindow(monitor, false),
+                                             TaskbarSettings.Describe(state),
+                                             look.Enabled ? ExplorerTap.Describe(look.Accent) : Text.TbStateOff));
             }
             _settings = saved;
             return sb.ToString();

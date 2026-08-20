@@ -83,13 +83,14 @@ namespace DIIISPL
             get
             {
                 string v = Get("language");
-                foreach (string c in Lang.Codes) if (c == v) return v;
-                return Text.Auto;
+                return string.IsNullOrEmpty(v) ? Text.Auto : v;
             }
             set
             {
-                foreach (string c in Lang.Codes) if (c == value) { Set("language", value); return; }
-                Set("language", "");   // всё прочее — «по Windows»
+                // Проверять код по списку здесь нельзя: языковой файл может
+                // появиться позже, и запомненный выбор не должен от этого пропасть.
+                // Несуществующий язык всё равно превратится в запасной при чтении.
+                Set("language", value == Text.Auto ? "" : value);
             }
         }
 

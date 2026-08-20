@@ -97,10 +97,21 @@ if not exist "%NETDIR%\csc.exe" set NETDIR=%WINDIR%\Microsoft.NET\Framework\v4.0
 echo === Лицензия ===
 powershell -NoProfile -ExecutionPolicy Bypass -File "%HERE%make-license-rtf.ps1" -Source "%ROOT%\LICENSE" -Target "%HERE%LICENSE.rtf" || exit /b 1
 
+rem Код продукта выводится из номера версии, а не берётся случайным. Пакет
+rem собирается по разу на язык, и перевод внутрь встаёт разницей между сборками:
+rem случайные коды сделали бы «переводом» подмену всего продукта. Одна и та же
+rem версия даёт один и тот же код, разные версии — разные, и замена прежней
+rem версии новой продолжает работать.
+for /f %%G in ('powershell -NoProfile -Command "$b=[Security.Cryptography.MD5]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes('DIIISPL %VERSION% %CHANNEL%')); ([guid][byte[]]$b).ToString().ToUpperInvariant()"') do set PRODUCTCODE=%%G
+if not defined PRODUCTCODE (
+  echo Не удалось вычислить код продукта.
+  exit /b 1
+)
+
 echo === Сборка пакета ===
 if not exist "%HERE%obj" mkdir "%HERE%obj"
 "%WIX%\candle.exe" -nologo -arch x64 ^
-  -dVersion=%VERSION% -dChannel=%CHANNEL% -dSourceDir="%ROOT%" -dBinDir="%HERE%obj\stage" -dLicenseRtf="%HERE%LICENSE.rtf" -dArtDir="%HERE%obj" ^
+  -dVersion=%VERSION% -dChannel=%CHANNEL% -dProductCode=%PRODUCTCODE% -dSourceDir="%ROOT%" -dBinDir="%HERE%obj\stage" -dLicenseRtf="%HERE%LICENSE.rtf" -dArtDir="%HERE%obj" ^
   -ext WixUtilExtension -ext WixUIExtension ^
   -out "%HERE%obj\\" "%HERE%DIIISPL.wxs" "%HERE%DIIISPLUI.wxs" || exit /b 1
 
@@ -109,14 +120,33 @@ rem   ICE60 — про шрифты в файлах без версии, к на
 rem   ICE38, ICE43, ICE57 — считают меню «Пуск» пользовательским и требуют ключа
 rem     в HKCU. Пакет ставится на всю машину (ALLUSERS=1), меню там общее, и ключ
 rem     в HKLM для него верный — статические проверки этого не учитывают.
+rem
+rem Языков два, и пакет собирается дважды: английская сборка становится файлом
+rem для скачивания, русская — только заготовкой, из которой берётся разница.
+rem Английский основной потому, что пакет один на весь свет: язык, которого в нём
+rem нет, оставляет человека с чем-то читаемым, а не с незнакомыми буквами.
+set MSI=%ROOT%\DIIISPL-%VERSION%-%CHANNEL%-x64.msi
 "%WIX%\light.exe" -nologo ^
   -ext WixUtilExtension -ext WixUIExtension ^
-  -cultures:ru-RU ^
+  -cultures:en-us -loc "%HERE%lang\en-us.wxl" ^
   -sice:ICE60 -sice:ICE38 -sice:ICE43 -sice:ICE57 ^
-  -out "%ROOT%\DIIISPL-%VERSION%-%CHANNEL%-x64.msi" "%HERE%obj\DIIISPL.wixobj" "%HERE%obj\DIIISPLUI.wixobj" || exit /b 1
+  -out "%MSI%" "%HERE%obj\DIIISPL.wixobj" "%HERE%obj\DIIISPLUI.wixobj" || exit /b 1
+
+"%WIX%\light.exe" -nologo ^
+  -ext WixUtilExtension -ext WixUIExtension ^
+  -cultures:ru-ru -loc "%HERE%lang\ru-ru.wxl" ^
+  -sice:ICE60 -sice:ICE38 -sice:ICE43 -sice:ICE57 ^
+  -out "%HERE%obj\ru-ru.msi" "%HERE%obj\DIIISPL.wixobj" "%HERE%obj\DIIISPLUI.wixobj" || exit /b 1
+
+echo === Переводы внутрь пакета ===
+rem -t language: сравниваются только тексты. Без этого разницей считались бы и
+rem файлы программы, одинаковые в обеих сборках, — перевод переписывал бы их
+rem поверх самих себя.
+"%WIX%\torch.exe" -nologo -p -t language "%MSI%" "%HERE%obj\ru-ru.msi" -out "%HERE%obj\ru-ru.mst" || exit /b 1
+powershell -NoProfile -ExecutionPolicy Bypass -File "%HERE%embed-lang.ps1" -Msi "%MSI%" -Transform 1049="%HERE%obj\ru-ru.mst" || exit /b 1
 
 echo === Подпись пакета ===
-call "%HERE%sign.cmd" "%ROOT%\DIIISPL-%VERSION%-%CHANNEL%-x64.msi" || exit /b 1
+call "%HERE%sign.cmd" "%MSI%" || exit /b 1
 
 echo.
-echo Готово: %ROOT%\DIIISPL-%VERSION%-%CHANNEL%-x64.msi
+echo Готово: %MSI%

@@ -40,7 +40,7 @@ namespace DIIISPL
             _profileName = profileName;
             _settings = settings;
 
-            Title = "Панель задач";
+            Title = Text.TbWinTitle;
             Width = 720;
             Height = 700;
             MinWidth = 620;
@@ -61,7 +61,7 @@ namespace DIIISPL
             root.RowDefinitions.Add(new RowDefinition());
             root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-            root.Children.Add(Ui.Head("Панель задач", "Профиль «" + _profileName + "»"));
+            root.Children.Add(Ui.Head(Text.TbWinTitle, Text.TbWinSubtitle(_profileName)));
 
             var scroll = new ScrollViewer();
             scroll.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
@@ -84,7 +84,7 @@ namespace DIIISPL
 
             var close = new Button();
             close.Style = (Style)Application.Current.Resources["BtnAccent"];
-            close.Content = "Готово";
+            close.Content = Text.TbWinDone;
             close.MinWidth = 120;
             close.Height = 36;
             close.IsDefault = true;
@@ -132,17 +132,17 @@ namespace DIIISPL
             });
 
             if (!_settings.AnyEnabled)
-                return Ui.Card("Вид панели задач", null,
-                    Ui.Row("Менять вид панели в этом профиле",
-                           "Пока выключено, панель выглядит так, как её рисует Windows.",
+                return Ui.Card(Text.TbWinCard, null,
+                    Ui.Row(Text.TbWinMaster,
+                           Text.TbWinMasterOff,
                            master, 60));
 
-            return Ui.Card("Вид панели задач", null,
-                Ui.Row("Менять вид панели в этом профиле", null, master, 60),
-                Ui.Row("Обычный вид", "Так панель выглядит, когда ничего особенного не происходит.",
+            return Ui.Card(Text.TbWinCard, null,
+                Ui.Row(Text.TbWinMaster, null, master, 60),
+                Ui.Row(Text.TbWinUsual, Text.TbWinUsualHint,
                        AccentBox(look, false), 190),
                 ColorRow(look),
-                Ui.Row("Тонкая линия у края панели", "Одинаково для всех случаев.",
+                Ui.Row(Text.TbWinLine, Text.TbWinLineHint,
                        Switch(look.ShowLine, delegate(bool on)
                        {
                            foreach (TaskbarState s in TaskbarSettings.Order) _settings[s].ShowLine = on;
@@ -161,8 +161,8 @@ namespace DIIISPL
                                 StateControls(look), 330));
             }
 
-            return Ui.Card("Когда вид другой",
-                "Случаи проверяются сверху вниз — побеждает первый подходящий.",
+            return Ui.Card(Text.TbWinCasesCard,
+                Text.TbWinCasesHint,
                 rows.ToArray());
         }
 
@@ -191,10 +191,10 @@ namespace DIIISPL
             if (!UsesColor(look.Accent)) return null;
 
             string hint = look.Accent == "opaque"
-                ? "Первые две цифры не действуют — панель непрозрачная."
-                : "Первые две цифры — насколько цвет плотный.";
+                ? Text.TbWinColorHint(true)
+                : Text.TbWinColorHint(false);
 
-            return Ui.Row("Цвет", hint, ColorField(look), 190);
+            return Ui.Row(Text.TbWinColor, hint, ColorField(look), 190);
         }
 
         private static bool UsesColor(string accent)
@@ -209,7 +209,7 @@ namespace DIIISPL
         private static string HintFor(TaskbarState state)
         {
             if (state == TaskbarState.VisibleWindow)
-                return "Считается для каждого экрана отдельно.";
+                return Text.TbWinPerScreen;
             return null;
         }
 
@@ -221,7 +221,7 @@ namespace DIIISPL
             box.Style = (Style)Application.Current.Resources["Combo"];
 
             var items = new List<Item>();
-            if (allowInherit) items.Add(new Item("Как обычно", null));
+            if (allowInherit) items.Add(new Item(Text.TbWinAsUsual, null));
             foreach (string name in ExplorerTap.Names) items.Add(new Item(ExplorerTap.Describe(name), name));
             box.ItemsSource = items;
 
@@ -265,7 +265,7 @@ namespace DIIISPL
             box.Style = (Style)Application.Current.Resources["Input"];
             box.Width = 110;
             box.Text = look.Color.ToString("X8", CultureInfo.InvariantCulture);
-            box.ToolTip = "AARRGGBB или RRGGBB — первые две цифры задают плотность цвета";
+            box.ToolTip = Text.TbWinColorTip;
             box.LostFocus += delegate
             {
                 if (_updating) return;
@@ -336,7 +336,7 @@ namespace DIIISPL
             picker.IsEnabled = others.Count > 0;
 
             var items = new List<Item>();
-            items.Add(new Item(others.Count > 0 ? "— выберите профиль —" : "других профилей нет", null));
+            items.Add(new Item(others.Count > 0 ? Text.TbWinPickProfile : Text.TbWinNoOthers, null));
             foreach (var l in others) items.Add(new Item(l.Name, l));
             picker.ItemsSource = items;
             picker.SelectedItem = items[0];
@@ -352,21 +352,20 @@ namespace DIIISPL
 
                 Rebuild();
                 Preview();
-                _hint.Text = "Настройки скопированы из «" + source.Name + "».";
+                _hint.Text = Text.TbWinCopied(source.Name);
             };
             row.Children.Add(picker);
 
             var toAll = new Button();
             toAll.Style = (Style)Application.Current.Resources["Btn"];
-            toAll.Content = "Применить ко всем";
+            toAll.Content = Text.TbWinApplyAll;
             toAll.Height = 34;
             toAll.Margin = new Thickness(8, 0, 0, 0);
             toAll.IsEnabled = others.Count > 0;
             toAll.Click += delegate { CopyToAllProfiles(); };
             row.Children.Add(toAll);
 
-            return Ui.Card("Перенос между профилями",
-                "Настроив вид один раз, незачем повторять его в каждом профиле.", row);
+            return Ui.Card(Text.TbWinTransferCard, Text.TbWinTransferHint, row);
         }
 
         private void CopyToAllProfiles()
@@ -376,9 +375,8 @@ namespace DIIISPL
                 if (!string.Equals(l.Name, _profileName, StringComparison.Ordinal)) others.Add(l);
             if (others.Count == 0) return;
 
-            var dialog = new ConfirmDialog("Применить ко всем профилям?",
-                "Вид панели задач из «" + _profileName + "» заменит настройки в остальных профилях (" +
-                others.Count + " шт.). Раскладки мониторов не изменятся.", "Применить");
+            var dialog = new ConfirmDialog(Text.TbWinApplyAllTitle,
+                Text.TbWinApplyAllBody(_profileName, others.Count), Text.Apply);
             dialog.Owner = this;
             if (dialog.ShowDialog() != true) return;
 
@@ -399,7 +397,7 @@ namespace DIIISPL
                 Store.Save(mine);
             }
 
-            _hint.Text = "Настройки записаны во все профили: " + (others.Count + (mine != null ? 1 : 0)) + ".";
+            _hint.Text = Text.TbWinWrittenAll(others.Count + (mine != null ? 1 : 0));
         }
 
         // ---------------------------------------------------------------- прочее
@@ -416,12 +414,12 @@ namespace DIIISPL
         {
             if (!ExplorerTap.Available)
             {
-                _hint.Text = "В программе не хватает файла для оформления панели — задать вид нечем.";
+                _hint.Text = Text.TbWinNoLibrary;
                 return;
             }
             _hint.Text = _settings.AnyEnabled
-                ? "Изменения видны сразу и сохраняются вместе с профилем."
-                : "Панель останется такой, какой её рисует Windows.";
+                ? Text.TbWinLiveHint
+                : Text.TbWinOffHint;
         }
     }
 }

@@ -2,6 +2,7 @@
 // Copyright (C) 2026 r.strlnkv
 // Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
 
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 
@@ -45,8 +46,15 @@ namespace DIIISPL
         private static void Load()
         {
             _code = Resolve(Settings.Language);
+
             _table = Lang.Table(_code);
             _fallback = _code == Lang.Codes[0] ? _table : Lang.Table(Lang.Codes[0]);
+
+            // Файл поверх встроенного словаря, а не вместо него: перевод, в котором
+            // чего-то не хватает, дополняется тем, что программа знает сама, и окно
+            // не остаётся с пустыми местами.
+            LangFile.Overlay(_code, _table);
+            if (!ReferenceEquals(_fallback, _table)) LangFile.Overlay(Lang.Codes[0], _fallback);
         }
 
         /// <summary>
@@ -56,10 +64,11 @@ namespace DIIISPL
         /// </summary>
         public static string Resolve(string setting)
         {
-            foreach (string c in Lang.Codes) if (c == setting) return c;
+            var all = AvailableCodes();
+            foreach (string c in all) if (c == setting) return c;
 
             string system = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
-            foreach (string c in Lang.Codes) if (c == system) return c;
+            foreach (string c in all) if (c == system) return c;
             return Lang.Codes[0];
         }
 
@@ -72,10 +81,34 @@ namespace DIIISPL
         {
             var result = new List<string>();
             var full = Lang.Table(Lang.Codes[0]);
-            var one = Lang.Table(code);
+            // Язык из файла не наследует английский: непереведённой считается
+            // каждая строка, которой в файле нет, — иначе счёт всегда нулевой.
+            bool builtIn = false;
+            foreach (string c in Lang.Codes) if (c == code) builtIn = true;
+            var one = builtIn ? Lang.Table(code) : new Dictionary<string, string>(StringComparer.Ordinal);
+            LangFile.Overlay(code, one);
             foreach (var kv in full) if (!one.ContainsKey(kv.Key)) result.Add(kv.Key);
             result.Sort();
             return result;
+        }
+
+        /// <summary>
+        /// Все языки, которые программа может показать: встроенные плюс лежащие
+        /// файлами. Файл с кодом встроенного языка новым языком не считается — он
+        /// просто правит его строки.
+        /// </summary>
+        public static List<string> AvailableCodes()
+        {
+            var all = new List<string>(Lang.Codes);
+            foreach (string c in LangFile.Codes()) if (!all.Contains(c)) all.Add(c);
+            return all;
+        }
+
+        /// <summary>Как язык подписывает себя сам.</summary>
+        public static string NameOf(string code)
+        {
+            foreach (string c in Lang.Codes) if (c == code) return Lang.NativeName(code);
+            return LangFile.NameOf(code);
         }
 
         // ------------------------------------------------------------------ доступ к словарю
@@ -312,5 +345,152 @@ namespace DIIISPL
         public static string ComboBusy(string combo, string other) { return G("win.comboBusy", combo, other); }
         public static string ComboSet(string combo, string profile) { return G("win.comboSet", combo, profile); }
         public static string ComboNeedsAutostart { get { return G("win.comboNeedsAutostart"); } }
+
+        // ------------------------------------------------------------------ командная строка
+        public static string CliUnknownCmd(string cmd) { return G("cli.unknownCmd", cmd); }
+        public static string CliError(string why) { return G("cli.error", why); }
+        public static string CliTitle { get { return G("cli.title"); } }
+        public static string CliHelpWindow { get { return G("cli.help.window"); } }
+        public static string CliHelpApply { get { return G("cli.help.apply"); } }
+        public static string CliHelpSave { get { return G("cli.help.save"); } }
+        public static string CliHelpList { get { return G("cli.help.list"); } }
+        public static string CliHelpDelete { get { return G("cli.help.delete"); } }
+        public static string CliHelpMonitors { get { return G("cli.help.monitors"); } }
+        public static string CliHelpHdr { get { return G("cli.help.hdr"); } }
+        public static string CliHelpTaskbar { get { return G("cli.help.taskbar"); } }
+        public static string CliHelpTaskbarState { get { return G("cli.help.taskbarState"); } }
+        public static string CliNoMonitors { get { return G("cli.noMonitors"); } }
+        public static string CliKey(string id) { return G("cli.key", id); }
+        public static string CliState(string what) { return G("cli.state", what); }
+        public static string CliOn(int w, int h, int x, int y, string hz, uint source, bool primary)
+        {
+            return G("cli.on", w, h, x, y, hz, source) + (primary ? G("cli.primarySuffix") : "");
+        }
+        public static string CliOff { get { return G("cli.off"); } }
+        public static string CliHdrLine(string what) { return G("cli.hdrLine", what); }
+        public static string CliHdrState(bool supported, bool on)
+        {
+            return supported ? G(on ? "cli.hdrOnSupported" : "cli.hdrOffSupported") : G("cli.hdrNone");
+        }
+        public static string CliPreferred(int w, int h, string hz) { return G("cli.preferred", w, h, hz); }
+        public static string CliModes(int n, bool approx) { return G("cli.modes", n, approx ? G("cli.modesApprox") : ""); }
+        public static string CliOutputs(string list) { return G("cli.outputs", list); }
+        public static string CliProfileNotFound(string name) { return G("cli.profileNotFound", name); }
+        public static string CliProfileIs(string name) { return G("cli.profileIs", name); }
+        public static string CliColorLine(string look, string color, bool line)
+        {
+            return G("cli.colorLine", look, color, G(line ? "cli.yes" : "cli.no"));
+        }
+        public static string CliStateOff { get { return G("cli.stateOff"); } }
+        public static string CliNoTaskbarFile { get { return G("cli.noTaskbarFile"); } }
+        public static string CliPickLook(string names) { return G("cli.pickLook", names); }
+        public static string CliBarsFound(int n) { return G("cli.barsFound", n); }
+        public static string CliColorFormat { get { return G("cli.colorFormat"); } }
+        public static string CliApplied(string what) { return G("cli.applied", what); }
+        public static string CliFailed(string why) { return G("cli.failed", why); }
+        public static string CliModeLine(string mode) { return G("cli.modeLine", mode); }
+        public static string CliHdrShort(string what) { return G("cli.hdrShort", what); }
+        public static string CliHdrDetail(bool active, bool supported, bool on, bool inClone)
+        {
+            if (!active) return "—";
+            if (supported) return on ? G("cli.hdrOnCaps") : G("cli.hdrOffSupported");
+            return G(inClone ? "cli.hdrNoInClone" : "cli.hdrNoAtMode");
+        }
+        public static string CliCloneLine(string names, string states) { return G("cli.cloneLine", names, states); }
+        public static string CliCloneNote { get { return G("cli.cloneNote"); } }
+        public static string CliNoProfiles { get { return G("cli.noProfiles"); } }
+        public static string CliProfileRow(string name, int on, int all, string hotkey)
+        {
+            return G("cli.profileRow", name, on, all, string.IsNullOrEmpty(hotkey) ? "" : "   [" + hotkey + "]");
+        }
+        public static string CliNeedName { get { return G("cli.needName"); } }
+        public static string CliSameName(string a, string b) { return G("cli.sameName", a, b); }
+        public static string CliSameNameHint(string clash) { return G("cli.sameNameHint", clash); }
+        public static string CliRetaken(string name) { return G("cli.retaken", name); }
+        public static string CliSaved(string name) { return G("cli.saved", name); }
+        public static string CliNotFound(string name) { return G("cli.notFound", name); }
+        public static string CliAppliedName(string name) { return G("cli.appliedName", name); }
+        public static string CliDeleted(string name) { return G("cli.deleted", name); }
+        public static string CliHelpLang { get { return G("cli.help.lang"); } }
+        public static string CliLangNeedCode { get { return G("cli.lang.needCode"); } }
+        public static string CliLangBadCode { get { return G("cli.lang.badCode"); } }
+        public static string CliLangWritten(string path) { return G("cli.lang.written", path); }
+        public static string CliLangHowTo { get { return G("cli.lang.howTo"); } }
+
+        // ------------------------------------------------------------------ «О программе»
+        public static string AboutTagline { get { return G("about.tagline"); } }
+        public static string AboutVersion { get { return G("about.version"); } }
+        public static string AboutBuild { get { return G("about.build"); } }
+        public static string AboutProfiles { get { return G("about.profiles"); } }
+        public static string AboutAuthor { get { return G("about.author"); } }
+        public static string AboutAuthorName { get { return G("about.authorName"); } }
+        public static string AboutChannel { get { return G("about.channel"); } }
+        public static string AboutLanguage { get { return G("about.language"); } }
+        public static string WhatsNew { get { return G("about.whatsNew"); } }
+        public static string AboutFooter(string app) { return G("about.footer", app); }
+        public static string ChannelDevHint { get { return G("about.devHint"); } }
+        public static string ChannelStableHint { get { return G("about.stableHint"); } }
+        public static string CheckButton { get { return G("about.check"); } }
+        public static string Checking { get { return G("about.checking"); } }
+        public static string AgainButton { get { return G("about.again"); } }
+        public static string UpToDate { get { return G("about.upToDate"); } }
+        public static string NewVersionFound(string version) { return G("about.newVersion", version); }
+        public static string UpdateButton { get { return G("about.update"); } }
+        public static string DowngradeTitle { get { return G("about.downgradeTitle"); } }
+        public static string DowngradeBody(string version) { return G("about.downgradeBody", version); }
+        public static string DowngradeOk { get { return G("about.downgradeOk"); } }
+        public static string Downloading { get { return G("about.downloading"); } }
+        public static string InstallerStarted { get { return G("about.installerStarted"); } }
+        public static string LangRestart { get { return G("about.langRestart"); } }
+        public static string LangRestartTitle(string language) { return G("about.langRestartTitle", language); }
+        public static string LangRestartOk { get { return G("about.langRestartOk"); } }
+
+        // ------------------------------------------------------------------ панель задач (Dev)
+        public static string TbState(string key) { return G("tb." + key); }
+        public static string TbNoTaskbar { get { return G("tb.noTaskbar"); } }
+        public static string TbNoExplorer { get { return G("tb.noExplorer"); } }
+        public static string TbLostExplorer { get { return G("tb.lostExplorer"); } }
+        public static string TbLook(string name) { return G("tb.look." + name); }
+        public static string TbSignals(bool battery, bool start, bool search, bool taskView)
+        {
+            return G("tb.signals", YesNo(battery), YesNo(start), YesNo(search), YesNo(taskView));
+        }
+        public static string TbBarsFound(int n) { return G("tb.barsFound", n); }
+        public static string TbBarLine(string handle, bool maximized, bool window, string state, string look)
+        {
+            return G("tb.barLine", handle, YesNo(maximized), YesNo(window), state, look);
+        }
+        public static string TbStateOff { get { return G("tb.stateOff"); } }
+        public static string YesNo(bool yes) { return G(yes ? "cli.yes" : "cli.no"); }
+
+        public static string TbWinTitle { get { return G("tb.win.title"); } }
+        public static string TbWinSubtitle(string profile) { return G("tb.win.subtitle", profile); }
+        public static string TbWinDone { get { return G("tb.win.done"); } }
+        public static string TbWinCard { get { return G("tb.win.card"); } }
+        public static string TbWinMaster { get { return G("tb.win.master"); } }
+        public static string TbWinMasterOff { get { return G("tb.win.masterOff"); } }
+        public static string TbWinUsual { get { return G("tb.win.usual"); } }
+        public static string TbWinUsualHint { get { return G("tb.win.usualHint"); } }
+        public static string TbWinLine { get { return G("tb.win.line"); } }
+        public static string TbWinLineHint { get { return G("tb.win.lineHint"); } }
+        public static string TbWinCasesCard { get { return G("tb.win.casesCard"); } }
+        public static string TbWinCasesHint { get { return G("tb.win.casesHint"); } }
+        public static string TbWinColorHint(bool opaque) { return G(opaque ? "tb.win.colorOpaque" : "tb.win.colorAlpha"); }
+        public static string TbWinColor { get { return G("tb.win.color"); } }
+        public static string TbWinPerScreen { get { return G("tb.win.perScreen"); } }
+        public static string TbWinAsUsual { get { return G("tb.win.asUsual"); } }
+        public static string TbWinColorTip { get { return G("tb.win.colorTip"); } }
+        public static string TbWinPickProfile { get { return G("tb.win.pickProfile"); } }
+        public static string TbWinNoOthers { get { return G("tb.win.noOthers"); } }
+        public static string TbWinCopied(string from) { return G("tb.win.copied", from); }
+        public static string TbWinApplyAll { get { return G("tb.win.applyAll"); } }
+        public static string TbWinTransferCard { get { return G("tb.win.transferCard"); } }
+        public static string TbWinTransferHint { get { return G("tb.win.transferHint"); } }
+        public static string TbWinApplyAllTitle { get { return G("tb.win.applyAllTitle"); } }
+        public static string TbWinApplyAllBody(string profile, int others) { return G("tb.win.applyAllBody", profile, others); }
+        public static string TbWinWrittenAll(int n) { return G("tb.win.writtenAll", n); }
+        public static string TbWinNoLibrary { get { return G("tb.win.noLibrary"); } }
+        public static string TbWinLiveHint { get { return G("tb.win.liveHint"); } }
+        public static string TbWinOffHint { get { return G("tb.win.offHint"); } }
     }
 }

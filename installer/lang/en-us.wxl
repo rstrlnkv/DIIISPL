@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+  DIIISPL — менеджер раскладок мониторов для Windows.
+  Copyright (C) 2026 r.strlnkv
+  Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+
+  Тексты установщика по-английски. Это язык пакета по умолчанию: остальные
+  приезжают отдельными переводами внутри того же файла, см. build-msi.cmd.
+-->
+<WixLocalization xmlns="http://schemas.microsoft.com/wix/2006/localization"
+                 Culture="en-us" Codepage="1252">
+
+  <!-- Язык и кодовая страница пакета: их читает Windows Installer, а не человек. -->
+  <String Id="Language" Overridable="yes">1033</String>
+  <String Id="SummaryCodepage" Overridable="yes">1252</String>
+
+  <String Id="PackageDescription">DIIISPL — monitor layouts</String>
+  <String Id="PackageComments">Free software under the GNU GPL v3 or later</String>
+  <String Id="DowngradeError">A newer version of DIIISPL is already installed.</String>
+
+  <String Id="FeatureTitle">DIIISPL</String>
+  <String Id="FeatureDescription">Monitor layout manager.</String>
+
+  <String Id="ShortcutDescription">Monitor layouts</String>
+  <String Id="LaunchCheckbox">Start DIIISPL</String>
+
+  <String Id="ShortcutDlgTitle">Shortcut</String>
+  <String Id="ShortcutDlgDescription">Where to start the program from.</String>
+  <String Id="ShortcutCheckBox">Create a Start menu shortcut</String>
+  <String Id="ShortcutHint">The program lives as an icon in the notification area. The shortcut is for starting it by hand; starting with Windows is switched on inside the program itself.</String>
+
+</WixLocalization>

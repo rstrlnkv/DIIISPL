@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+  DIIISPL — менеджер раскладок мониторов для Windows.
+  Copyright (C) 2026 r.strlnkv
+  Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+
+  Тексты установщика по-русски.
+-->
+<WixLocalization xmlns="http://schemas.microsoft.com/wix/2006/localization"
+                 Culture="ru-ru" Codepage="1251">
+
+  <String Id="Language" Overridable="yes">1049</String>
+  <String Id="SummaryCodepage" Overridable="yes">1251</String>
+
+  <String Id="PackageDescription">DIIISPL — раскладки мониторов</String>
+  <String Id="PackageComments">Свободная программа под GNU GPL v3 или новее</String>
+  <String Id="DowngradeError">Уже установлена более новая версия DIIISPL.</String>
+
+  <String Id="FeatureTitle">DIIISPL</String>
+  <String Id="FeatureDescription">Менеджер раскладок мониторов.</String>
+
+  <String Id="ShortcutDescription">Раскладки мониторов</String>
+  <String Id="LaunchCheckbox">Запустить DIIISPL</String>
+
+  <String Id="ShortcutDlgTitle">Ярлык</String>
+  <String Id="ShortcutDlgDescription">Откуда запускать программу.</String>
+  <String Id="ShortcutCheckBox">Создать ярлык в меню «Пуск»</String>
+  <String Id="ShortcutHint">Программа живёт значком в области уведомлений. Ярлык нужен, чтобы запускать её вручную; автозапуск при входе в Windows включается в самой программе.</String>
+
+</WixLocalization>

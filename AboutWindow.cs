@@ -34,7 +34,7 @@ namespace DIIISPL
 
         public AboutWindow()
         {
-            Title = "О программе";
+            Title = Text.About;
             Width = 560;
             MinWidth = 480;
             MinHeight = 520;
@@ -146,7 +146,7 @@ namespace DIIISPL
         private UIElement Tagline()
         {
             var t = new TextBlock();
-            t.Text = "Раскладки мониторов для Windows 11";
+            t.Text = Text.AboutTagline;
             t.Style = (Style)Application.Current.Resources["Caption"];
             t.HorizontalAlignment = HorizontalAlignment.Center;
             t.Margin = new Thickness(0, 6, 0, 20);
@@ -163,9 +163,9 @@ namespace DIIISPL
             for (int i = 0; i < 3; i++)
                 grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-            Add(grid, 0, Updater.CurrentText, "ВЕРСИЯ");
-            Add(grid, 1, BuildInfo.Number, "СБОРКА");
-            Add(grid, 2, profiles.ToString(), "ПРОФИЛИ");
+            Add(grid, 0, Updater.CurrentText, Text.AboutVersion);
+            Add(grid, 1, BuildInfo.Number, Text.AboutBuild);
+            Add(grid, 2, profiles.ToString(), Text.AboutProfiles);
 
             var card = new Border();
             card.Style = (Style)Application.Current.Resources["Card"];
@@ -206,7 +206,7 @@ namespace DIIISPL
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
             var label = new TextBlock();
-            label.Text = "Автор";
+            label.Text = Text.AboutAuthor;
             label.VerticalAlignment = VerticalAlignment.Center;
             grid.Children.Add(label);
 
@@ -215,7 +215,7 @@ namespace DIIISPL
             Grid.SetColumn(right, 1);
 
             var name = new TextBlock();
-            name.Text = "Ростислав Стрельников";
+            name.Text = Text.AboutAuthorName;
             name.VerticalAlignment = VerticalAlignment.Center;
             name.Foreground = (Brush)Application.Current.Resources["TextSec"];
             right.Children.Add(name);
@@ -263,7 +263,7 @@ namespace DIIISPL
             bottom.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
             var label = new TextBlock();
-            label.Text = "Канал обновлений";
+            label.Text = Text.AboutChannel;
             label.VerticalAlignment = VerticalAlignment.Center;
             label.Margin = new Thickness(0, 0, 12, 0);   // иначе подпись упирается в кнопку
             bottom.Children.Add(label);
@@ -296,6 +296,7 @@ namespace DIIISPL
             stack.Children.Add(line);
             stack.Children.Add(bottom);
             stack.Children.Add(_channelHint);
+            stack.Children.Add(LanguageRow());
 
             var card = new Border();
             card.Style = (Style)Application.Current.Resources["Card"];
@@ -303,6 +304,84 @@ namespace DIIISPL
             card.Margin = new Thickness(0, 0, 0, 12);
             card.Child = stack;
             return card;
+        }
+
+        /// <summary>
+        /// Выбор языка — рядом с каналом обновлений, в той же карточке: обе строки
+        /// про то, «какой быть программе», и обе меняются раз в жизни.
+        ///
+        /// Кнопок ровно столько, сколько языков знает <see cref="Lang.Codes"/>, и
+        /// подписаны они на себе самих: человек, ищущий свой язык, узнаёт его по
+        /// написанию, а не по переводу названия на чужой.
+        /// </summary>
+        private UIElement LanguageRow()
+        {
+            var line = new Border();
+            line.Height = 1;
+            line.Background = (Brush)Application.Current.Resources["Stroke"];
+            line.Margin = new Thickness(0, 14, 0, 14);
+
+            var row = new Grid();
+            row.ColumnDefinitions.Add(new ColumnDefinition());
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var label = new TextBlock();
+            label.Text = Text.AboutLanguage;
+            label.VerticalAlignment = VerticalAlignment.Center;
+            label.Margin = new Thickness(0, 0, 12, 0);
+            row.Children.Add(label);
+
+            var buttons = new WrapPanel();
+            buttons.Orientation = Orientation.Horizontal;
+            buttons.HorizontalAlignment = HorizontalAlignment.Right;
+            Grid.SetColumn(buttons, 1);
+
+            bool first = true;
+            foreach (string code in Text.AvailableCodes())
+            {
+                string pick = code;
+                var b = new Button();
+                b.Content = Text.NameOf(code);
+                b.Height = 30;
+                b.MinWidth = 96;
+                b.Margin = new Thickness(first ? 0 : 6, 0, 0, 0);
+                b.Style = (Style)Application.Current.Resources[code == Text.Code ? "BtnAccent" : "Btn"];
+                b.Click += delegate { SetLanguage(pick); };
+                buttons.Children.Add(b);
+                first = false;
+            }
+            row.Children.Add(buttons);
+
+            var hint = new TextBlock();
+            hint.Style = (Style)Application.Current.Resources["Caption"];
+            hint.TextWrapping = TextWrapping.Wrap;
+            hint.Margin = new Thickness(0, 10, 0, 0);
+            hint.Text = Text.LangRestart;
+
+            var stack = new StackPanel();
+            stack.Children.Add(line);
+            stack.Children.Add(row);
+            stack.Children.Add(hint);
+            return stack;
+        }
+
+        /// <summary>
+        /// Сменить язык. Перезапуск, а не пересборка окон на ходу: окна собраны в
+        /// коде, и обойти их все, ничего не забыв, — работа, которую пришлось бы
+        /// повторять при каждой новой надписи. Перезапуск честнее и не врёт.
+        /// </summary>
+        private void SetLanguage(string code)
+        {
+            if (code == Text.Code) return;
+
+            var ask = new ConfirmDialog(Text.LangRestartTitle(Lang.NativeName(code)),
+                                        Text.LangRestart, Text.LangRestartOk);
+            ask.Owner = this;
+            if (ask.ShowDialog() != true) return;
+
+            Settings.Language = code;
+            var app = Application.Current as App;
+            if (app != null) app.RestartForLanguage();
         }
 
         private UIElement Buttons()
@@ -314,7 +393,7 @@ namespace DIIISPL
 
             var news = new Button();
             news.Style = (Style)Application.Current.Resources["Btn"];
-            news.Content = "Что нового";
+            news.Content = Text.WhatsNew;
             news.Height = 38;
             news.Margin = new Thickness(0, 0, 6, 0);
             news.Click += delegate { Updater.OpenPage(Updater.ReleasesPage); };
@@ -335,7 +414,7 @@ namespace DIIISPL
         private UIElement Footer()
         {
             var t = new TextBlock();
-            t.Text = "© 2026 " + App.AppTitle + " · GPL-3.0";
+            t.Text = Text.AboutFooter(App.AppTitle);
             t.HorizontalAlignment = HorizontalAlignment.Center;
             t.Margin = new Thickness(0, 8, 0, 0);
             t.FontSize = 11;
@@ -363,8 +442,8 @@ namespace DIIISPL
             // стояло «вместе с недоделками» — выбор между двумя каналами, о котором
             // не сказано, что в одном есть, а в другом нет.
             _channelHint.Text = dev
-                ? "Сборки Dev приходят раньше общего выпуска и умеют больше — например, задавать вид панели задач. Взамен в них чаще что-то не работает."
-                : "Приходят только готовые выпуски. То, что ещё дорабатывается — вид панели задач, — есть только в сборках Dev.";
+                ? Text.ChannelDevHint
+                : Text.ChannelStableHint;
 
             // Метка говорит про саму сборку, а не про выбранный канал: канал — это
             // «что присылать дальше», а метка отвечает на вопрос «что у меня сейчас».
@@ -382,7 +461,7 @@ namespace DIIISPL
             _busy = false;
             _updateStatus.Text = Updater.Ago(Settings.LastCheck);
             _updateStatus.Foreground = (Brush)Application.Current.Resources["TextSec"];
-            _updateAction.Content = "Проверить";
+            _updateAction.Content = Text.CheckButton;
             _updateAction.IsEnabled = true;
         }
 
@@ -404,7 +483,7 @@ namespace DIIISPL
         {
             _busy = true;
             _updateAction.IsEnabled = false;
-            Say("проверяю…", false);
+            Say(Text.Checking, false);
 
             string channel = Settings.Channel;
             ThreadPool.QueueUserWorkItem(delegate
@@ -418,20 +497,20 @@ namespace DIIISPL
                     if (error != null)
                     {
                         Say(error, true);
-                        _updateAction.Content = "Ещё раз";
+                        _updateAction.Content = Text.AgainButton;
                         return;
                     }
                     if (release == null)
                     {
                         _found = null;
-                        Say("установлена последняя версия", false);
-                        _updateAction.Content = "Проверить";
+                        Say(Text.UpToDate, false);
+                        _updateAction.Content = Text.CheckButton;
                         return;
                     }
                     _found = release;
-                    Say("вышла версия " + release.Version.Major + "." + release.Version.Minor +
-                        "." + release.Version.Build, true);
-                    _updateAction.Content = "Обновить";
+                    Say(Text.NewVersionFound(release.Version.Major + "." + release.Version.Minor +
+                                             "." + release.Version.Build), true);
+                    _updateAction.Content = Text.UpdateButton;
                     _updateAction.Style = (Style)Application.Current.Resources["BtnAccent"];
                 }));
             });
@@ -448,18 +527,17 @@ namespace DIIISPL
             // как есть и отдаёт обратно, если снова поставить Dev.
             if (release != null && !release.Early)
             {
-                var warn = new ConfirmDialog("Перейти на общий выпуск?",
-                    "Это сборка Dev. В версии " + release.Version.Major + "." + release.Version.Minor +
-                    "." + release.Version.Build + " нет настроек вида панели задач — раздел из программы исчезнет. " +
-                    "Уже заданный вид останется записанным в профилях и вернётся, если снова поставить сборку Dev.",
-                    "Всё равно поставить");
+                var warn = new ConfirmDialog(Text.DowngradeTitle,
+                    Text.DowngradeBody(release.Version.Major + "." + release.Version.Minor +
+                                       "." + release.Version.Build),
+                    Text.DowngradeOk);
                 warn.Owner = this;
                 if (warn.ShowDialog() != true) return;
             }
 #endif
             _busy = true;
             _updateAction.IsEnabled = false;
-            Say("скачиваю установщик…", false);
+            Say(Text.Downloading, false);
 
             ThreadPool.QueueUserWorkItem(delegate
             {
@@ -471,7 +549,7 @@ namespace DIIISPL
                     {
                         _busy = false;
                         _updateAction.IsEnabled = true;
-                        _updateAction.Content = "Ещё раз";
+                        _updateAction.Content = Text.AgainButton;
                         Say(error, true);
                         return;
                     }
@@ -484,7 +562,7 @@ namespace DIIISPL
                         Say(problem, true);
                         return;
                     }
-                    Say("установщик запущен", false);
+                    Say(Text.InstallerStarted, false);
                 }));
             });
         }

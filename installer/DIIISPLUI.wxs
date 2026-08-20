@@ -32,16 +32,16 @@
         <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44"
                  TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
         <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15"
-                 Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Ярлык" />
+                 Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}!(loc.ShortcutDlgTitle)" />
         <Control Id="Description" Type="Text" X="25" Y="23" Width="320" Height="15"
-                 Transparent="yes" NoPrefix="yes" Text="Откуда запускать программу." />
+                 Transparent="yes" NoPrefix="yes" Text="!(loc.ShortcutDlgDescription)" />
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
 
         <Control Id="ShortcutCheckBox" Type="CheckBox" X="20" Y="70" Width="330" Height="17"
                  Property="INSTALLSHORTCUT" CheckBoxValue="1"
-                 Text="Создать ярлык в меню «Пуск»" />
+                 Text="!(loc.ShortcutCheckBox)" />
         <Control Id="Hint" Type="Text" X="36" Y="92" Width="310" Height="40" NoPrefix="yes"
-                 Text="Программа живёт значком в области уведомлений. Ярлык нужен, чтобы запускать её вручную; автозапуск при входе в Windows включается в самой программе." />
+                 Text="!(loc.ShortcutHint)" />
 
         <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17"

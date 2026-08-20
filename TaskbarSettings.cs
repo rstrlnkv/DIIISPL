@@ -137,13 +137,13 @@ namespace DIIISPL
         {
             switch (state)
             {
-                case TaskbarState.Desktop: return "Виден рабочий стол";
-                case TaskbarState.VisibleWindow: return "Открыто окно";
-                case TaskbarState.MaximizedWindow: return "Окно во весь экран";
-                case TaskbarState.StartOpened: return "Открыт «Пуск»";
-                case TaskbarState.SearchOpened: return "Открыт поиск";
-                case TaskbarState.TaskViewOpened: return "Представление задач";
-                case TaskbarState.BatterySaver: return "Экономия заряда";
+                case TaskbarState.Desktop: return Text.TbState("desktop");
+                case TaskbarState.VisibleWindow: return Text.TbState("visibleWindow");
+                case TaskbarState.MaximizedWindow: return Text.TbState("maximized");
+                case TaskbarState.StartOpened: return Text.TbState("start");
+                case TaskbarState.SearchOpened: return Text.TbState("search");
+                case TaskbarState.TaskViewOpened: return Text.TbState("taskView");
+                case TaskbarState.BatterySaver: return Text.TbState("battery");
                 default: return state.ToString();
             }
         }
