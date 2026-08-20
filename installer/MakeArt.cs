@@ -52,10 +52,13 @@ namespace DIIISPL.Tools
                 using (var line = new SolidBrush(Color.FromArgb(0xDF, 0xE5, 0xEE)))
                     g.FillRectangle(line, 0, 57, 493, 1);
 
-                // Знак жмётся к правому краю: пояснение под заголовком установщик тянет
-                // почти до сюда, и знак покрупнее оказывался прямо поверх текста.
-                Mark(g, 398, 16, 26);
-                Word(g, 439, 18, 13f, Color.FromArgb(0x1A, 0x1A, 0x1A));
+                // Здесь только знак, без названия: пояснение под заголовком установщик
+                // тянет почти до правого края, и подпись рядом со знаком либо лезла
+                // на текст, либо обрезалась краем — тем вернее, чем длиннее имя.
+                // Название и так стоит в заголовке окна.
+                float markH = 28;
+                float markW = markH * 1.28f;
+                Mark(g, 493 - 18 - markW, (58 - markH) / 2, markH);
             }
             return bmp;
         }
@@ -70,11 +73,13 @@ namespace DIIISPL.Tools
             var bmp = new Bitmap(493, 312, PixelFormat.Format24bppRgb);
             using (Graphics g = Prepare(bmp))
             {
-                // Правая половина ровно белая, без градиента: флажок «Запустить DIIISPL»
-                // на последнем окне рисует свой фон поверх картинки, и на градиенте
-                // от него оставалась светлая полоса.
-                using (var white = new SolidBrush(Color.White))
-                    g.FillRectangle(white, 0, 0, 493, 312);
+                // Правая половина — ровно тот же серый, каким установщик красит свои окна
+                // (240,240,240, замерено по живому мастеру). Флажок «Запустить DIIISPL»
+                // на последнем окне рисует свой фон поверх картинки: на белом от него
+                // оставалась заметная полоса, а на этом сером шва не видно. Заодно
+                // приветствие и последнее окно перестали выделяться среди прочих страниц.
+                using (var face = new SolidBrush(Color.FromArgb(0xF0, 0xF0, 0xF0)))
+                    g.FillRectangle(face, 0, 0, 493, 312);
                 Fill(g, new Rectangle(0, 0, panel, 312), PanelTop, PanelBottom);
 
                 // Мягкое свечение за знаком: тёмная полоса без него выглядит плоской
@@ -95,16 +100,12 @@ namespace DIIISPL.Tools
                 }
                 g.Restore(saved);
 
-                // Знак и подписи выровнены по центру панели: ширина знака 1,28 его высоты.
-                float markW = 88 * 1.28f;
-                float left = (panel - markW) / 2;
-
-                Mark(g, left, 92, 88);
-                Word(g, left, 198, 20f, Color.White);
-
-                using (var font = new Font("Segoe UI", 8f, FontStyle.Regular, GraphicsUnit.Point))
-                using (var brush = new SolidBrush(Color.FromArgb(0x93, 0x9D, 0xAC)))
-                    g.DrawString("Раскладки мониторов", font, brush, left, 231);
+                // Каждая строка центрируется по своей ширине, а не по ширине знака:
+                // иначе длинное название уезжает вбок и блок разъезжается.
+                Mark(g, (panel - 88 * 1.28f) / 2, 92, 88);
+                Centered(g, Program, "Segoe UI Semibold", 20f, Color.White, panel, 198);
+                Centered(g, "Раскладки мониторов", "Segoe UI", 8f,
+                         Color.FromArgb(0x93, 0x9D, 0xAC), panel, 235);
             }
             return bmp;
         }
@@ -132,11 +133,19 @@ namespace DIIISPL.Tools
                 g.FillPath(brush, path);
         }
 
-        private static void Word(Graphics g, float x, float y, float size, Color color)
+        /// <summary>Название программы. Отсюда его берут все надписи на картинках.</summary>
+        private const string Program = "DIIISPL";
+
+        /// <summary>Строка по центру полосы заданной ширины — с замером, а не на глаз.</summary>
+        private static void Centered(Graphics g, string text, string face, float size,
+                                     Color color, float width, float y)
         {
-            using (var font = new Font("Segoe UI Semibold", size, FontStyle.Regular, GraphicsUnit.Point))
+            using (var font = new Font(face, size, FontStyle.Regular, GraphicsUnit.Point))
             using (var brush = new SolidBrush(color))
-                g.DrawString("DIIISPL", font, brush, x, y);
+            {
+                SizeF measured = g.MeasureString(text, font);
+                g.DrawString(text, font, brush, (width - measured.Width) / 2, y);
+            }
         }
 
         private static Graphics Prepare(Bitmap bmp)
