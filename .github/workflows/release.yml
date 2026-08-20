@@ -29,7 +29,11 @@ jobs:
       SIGN_PFX_PASSWORD: ${{ secrets.SIGN_PFX_PASSWORD }}
 
     steps:
+      # Вся история, а не последний коммит: номер сборки — это их число, и при
+      # выкачке глубиной в один у каждого выпуска он был бы «1».
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Версия
         shell: pwsh

@@ -3,8 +3,6 @@
 // Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
 
 using System;
-using System.Diagnostics;
-using System.Reflection;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -15,10 +13,12 @@ using System.Windows.Media.Imaging;
 namespace DIIISPL
 {
     /// <summary>
-    /// О программе: значок, версия, автор, обновление и лицензия.
+    /// О программе: значок, версия, автор и обновление.
     ///
-    /// Последнее — не формальность: часть кода взята из чужой программы под GPL,
-    /// и указать это здесь и в NOTICE.md — условие лицензии, а не вежливость.
+    /// Про чужой код и лицензию здесь ничего нет намеренно: текст лицензии едет
+    /// вместе с программой файлом LICENSE.txt, чужой код описан в NOTICE.md, а в
+    /// подвале страницы стоит строка с лицензией. Разворачивать это на экране
+    /// не требуется ни лицензией, ни человеком, который сюда заходит за версией.
     /// </summary>
     internal class AboutWindow : Window
     {
@@ -36,9 +36,9 @@ namespace DIIISPL
         {
             Title = "О программе";
             Width = 560;
-            Height = 780;
+            Height = 700;
             MinWidth = 480;
-            MinHeight = 560;
+            MinHeight = 520;
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
             Background = (Brush)Application.Current.Resources["Bg"];
             UseLayoutRounding = true;
@@ -64,7 +64,6 @@ namespace DIIISPL
             stack.Children.Add(Author());
             stack.Children.Add(UpdateCard());
             stack.Children.Add(Buttons());
-            stack.Children.Add(Credits());
             stack.Children.Add(Footer());
 
             var scroll = new ScrollViewer();
@@ -148,20 +147,19 @@ namespace DIIISPL
             return t;
         }
 
-        /// <summary>Три числа в строку: версия, сколько профилей, сколько мониторов сейчас.</summary>
+        /// <summary>Три числа в строку: версия, номер сборки, сколько профилей.</summary>
         private UIElement Numbers()
         {
-            int profiles = 0, monitors = 0;
+            int profiles = 0;
             try { profiles = Store.LoadAll().Count; } catch { }
-            try { monitors = Monitors.Enumerate().Count; } catch { }
 
             var grid = new Grid();
             for (int i = 0; i < 3; i++)
                 grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
             Add(grid, 0, Updater.CurrentText, "ВЕРСИЯ");
-            Add(grid, 1, profiles.ToString(), "ПРОФИЛИ");
-            Add(grid, 2, monitors.ToString(), "МОНИТОРЫ");
+            Add(grid, 1, BuildInfo.Number, "СБОРКА");
+            Add(grid, 2, profiles.ToString(), "ПРОФИЛИ");
 
             var card = new Border();
             card.Style = (Style)Application.Current.Resources["Card"];
@@ -261,6 +259,7 @@ namespace DIIISPL
             var label = new TextBlock();
             label.Text = "Канал обновлений";
             label.VerticalAlignment = VerticalAlignment.Center;
+            label.Margin = new Thickness(0, 0, 12, 0);   // иначе подпись упирается в кнопку
             bottom.Children.Add(label);
 
             var switcher = new StackPanel();
@@ -325,23 +324,6 @@ namespace DIIISPL
             grid.Children.Add(github);
 
             return grid;
-        }
-
-        /// <summary>Чужой код внутри программы и лицензия. Убирать это нельзя.</summary>
-        private UIElement Credits()
-        {
-            return Ui.Card("На чём стоит", null,
-#if DEV
-                Ui.Note("Вид панели задач задаёт вспомогательная библиотека, работающая внутри " +
-                     "проводника: снаружи панель задач Windows 11 не поддаётся. Библиотека основана " +
-                     "на компоненте ExplorerTAP из программы TranslucentTB, © Charles Milette " +
-                     "и участники, распространяемой под GNU GPL v3."),
-                Link("Исходники TranslucentTB", "https://github.com/TranslucentTB/TranslucentTB"),
-#endif
-                Ui.Note("DIIISPL — свободная программа: её можно использовать, изучать, изменять " +
-                     "и передавать дальше на условиях GNU General Public License версии 3 или любой " +
-                     "более поздней. Программа распространяется без всяких гарантий."),
-                Link("Открыть текст лицензии", LicensePath()));
         }
 
         private UIElement Footer()
@@ -482,19 +464,6 @@ namespace DIIISPL
         }
 
         // ---------------------------------------------------------------- мелочи
-        /// <summary>Лицензия лежит рядом с программой; у собранной вручную — под именем LICENSE.</summary>
-        private static string LicensePath()
-        {
-            try
-            {
-                string dir = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                string txt = System.IO.Path.Combine(dir, "LICENSE.txt");
-                if (System.IO.File.Exists(txt)) return txt;
-                return System.IO.Path.Combine(dir, "LICENSE");
-            }
-            catch { return "LICENSE"; }
-        }
-
         /// <summary>Ссылка, открываемая тем, чем её открывает система.</summary>
         private static UIElement Link(string text, string target)
         {

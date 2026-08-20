@@ -46,3 +46,6 @@ installer/sign.thumbprint
 # сертификат подписи — только на машине владельца ключа
 installer/*.pfx
 installer/*.cer
+
+# номер сборки: создаётся build.cmd при каждой сборке
+/BuildInfo.g.cs

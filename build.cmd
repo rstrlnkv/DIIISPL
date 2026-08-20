@@ -29,6 +29,14 @@ if /i "%CHANNEL%"=="dev" (
   echo === Сборка Stable: без панели задач ===
 )
 
+rem Номер сборки — число коммитов. Он растёт сам, не требует ведения вручную и
+rem не разъезжается с версией: версия говорит «что это», номер — «какая по счёту».
+rem Файл создаётся при каждой сборке и в репозиторий не попадает; без git номер 0.
+set BUILD=0
+for /f "delims=" %%I in ('git -C "%~dp0." rev-list --count HEAD 2^>nul') do set BUILD=%%I
+> "%~dp0BuildInfo.g.cs" echo // Создаётся build.cmd при каждой сборке. Править незачем.
+>> "%~dp0BuildInfo.g.cs" echo namespace DIIISPL { internal static class BuildInfo { public const string Number = "%BUILD%"; } }
+
 "%NETDIR%\csc.exe" /nologo /target:winexe /optimize+ /platform:anycpu /codepage:65001 %DEFINE% ^
   /out:"%~dp0DIIISPL.exe" ^
   /win32icon:"%~dp0DIIISPL.ico" ^
@@ -36,7 +44,7 @@ if /i "%CHANNEL%"=="dev" (
   /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Web.Extensions.dll ^
   /r:"%NETDIR%\System.Xaml.dll" ^
   /r:"%WPF%\WindowsBase.dll" /r:"%WPF%\PresentationCore.dll" /r:"%WPF%\PresentationFramework.dll" ^
-  "%~dp0AssemblyInfo.cs" "%~dp0Native.cs" "%~dp0Edid.cs" "%~dp0Monitors.cs" "%~dp0Layout.cs" "%~dp0Applier.cs" ^
+  "%~dp0AssemblyInfo.cs" "%~dp0BuildInfo.g.cs" "%~dp0Native.cs" "%~dp0Edid.cs" "%~dp0Monitors.cs" "%~dp0Layout.cs" "%~dp0Applier.cs" ^
   "%~dp0Store.cs" "%~dp0Settings.cs" "%~dp0ApplyGate.cs" "%~dp0Updater.cs" "%~dp0Hotkey.cs" %TASKBAR% ^
   "%~dp0Cli.cs" "%~dp0Theme.cs" "%~dp0Fluent.cs" ^
   "%~dp0MonitorCanvas.cs" "%~dp0ConfirmDialog.cs" "%~dp0Ui.cs" "%~dp0AboutWindow.cs" "%~dp0MainWindow.cs" "%~dp0App.cs"
