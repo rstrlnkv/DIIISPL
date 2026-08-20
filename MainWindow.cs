@@ -34,6 +34,7 @@ namespace DIIIX
         private readonly Button _saveButton = new Button();
         private readonly MonitorCanvas _canvas = new MonitorCanvas();
         private readonly TextBlock _status = new TextBlock();
+        private readonly Border _statusBar = new Border();
 
         private readonly CheckBox _enabledSwitch = new CheckBox();
         private readonly CheckBox _primarySwitch = new CheckBox();
@@ -106,13 +107,15 @@ namespace DIIIX
             Grid.SetColumn(main, 1);
             body.Children.Add(main);
 
-            var statusBar = new Border();
-            statusBar.Padding = new Thickness(20, 8, 20, 12);
+            // Полоса внизу появляется, только когда есть что сказать, — иначе внизу окна
+            // оставалась бы пустая ступенька.
+            _statusBar.Padding = new Thickness(20, 8, 20, 12);
+            _statusBar.Visibility = Visibility.Collapsed;
             _status.Style = (Style)Application.Current.Resources["Caption"];
             _status.TextTrimming = TextTrimming.CharacterEllipsis;
-            statusBar.Child = _status;
-            Grid.SetRow(statusBar, 1);
-            root.Children.Add(statusBar);
+            _statusBar.Child = _status;
+            Grid.SetRow(_statusBar, 1);
+            root.Children.Add(_statusBar);
 
             return root;
         }
@@ -1202,33 +1205,19 @@ namespace DIIIX
             _saveButton.IsEnabled = true;
         }
 
+        /// <summary>
+        /// Строка внизу окна. Сама по себе она молчит: о том, какая раскладка применена,
+        /// говорит точка в списке слева, а имя профиля и его состав видны в заголовке
+        /// и на холсте. Здесь остаются только помехи и ответы на действия.
+        /// </summary>
         private void UpdateStatus(string text)
         {
-            if (text == null && _current != null)
-            {
-                string problem = _canvas.Validate();
-                text = problem ?? Summary();
-            }
+            if (text == null && _current != null) text = _canvas.Validate();
+
             _status.Text = text ?? "";
+            _statusBar.Visibility = string.IsNullOrEmpty(_status.Text)
+                ? Visibility.Collapsed : Visibility.Visible;
         }
-
-        /// <summary>
-        /// Строка внизу окна. Здесь только то, чего больше нигде не видно: имя профиля
-        /// написано в заголовке, состав — на холсте, и повторять их незачем.
-        /// </summary>
-        private string Summary()
-        {
-            if (_current == null) return "";
-
-            int on = 0;
-            foreach (var d in _current.Displays) if (d.Enabled) on++;
-            if (on == 0) return "В этом профиле не выбран ни один монитор.";
-
-            if (_activeProfileName == null) return "Сейчас применена раскладка, которой нет среди профилей.";
-            if (_activeProfileName == _current.Name) return "Эта раскладка применена сейчас.";
-            return "Сейчас применена «" + _activeProfileName + "».";
-        }
-
         // ---------------------------------------------------------------- горячая клавиша
         private void BeginHotkeyCapture()
         {
