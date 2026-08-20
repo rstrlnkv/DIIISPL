@@ -92,6 +92,15 @@ namespace DIIIX
                 }
             }
 
+            // Основной экран обязан совпадать: без этой проверки раскладка из двух
+            // одинаковых мониторов считалась бы совпавшей и с переставленным основным —
+            // позиции-то сверяются относительно него самого.
+            foreach (var d in Displays)
+            {
+                if (!d.Enabled) continue;
+                if (active[d.Identity].Primary != d.Primary) return false;
+            }
+
             // позиции сверяем относительно основного экрана — сам сдвиг значения не имеет
             LayoutDisplay origin = null;
             foreach (var d in Displays) if (d.Enabled && d.Primary) { origin = d; break; }
