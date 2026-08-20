@@ -13,6 +13,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProduct("DIIISPL")]
 [assembly: AssemblyCompany("Rostislav Strelnikov")]
 [assembly: AssemblyCopyright("© 2026 Rostislav Strelnikov. GNU GPL v3 или новее")]
-[assembly: AssemblyVersion("1.0.1.0")]
-[assembly: AssemblyFileVersion("1.0.1.0")]
+[assembly: AssemblyVersion("0.1.0.0")]
+[assembly: AssemblyFileVersion("0.1.0.0")]
 [assembly: ComVisible(false)]

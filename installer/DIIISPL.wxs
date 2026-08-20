@@ -14,7 +14,7 @@
        менялось по тегу, а ProductVersion внутри пакета оставался прежним —
        и «Программы и компоненты» показывали бы одну версию вечно. -->
   <?ifndef Version ?>
-  <?define Version = "1.0.1" ?>
+  <?define Version = "0.1.0" ?>
   <?endif ?>
 
   <Product Id="*"
@@ -69,12 +69,16 @@
       </Component>
 
       <!--
-        Библиотека оформления панели задач. Отдельным компонентом: без неё программа
-        работает, поэтому она вынесена в свою возможность, которую можно не ставить.
+        Библиотека оформления панели задач — только в сборках Dev. В стабильной
+        панели задач нет вовсе, и класть рядом с программой библиотеку, которая
+        загружается внутрь проводника и остаётся там жить, незачем: чего в пакете
+        нет, то не выстрелит.
       -->
+      <?if $(var.Channel) = "dev" ?>
       <Component Id="TaskbarLibrary" Guid="*" Win64="yes">
         <File Id="DIIISPL.ExplorerTAP.dll" Source="$(var.BinDir)\DIIISPL.ExplorerTAP.dll" KeyPath="yes" />
       </Component>
+      <?endif ?>
 
       <!-- По компоненту на файл: у обоих нет версии, а такие в один не складываются. -->
       <Component Id="License" Guid="*" Win64="yes">
@@ -116,7 +120,9 @@
              ConfigurableDirectory="INSTALLFOLDER"
              Description="Менеджер раскладок мониторов.">
       <ComponentRef Id="MainProgram" />
+      <?if $(var.Channel) = "dev" ?>
       <ComponentRef Id="TaskbarLibrary" />
+      <?endif ?>
       <ComponentRef Id="License" />
       <ComponentRef Id="Readme" />
       <ComponentRef Id="StartMenuShortcut" />

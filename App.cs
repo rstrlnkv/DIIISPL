@@ -77,7 +77,9 @@ namespace DIIISPL
 
             AdoptOldAutoStart();
 
+#if DEV
             ExplorerTap.RestoreWhenProcessExits = true;   // трей живёт долго — при выходе вернём панель
+#endif
             // Значок окну не задаём: без него WPF берёт значок самой программы, а там
             // под каждый размер лежит свой кадр — и в заголовке, и на панели задач,
             // и в Alt+Tab окно получает подходящий, а не растянутый из одного.
@@ -86,7 +88,9 @@ namespace DIIISPL
 
             BuildTray();
             ReloadHotkeys();
+#if DEV
             StartTaskbarForActiveProfile();
+#endif
 
             CheckForUpdateQuietly();
 
@@ -228,6 +232,7 @@ namespace DIIISPL
         /// При запуске подхватываем вид панели того профиля, который сейчас применён:
         /// иначе после перезагрузки панель осталась бы системной до первого переключения.
         /// </summary>
+#if DEV
         private void StartTaskbarForActiveProfile()
         {
             if (!ExplorerTap.Available) return;
@@ -243,11 +248,14 @@ namespace DIIISPL
             }
             catch { }
         }
+#endif
 
         private void Quit()
         {
+#if DEV
             TaskbarWatcher.Stop();
             if (ExplorerTap.Available) ExplorerTap.RestoreAll();
+#endif
 
             UnregisterHotkeys();
             if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }

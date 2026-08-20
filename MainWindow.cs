@@ -316,13 +316,14 @@ namespace DIIISPL
             actions.Orientation = Orientation.Horizontal;
             Grid.SetColumn(actions, 1);
 
+#if DEV
             // вид панели задач — свойство профиля, а не монитора, поэтому здесь
             _taskbarButton.Style = (Style)Application.Current.Resources["Btn"];
             _taskbarButton.Height = 42;
-
             _taskbarButton.Margin = new Thickness(0, 0, 8, 0);
             _taskbarButton.Click += delegate { OpenTaskbarSettings(); };
             actions.Children.Add(_taskbarButton);
+#endif
 
             _hotkeyButton.Style = (Style)Application.Current.Resources["Btn"];
             _hotkeyButton.Height = 42;
@@ -807,8 +808,10 @@ namespace DIIISPL
             UpdateHeader();
         }
 
+#if DEV
         /// <summary>Открыть экран настроек панели задач для текущего профиля.</summary>
         public void ShowTaskbarSettings() { OpenTaskbarSettings(); }
+#endif
 
         /// <summary>Окно «О программе». Открывается и отсюда, и из меню значка в трее.</summary>
         public void ShowAbout()
@@ -818,6 +821,7 @@ namespace DIIISPL
             window.ShowDialog();
         }
 
+#if DEV
         /// <summary>Открыть отдельный экран настроек панели задач для текущего профиля.</summary>
         private void OpenTaskbarSettings()
         {
@@ -853,6 +857,7 @@ namespace DIIISPL
                 ? "Как выглядит панель задач в этом профиле"
                 : "В программе не хватает файла, отвечающего за вид панели задач";
         }
+#endif
 
         private void UpdateHeader()
         {
@@ -860,7 +865,9 @@ namespace DIIISPL
             _nameText.Text = _current != null ? _current.Name : "";
             _nameHint.Text = DescribeCurrent();
             _applyButton.IsEnabled = _current != null;
+#if DEV
             UpdateTaskbarButton();
+#endif
             _saveButton.IsEnabled = _current != null && _dirty;
             _hotkeyButton.Content = Glyph("", _current != null && !string.IsNullOrEmpty(_current.Hotkey)
                 ? _current.Hotkey : "Сочетание клавиш");
@@ -878,7 +885,9 @@ namespace DIIISPL
             var parts = new List<string>();
             parts.Add(on == 1 ? "один монитор" : "мониторов: " + on);
             if (!string.IsNullOrEmpty(_current.Hotkey)) parts.Add("клавиша " + _current.Hotkey);
+#if DEV
             if (_current.Taskbar != null && _current.Taskbar.AnyEnabled) parts.Add("свой вид панели задач");
+#endif
 
             return string.Join(" · ", parts.ToArray());
         }

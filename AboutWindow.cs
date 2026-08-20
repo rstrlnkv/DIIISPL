@@ -25,7 +25,7 @@ namespace DIIISPL
         private readonly TextBlock _updateStatus = new TextBlock();
         private readonly Button _updateAction = new Button();
         private readonly Button _stableButton = new Button();
-        private readonly Button _earlyButton = new Button();
+        private readonly Button _devButton = new Button();
         private readonly TextBlock _channelHint = new TextBlock();
         private readonly TextBlock _badge = new TextBlock();
 
@@ -119,7 +119,7 @@ namespace DIIISPL
             name.VerticalAlignment = VerticalAlignment.Center;
             row.Children.Add(name);
 
-            _badge.Text = "РАННИЙ";
+            _badge.Text = "DEV";
             _badge.FontSize = 11;
             _badge.FontWeight = FontWeights.SemiBold;
             _badge.Foreground = (Brush)Application.Current.Resources["AccentText"];
@@ -267,18 +267,18 @@ namespace DIIISPL
             switcher.Orientation = Orientation.Horizontal;
             Grid.SetColumn(switcher, 1);
 
-            _stableButton.Content = "Стабильный";
+            _stableButton.Content = "Stable";
             _stableButton.Height = 30;
             _stableButton.MinWidth = 96;
             _stableButton.Click += delegate { SetChannel(Settings.Stable); };
             switcher.Children.Add(_stableButton);
 
-            _earlyButton.Content = "Ранний";
-            _earlyButton.Height = 30;
-            _earlyButton.MinWidth = 76;
-            _earlyButton.Margin = new Thickness(6, 0, 0, 0);
-            _earlyButton.Click += delegate { SetChannel(Settings.Early); };
-            switcher.Children.Add(_earlyButton);
+            _devButton.Content = "Dev";
+            _devButton.Height = 30;
+            _devButton.MinWidth = 76;
+            _devButton.Margin = new Thickness(6, 0, 0, 0);
+            _devButton.Click += delegate { SetChannel(Settings.Dev); };
+            switcher.Children.Add(_devButton);
 
             bottom.Children.Add(switcher);
 
@@ -331,11 +331,13 @@ namespace DIIISPL
         private UIElement Credits()
         {
             return Ui.Card("На чём стоит", null,
+#if DEV
                 Ui.Note("Вид панели задач задаёт вспомогательная библиотека, работающая внутри " +
                      "проводника: снаружи панель задач Windows 11 не поддаётся. Библиотека основана " +
                      "на компоненте ExplorerTAP из программы TranslucentTB, © Charles Milette " +
                      "и участники, распространяемой под GNU GPL v3."),
                 Link("Исходники TranslucentTB", "https://github.com/TranslucentTB/TranslucentTB"),
+#endif
                 Ui.Note("DIIISPL — свободная программа: её можно использовать, изучать, изменять " +
                      "и передавать дальше на условиях GNU General Public License версии 3 или любой " +
                      "более поздней. Программа распространяется без всяких гарантий."),
@@ -365,15 +367,22 @@ namespace DIIISPL
 
         private void ShowChannel()
         {
-            bool early = Settings.Channel == Settings.Early;
+            bool dev = Settings.Channel == Settings.Dev;
 
-            _stableButton.Style = (Style)Application.Current.Resources[early ? "Btn" : "BtnAccent"];
-            _earlyButton.Style = (Style)Application.Current.Resources[early ? "BtnAccent" : "Btn"];
-            _channelHint.Text = early
-                ? "Ранние сборки приходят раньше остальных — вместе с недоделками."
-                : "Только готовые версии.";
+            _stableButton.Style = (Style)Application.Current.Resources[dev ? "Btn" : "BtnAccent"];
+            _devButton.Style = (Style)Application.Current.Resources[dev ? "BtnAccent" : "Btn"];
+            _channelHint.Text = dev
+                ? "Сборки Dev приходят до общего выпуска — вместе с недоделками."
+                : "Приходят только готовые выпуски.";
 
-            ((UIElement)_badge.Tag).Visibility = early ? Visibility.Visible : Visibility.Collapsed;
+            // Метка говорит про саму сборку, а не про выбранный канал: канал — это
+            // «что присылать дальше», а метка отвечает на вопрос «что у меня сейчас».
+            // Пока она показывала выбор каналов, она повторяла соседние кнопки.
+#if DEV
+            ((UIElement)_badge.Tag).Visibility = Visibility.Visible;
+#else
+            ((UIElement)_badge.Tag).Visibility = Visibility.Collapsed;
+#endif
         }
 
         /// <summary>Обычный вид: когда проверяли и кнопка «Проверить».</summary>

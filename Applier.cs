@@ -138,9 +138,13 @@ namespace DIIISPL
         /// Передать наблюдателю настройки панели из профиля. Кеш сбрасывается обязательно:
         /// смена раскладки пересоздаёт панели задач, и всё, что мы помнили об их окнах
         /// и о связи со службой в проводнике, после этого недействительно.
+        ///
+        /// В стабильной сборке панели задач нет вовсе — ни экрана настроек, ни
+        /// наблюдателя, ни библиотеки внутри проводника, — поэтому применять нечего.
         /// </summary>
         private static void ApplyTaskbar(Layout layout, ApplyResult res)
         {
+#if DEV
             TaskbarWatcher.ResetCache();
 
             if (layout.Taskbar == null || !layout.Taskbar.AnyEnabled) { TaskbarWatcher.Use(null); return; }
@@ -153,6 +157,7 @@ namespace DIIISPL
             TaskbarWatcher.Use(layout.Taskbar);
             if (ExplorerTap.LastError != null)
                 res.Warnings.Add("Панель задач: " + ExplorerTap.LastError);
+#endif
         }
 
         private static bool HasClone(Layout layout)

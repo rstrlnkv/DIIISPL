@@ -18,7 +18,7 @@ namespace DIIISPL
     internal static class Settings
     {
         public const string Stable = "stable";
-        public const string Early = "early";
+        public const string Dev = "dev";
 
         private static Dictionary<string, string> _values;
 
@@ -27,11 +27,11 @@ namespace DIIISPL
             get { return Path.Combine(Store.DataDir, "settings.ini"); }
         }
 
-        /// <summary>Канал обновлений: стабильный или ранний.</summary>
+        /// <summary>Канал обновлений: Stable или Dev.</summary>
         public static string Channel
         {
-            get { string v = Get("channel"); return v == Early ? Early : Stable; }
-            set { Set("channel", value == Early ? Early : Stable); }
+            get { string v = Get("channel"); return v == Dev ? Dev : Stable; }
+            set { Set("channel", value == Dev ? Dev : Stable); }
         }
 
         /// <summary>Когда в последний раз спрашивали GitHub. Пусто — не спрашивали ни разу.</summary>

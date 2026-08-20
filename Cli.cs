@@ -20,8 +20,10 @@ namespace DIIISPL
                     case "monitors": return DumpMonitors();
                     case "hdr": return DumpHdr();
                     case "state": return DumpState();
+#if DEV
                     case "taskbar": return SetTaskbar(args);
                     case "taskbar-state": return DumpTaskbarState(args);
+#endif
                     case "list": return ListProfiles();
                     case "save": return SaveCurrent(args);
                     case "apply":
@@ -49,8 +51,10 @@ namespace DIIISPL
             Console.WriteLine("  DIIISPL.exe /delete \"Имя\"   удалить профиль");
             Console.WriteLine("  DIIISPL.exe /monitors       что подключено и как опознано");
             Console.WriteLine("  DIIISPL.exe /hdr            состояние HDR на каждом выходе");
+#if DEV
             Console.WriteLine("  DIIISPL.exe /taskbar вид [AARRGGBB] [line]   вид панели задач сейчас");
             Console.WriteLine("  DIIISPL.exe /taskbar-state [\"Имя\"]           что видно на экранах и какой вид из этого следует");
+#endif
             return 0;
         }
 
@@ -91,6 +95,7 @@ namespace DIIISPL
         }
 
         /// <summary>Что программа видит на экранах и какой вид панели из этого следует.</summary>
+#if DEV
         private static int DumpTaskbarState(string[] args)
         {
             Console.WriteLine();
@@ -148,6 +153,7 @@ namespace DIIISPL
                 : "  не удалось: " + ExplorerTap.LastError);
             return ok ? 0 : 1;
         }
+#endif
 
         /// <summary>Состояние в машиночитаемом виде — для скриптов и диагностики.</summary>
         private static int DumpState()

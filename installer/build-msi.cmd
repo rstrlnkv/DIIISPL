@@ -1,12 +1,23 @@
 @echo off
 rem Сборка установщика DIIISPL.msi. Требуется только сеть при первом запуске:
 rem набор WiX подтягивается пакетом, ничего ставить в систему не нужно.
+rem
+rem   build-msi.cmd        стабильный пакет
+rem   build-msi.cmd dev    пакет канала Dev — с библиотекой оформления панели задач
+rem
+rem Канал должен совпадать с тем, которым собрана программа: стабильная сборка
+rem библиотеку не использует, и класть её в пакет незачем.
 setlocal
 set HERE=%~dp0
 set ROOT=%HERE%..
-set VERSION=1.0.1
+set VERSION=0.1.0
 rem На сборщике версию задаёт тег — он и есть источник правды для релиза.
 if defined DIIISPL_VERSION set VERSION=%DIIISPL_VERSION%
+
+set CHANNEL=%1
+if not defined CHANNEL set CHANNEL=%DIIISPL_CHANNEL%
+if /i "%CHANNEL%"=="dev" (set CHANNEL=dev) else (set CHANNEL=stable)
+echo === Пакет канала %CHANNEL% ===
 
 for %%F in ("%ROOT%\DIIISPL.exe" "%ROOT%\DIIISPL.ico" "%ROOT%\LICENSE" "%ROOT%\README.md") do (
   if not exist %%F (
@@ -14,7 +25,7 @@ for %%F in ("%ROOT%\DIIISPL.exe" "%ROOT%\DIIISPL.ico" "%ROOT%\LICENSE" "%ROOT%\R
     exit /b 1
   )
 )
-if not exist "%ROOT%\DIIISPL.ExplorerTAP.dll" (
+if "%CHANNEL%"=="dev" if not exist "%ROOT%\DIIISPL.ExplorerTAP.dll" (
   echo Нет DIIISPL.ExplorerTAP.dll — соберите её: native\build-native.cmd
   exit /b 1
 )
@@ -32,8 +43,15 @@ rem то, что лежит в рабочем каталоге.
 echo === Подпись файлов программы ===
 if not exist "%HERE%obj\stage" mkdir "%HERE%obj\stage"
 copy /y "%ROOT%\DIIISPL.exe" "%HERE%obj\stage\" >nul || exit /b 1
-copy /y "%ROOT%\DIIISPL.ExplorerTAP.dll" "%HERE%obj\stage\" >nul || exit /b 1
-call "%HERE%sign.cmd" "%HERE%obj\stage\DIIISPL.exe" "%HERE%obj\stage\DIIISPL.ExplorerTAP.dll" || exit /b 1
+rem Библиотека — только в Dev. Прошлый её экземпляр из stage убирается: иначе
+rem стабильный пакет собрался бы с файлом, оставшимся от предыдущей сборки.
+if "%CHANNEL%"=="dev" (
+  copy /y "%ROOT%\DIIISPL.ExplorerTAP.dll" "%HERE%obj\stage\" >nul || exit /b 1
+  call "%HERE%sign.cmd" "%HERE%obj\stage\DIIISPL.exe" "%HERE%obj\stage\DIIISPL.ExplorerTAP.dll" || exit /b 1
+) else (
+  if exist "%HERE%obj\stage\DIIISPL.ExplorerTAP.dll" del /q "%HERE%obj\stage\DIIISPL.ExplorerTAP.dll"
+  call "%HERE%sign.cmd" "%HERE%obj\stage\DIIISPL.exe" || exit /b 1
+)
 
 echo === Картинки окон ===
 set NETDIR=%WINDIR%\Microsoft.NET\Framework64\v4.0.30319
@@ -48,7 +66,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%HERE%make-license-rtf.ps1"
 echo === Сборка пакета ===
 if not exist "%HERE%obj" mkdir "%HERE%obj"
 "%WIX%\candle.exe" -nologo -arch x64 ^
-  -dVersion=%VERSION% -dSourceDir="%ROOT%" -dBinDir="%HERE%obj\stage" -dLicenseRtf="%HERE%LICENSE.rtf" -dArtDir="%HERE%obj" ^
+  -dVersion=%VERSION% -dChannel=%CHANNEL% -dSourceDir="%ROOT%" -dBinDir="%HERE%obj\stage" -dLicenseRtf="%HERE%LICENSE.rtf" -dArtDir="%HERE%obj" ^
   -ext WixUtilExtension -ext WixUIExtension ^
   -out "%HERE%obj\\" "%HERE%DIIISPL.wxs" "%HERE%DIIISPLUI.wxs" || exit /b 1
 

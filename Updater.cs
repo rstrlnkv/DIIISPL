@@ -75,7 +75,7 @@ namespace DIIISPL
             }
         }
 
-        /// <summary>Версия для показа: «1.0.1» читается лучше, чем «1.0.1.0».</summary>
+        /// <summary>Версия для показа: «0.1.0» читается лучше, чем «0.1.0.0».</summary>
         public static string CurrentText
         {
             get
@@ -107,8 +107,8 @@ namespace DIIISPL
                     Release r = Read(item);
                     if (r == null) continue;
                     if (Truthy(item, "draft")) continue;
-                    // на стабильном канале ранние сборки не предлагаем
-                    if (r.Early && channel != Settings.Early) continue;
+                    // на канале Stable сборки Dev не предлагаем
+                    if (r.Early && channel != Settings.Dev) continue;
                     if (best == null || r.Version > best.Version) best = r;
                 }
 

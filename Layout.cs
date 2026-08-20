@@ -51,8 +51,22 @@ namespace DIIISPL
         public string Name = "";
         public string Hotkey = "";
         public int Order = 0;                 // порядок в списке, задаётся пользователем
-        public TaskbarSettings Taskbar = new TaskbarSettings();   // вид панели задач по состояниям
         public List<LayoutDisplay> Displays = new List<LayoutDisplay>();
+
+#if DEV
+        public TaskbarSettings Taskbar = new TaskbarSettings();   // вид панели задач по состояниям
+#endif
+
+        /// <summary>
+        /// Секция [taskbar] как она лежит в файле.
+        ///
+        /// В стабильной сборке панели задач нет, а профиль ей всё равно читать и
+        /// писать. Без этого списка первое же сохранение выкинуло бы из файла всё,
+        /// чего сборка не знает, — и человек, поработавший в Dev, а потом в Stable,
+        /// молча потерял бы настройки вида панели. Поэтому строки сохраняются как
+        /// есть и возвращаются на место нетронутыми.
+        /// </summary>
+        private readonly List<string> _taskbarRaw = new List<string>();
 
         /// <summary>
         /// Совпадает ли профиль с тем, что включено прямо сейчас. HDR не учитываем:
@@ -149,7 +163,10 @@ namespace DIIISPL
             copy.Name = Name;
             copy.Hotkey = Hotkey;
             copy.Order = Order;
+#if DEV
             copy.Taskbar = Taskbar.Copy();
+#endif
+            copy._taskbarRaw.AddRange(_taskbarRaw);
             foreach (var d in Displays) copy.Displays.Add(d.Clone());
             return copy;
         }
@@ -240,8 +257,18 @@ namespace DIIISPL
             sb.AppendLine("hotkey = " + (Hotkey ?? ""));
             sb.AppendLine("order = " + Order.ToString(CultureInfo.InvariantCulture));
             sb.AppendLine();
+#if DEV
             sb.AppendLine("[taskbar]");
             foreach (string line in Taskbar.Serialize()) sb.AppendLine(line);
+#else
+            // Стабильная сборка про панель задач ничего не знает и потому ничего
+            // о ней не решает: возвращает секцию в файл ровно такой, какой прочла.
+            if (_taskbarRaw.Count > 0)
+            {
+                sb.AppendLine("[taskbar]");
+                foreach (string line in _taskbarRaw) sb.AppendLine(line);
+            }
+#endif
             foreach (var d in Displays)
             {
                 sb.AppendLine();
@@ -289,14 +316,19 @@ namespace DIIISPL
                     else if (key == "hotkey") layout.Hotkey = val;
                     else if (key == "order") layout.Order = ParseInt(val);
                     // прежний формат: одно поле на весь профиль
+#if DEV
                     else if (key == "taskbar") layout.Taskbar.AdoptLegacy(val);
+#endif
                 }
                 else if (section == "taskbar")
                 {
+                    layout._taskbarRaw.Add(line);
+#if DEV
                     TaskbarState state;
                     if (key == "version") layout.Taskbar.Versioned = true;
                     else if (TaskbarSettings.TryParseKey(key, out state))
                         layout.Taskbar.States[state] = TaskbarAppearance.Parse(val);
+#endif
                 }
                 else if (section == "display" && cur != null)
                 {
@@ -319,7 +351,9 @@ namespace DIIISPL
             }
             if (string.IsNullOrEmpty(layout.Name)) layout.Name = Path.GetFileNameWithoutExtension(file);
             layout.DropLoneCloneGroups();
+#if DEV
             if (!layout.Taskbar.Versioned) layout.Taskbar.DropUntouchedSpecialCases();
+#endif
             return layout;
         }
 

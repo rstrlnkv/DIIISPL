@@ -1,8 +1,9 @@
-# Сборка выпуска. Запускается тегом вида v1.0.2 — он же задаёт версию:
-# держать её ещё и в файлах значит однажды выпустить 1.0.2 с надписью 1.0.1.
+# Сборка выпуска. Запускается тегом вида v0.1.0 — он же задаёт и версию, и канал:
+# держать их ещё и в файлах значит однажды выпустить 0.1.1 с надписью 0.1.0.
 #
-# Ранние сборки помечаются тегом с суффиксом (v1.0.2-early.1) и уезжают
-# предварительным выпуском — программа берёт их только на раннем канале.
+# Тег с суффиксом (v0.1.1-dev.1) — сборка Dev: уезжает предварительным выпуском,
+# программа берёт такие только на канале Dev, и только в них есть настройки
+# панели задач. Тег без суффикса — стабильная сборка, без них.
 name: Выпуск
 
 on:
@@ -11,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Версия без «v», например 1.0.2
+        description: Версия без «v», например 0.1.1 или 0.1.1-dev.1
         required: true
 
 permissions:
@@ -36,16 +37,22 @@ jobs:
           $tag = '${{ github.ref_name }}'
           $version = if ('${{ github.event_name }}' -eq 'workflow_dispatch') { '${{ inputs.version }}' }
                      else { $tag -replace '^v','' }
-          $number = ($version -split '-')[0]          # 1.0.2-early.1 → 1.0.2
+          $number = ($version -split '-')[0]          # 0.1.1-dev.1 → 0.1.1
           if ($number -notmatch '^\d+\.\d+\.\d+$') { throw "Непонятная версия: $version" }
           $early = $version -match '-'
 
-          # Именно ToString().ToLower(). PowerShell пишет булево как «True», а
+          # Тег задаёт и канал. Суффикс — сборка Dev: в ней есть настройки панели
+          # задач и библиотека оформления; в стабильной их нет вовсе.
+          #
+          # Ниже именно ToString().ToLower(): PowerShell пишет булево как «True», а
           # действие выпуска сравнивает строку с «true» — с заглавной буквы
           # предварительный выпуск не пометится предварительным и уйдёт всем,
-          # включая тех, кто ранний канал не выбирал.
-          "DIIISPL_VERSION=$number"                    | Out-File $env:GITHUB_ENV -Append -Encoding utf8
-          "DIIISPL_TAG=$version"                       | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          # включая тех, кто канал Dev не выбирал.
+          $channel = if ($early) { 'dev' } else { 'stable' }
+
+          "DIIISPL_VERSION=$number"                      | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "DIIISPL_TAG=$version"                         | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "DIIISPL_CHANNEL=$channel"                     | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           "DIIISPL_EARLY=$($early.ToString().ToLower())" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
 
           # версия внутри программы — та же, что в теге
@@ -56,11 +63,13 @@ jobs:
           Set-Content $file $text -Encoding utf8
           Write-Host "Собираю $version"
 
-      # Собирается из исходников: detours и wil тянет vcpkg, поэтому шаг долгий,
-      # несколько минут. Кэш сюда не поставлен намеренно — build-native.cmd
-      # раскладывает промежуточные файлы во временную папку, путь к которой
-      # у сборщика свой, и ключ кэша указывал бы мимо.
+      # Только для сборок Dev: в стабильной библиотеки нет ни в программе, ни в
+      # пакете, и тратить на неё минуты незачем. Собирается из исходников —
+      # detours и wil тянет vcpkg, поэтому шаг долгий. Кэш сюда не поставлен
+      # намеренно: build-native.cmd раскладывает промежуточные файлы во временную
+      # папку, путь к которой у сборщика свой, и ключ кэша указывал бы мимо.
       - name: Библиотека оформления панели задач
+        if: ${{ env.DIIISPL_CHANNEL == 'dev' }}
         run: native\build-native.cmd
 
       # Сертификат самодельный и в репозиторий не попадает. Есть в секретах —
@@ -79,10 +88,10 @@ jobs:
           "DIIISPL_SIGN_THUMBPRINT=$($cert.Thumbprint)" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Программа
-        run: build.cmd
+        run: build.cmd ${{ env.DIIISPL_CHANNEL }}
 
       - name: Установщик
-        run: installer\build-msi.cmd
+        run: installer\build-msi.cmd ${{ env.DIIISPL_CHANNEL }}
 
       - name: Выпуск
         uses: softprops/action-gh-release@v2
