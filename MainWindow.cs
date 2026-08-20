@@ -26,6 +26,7 @@ namespace DIIIX
 
         private readonly ListBox _profileList = new ListBox();
         private readonly TextBlock _nameText = new TextBlock();
+        private readonly TextBlock _nameHint = new TextBlock();
         private readonly TextBox _nameBox = new TextBox();
         private readonly Button _hotkeyButton = new Button();
         private readonly Button _taskbarButton = new Button();
@@ -57,7 +58,7 @@ namespace DIIIX
 
         public MainWindow()
         {
-            Title = "DIIIX — раскладки мониторов";
+            Title = "DIIIX";
             Width = 1180;
             Height = 760;
             MinWidth = 960;
@@ -90,7 +91,7 @@ namespace DIIIX
             root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
             var body = new Grid();
-            body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(272) });
+            body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(248) });
             body.ColumnDefinitions.Add(new ColumnDefinition());
             Grid.SetRow(body, 0);
             root.Children.Add(body);
@@ -115,16 +116,34 @@ namespace DIIIX
         private UIElement BuildSidebar()
         {
             var panel = new Grid();
-            panel.Margin = new Thickness(16, 12, 8, 4);
+            panel.Margin = new Thickness(12, 8, 6, 12);
             panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             panel.RowDefinitions.Add(new RowDefinition());
             panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
+            // Название программы над списком — как в окне MagicKeys: сначала кто это,
+            // потом уже содержимое.
+            var top = new StackPanel();
+            top.Margin = new Thickness(10, 6, 10, 4);
+
+            var brandName = new TextBlock();
+            brandName.Text = App.AppTitle;
+            brandName.Style = (Style)Application.Current.Resources["Subtitle"];
+            top.Children.Add(brandName);
+
+            var brandSub = new TextBlock();
+            brandSub.Text = "Раскладки мониторов";
+            brandSub.Style = (Style)Application.Current.Resources["Caption"];
+            brandSub.Margin = new Thickness(0, 2, 0, 14);
+            top.Children.Add(brandSub);
+
             var header = new TextBlock();
             header.Text = "ПРОФИЛИ";
             header.Style = (Style)Application.Current.Resources["SectionHeader"];
-            header.Margin = new Thickness(10, 6, 0, 10);
-            panel.Children.Add(header);
+            header.Margin = new Thickness(0, 0, 0, 8);
+            top.Children.Add(header);
+
+            panel.Children.Add(top);
 
             _profileList.Background = Brushes.Transparent;
             _profileList.BorderThickness = new Thickness(0);
@@ -159,6 +178,13 @@ namespace DIIIX
             deleteButton.HorizontalContentAlignment = HorizontalAlignment.Left;
             deleteButton.Click += delegate { DeleteCurrent(); };
             buttons.Children.Add(deleteButton);
+
+            var aboutButton = new Button();
+            aboutButton.Style = (Style)Application.Current.Resources["BtnSubtle"];
+            aboutButton.Content = Glyph("", "О программе");
+            aboutButton.HorizontalContentAlignment = HorizontalAlignment.Left;
+            aboutButton.Click += delegate { ShowAbout(); };
+            buttons.Children.Add(aboutButton);
 
             panel.Children.Add(buttons);
             return panel;
@@ -229,7 +255,17 @@ namespace DIIIX
             _nameBox.LostFocus += delegate { if (_renaming) CommitRename(true); };
             nameStack.Children.Add(_nameBox);
 
-            header.Children.Add(nameStack);
+            // Под названием — строка о том, что в профиле: сколько мониторов и какая
+            // клавиша. Так заголовок отвечает не только «что это», но и «что внутри».
+            var titleBlock = new StackPanel();
+            titleBlock.VerticalAlignment = VerticalAlignment.Center;
+            titleBlock.Children.Add(nameStack);
+            _nameHint.Style = (Style)Application.Current.Resources["Caption"];
+            _nameHint.Margin = new Thickness(4, 3, 0, 0);
+            _nameHint.TextTrimming = TextTrimming.CharacterEllipsis;
+            titleBlock.Children.Add(_nameHint);
+
+            header.Children.Add(titleBlock);
 
             var actions = new StackPanel();
             actions.Orientation = Orientation.Horizontal;
@@ -686,6 +722,14 @@ namespace DIIIX
         /// <summary>Открыть экран настроек панели задач для текущего профиля.</summary>
         public void ShowTaskbarSettings() { OpenTaskbarSettings(); }
 
+        /// <summary>Окно «О программе». Открывается и отсюда, и из меню значка в трее.</summary>
+        public void ShowAbout()
+        {
+            var window = new AboutWindow();
+            if (IsVisible) window.Owner = this;
+            window.ShowDialog();
+        }
+
         /// <summary>Открыть отдельный экран настроек панели задач для текущего профиля.</summary>
         private void OpenTaskbarSettings()
         {
@@ -726,12 +770,29 @@ namespace DIIIX
         {
             _updating = true;
             _nameText.Text = _current != null ? _current.Name : "";
+            _nameHint.Text = DescribeCurrent();
             _applyButton.IsEnabled = _current != null;
             UpdateTaskbarButton();
             _saveButton.IsEnabled = _current != null && _dirty;
             _hotkeyButton.Content = Glyph("", _current != null && !string.IsNullOrEmpty(_current.Hotkey)
                 ? _current.Hotkey : "Сочетание клавиш");
             _updating = false;
+        }
+
+        /// <summary>Короткая строка под названием профиля: что в нём и чем переключается.</summary>
+        private string DescribeCurrent()
+        {
+            if (_current == null) return "";
+
+            int on = 0;
+            foreach (var d in _current.Displays) if (d.Enabled) on++;
+
+            var parts = new List<string>();
+            parts.Add(on == 1 ? "один монитор" : "мониторов: " + on);
+            if (!string.IsNullOrEmpty(_current.Hotkey)) parts.Add("клавиша " + _current.Hotkey);
+            if (_current.Taskbar != null && _current.Taskbar.AnyEnabled) parts.Add("свой вид панели задач");
+
+            return string.Join(" · ", parts.ToArray());
         }
 
         private void UpdateProperties()

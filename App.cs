@@ -151,6 +151,12 @@ namespace DIIIX
             auto.Click += delegate { AutoStartEnabled = !AutoStartEnabled; };
             menu.Items.Add(auto);
 
+            var about = new MenuItem();
+            about.Style = (Style)Resources["FlyoutMenuItem"];
+            about.Header = "О программе…";
+            about.Click += delegate { _window.ShowAbout(); };
+            menu.Items.Add(about);
+
             menu.Items.Add(NewSeparator());
 
             var exit = new MenuItem();

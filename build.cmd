@@ -17,7 +17,7 @@ set WPF=%NETDIR%\WPF
   /r:"%WPF%\WindowsBase.dll" /r:"%WPF%\PresentationCore.dll" /r:"%WPF%\PresentationFramework.dll" ^
   "%~dp0AssemblyInfo.cs" "%~dp0Native.cs" "%~dp0Edid.cs" "%~dp0Monitors.cs" "%~dp0Layout.cs" "%~dp0Applier.cs" ^
   "%~dp0Store.cs" "%~dp0Hotkey.cs" "%~dp0ExplorerTap.cs" "%~dp0TaskbarSettings.cs" "%~dp0TaskbarWatcher.cs" "%~dp0TaskbarWindow.cs" "%~dp0Cli.cs" "%~dp0Theme.cs" "%~dp0Fluent.cs" ^
-  "%~dp0MonitorCanvas.cs" "%~dp0ConfirmDialog.cs" "%~dp0MainWindow.cs" "%~dp0App.cs"
+  "%~dp0MonitorCanvas.cs" "%~dp0ConfirmDialog.cs" "%~dp0AboutWindow.cs" "%~dp0MainWindow.cs" "%~dp0App.cs"
 
 if errorlevel 1 exit /b 1
 
