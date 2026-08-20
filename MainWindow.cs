@@ -121,14 +121,15 @@ namespace DIIIX
         {
             var panel = new Grid();
             panel.Margin = new Thickness(12, 8, 6, 12);
-            panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            panel.RowDefinitions.Add(new RowDefinition());
-            panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });   // название
+            panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });   // шапка списка
+            panel.RowDefinitions.Add(new RowDefinition());                              // список
+            panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });   // «О программе»
 
             // Название программы над списком — как в окне MagicKeys: сначала кто это,
             // потом уже содержимое.
             var top = new StackPanel();
-            top.Margin = new Thickness(10, 6, 10, 4);
+            top.Margin = new Thickness(10, 6, 10, 14);
 
             var brandName = new TextBlock();
             brandName.Text = App.AppTitle;
@@ -138,13 +139,20 @@ namespace DIIIX
             var brandSub = new TextBlock();
             brandSub.Text = "Раскладки мониторов";
             brandSub.Style = (Style)Application.Current.Resources["Caption"];
-            brandSub.Margin = new Thickness(0, 2, 0, 14);
+            brandSub.Margin = new Thickness(0, 2, 0, 0);
             top.Children.Add(brandSub);
+
+            panel.Children.Add(top);
 
             // Создание профиля и действия над ним — в шапке списка, рядом с его
             // заголовком: они относятся к списку, а не к окну целиком.
+            //
+            // Шапка лежит отдельным рядом сетки, а не внутри блока с названием: у того
+            // свой отступ справа, и кнопки оказывались левее правого края списка.
+            // Здесь правый край общий со строками списка, и всё стоит по одной линии.
             var headerRow = new Grid();
-            headerRow.Margin = new Thickness(0, 0, 0, 6);
+            headerRow.Margin = new Thickness(10, 0, 0, 6);
+            Grid.SetRow(headerRow, 1);
             headerRow.ColumnDefinitions.Add(new ColumnDefinition());
             headerRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
@@ -175,9 +183,7 @@ namespace DIIIX
             headerButtons.Children.Add(moreButton);
 
             headerRow.Children.Add(headerButtons);
-            top.Children.Add(headerRow);
-
-            panel.Children.Add(top);
+            panel.Children.Add(headerRow);
 
             _profileList.Background = Brushes.Transparent;
             _profileList.BorderThickness = new Thickness(0);
@@ -191,7 +197,7 @@ namespace DIIIX
                 if (layout != null && !ReferenceEquals(layout, _current)) SelectProfile(layout);
             };
             ScrollViewer.SetHorizontalScrollBarVisibility(_profileList, ScrollBarVisibility.Disabled);
-            Grid.SetRow(_profileList, 1);
+            Grid.SetRow(_profileList, 2);
             panel.Children.Add(_profileList);
 
             // «О программе» — строкой того же вида, что и профили выше: в MagicKeys
@@ -206,7 +212,7 @@ namespace DIIIX
             about.HorizontalAlignment = HorizontalAlignment.Stretch;
             about.Margin = new Thickness(0, 8, 0, 0);
             about.Click += delegate { ShowAbout(); };
-            Grid.SetRow(about, 2);
+            Grid.SetRow(about, 3);
             panel.Children.Add(about);
 
             return panel;
