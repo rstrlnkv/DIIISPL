@@ -247,6 +247,16 @@ namespace DIIISPL
             if (origin == null) return false;
 
             MonitorInfo originMon = active[origin.Identity];
+
+            // Начало координат обязано стоять в (0,0) — там его поставит Submit.
+            //
+            // Без этой проверки сверка была чисто относительной и общего сдвига
+            // не видела вовсе. Измерено: профиль, где основным отмечен выдернутый
+            // сейчас телевизор, считался «применять нечего», хотя применение
+            // перенесло бы начало координат на другой монитор — то есть панель
+            // задач и «Пуск» переехали бы на соседний экран.
+            if (originMon.X != 0 || originMon.Y != 0) return false;
+
             int dx = originMon.X - origin.X, dy = originMon.Y - origin.Y;
             foreach (var d in present)
             {
@@ -513,15 +523,29 @@ namespace DIIISPL
                 // человек подписал себе секцию в Dev, после первого же сохранения в
                 // Stable исчезали, а отступы съедались. Запоминаем `raw`, а не
                 // обрезанное: восстановить отступ иначе неоткуда.
-                if (section == "taskbar" && !line.StartsWith("[")) layout._taskbarRaw.Add(raw.TrimEnd());
-
-                if (line.Length == 0 || line.StartsWith("#") || line.StartsWith(";")) continue;
                 if (line.StartsWith("["))
                 {
-                    section = line.Trim('[', ']').ToLowerInvariant();
+                    string name = line.Trim('[', ']').ToLowerInvariant();
+                    bool known = name == "profile" || name == "display" || name == "taskbar";
+
+                    // Незнакомая строка в скобках внутри секции панели задач —
+                    // это её часть, а не новая секция.
+                    //
+                    // Прежде такая строка делала две вещи разом: сама в список не
+                    // попадала и переводила разбор в выдуманную секцию — то есть
+                    // уносила с собой весь хвост секции, молча. Обещание же в том
+                    // и состоит, что стабильная сборка про формат этой секции не
+                    // знает ничего: любая подсекция, которую заведёт Dev, обязана
+                    // вернуться в файл целиком.
+                    if (!known && section == "taskbar") { layout._taskbarRaw.Add(raw.TrimEnd()); continue; }
+
+                    section = name;
                     if (section == "display") { cur = new LayoutDisplay(); layout.Displays.Add(cur); }
                     continue;
                 }
+
+                if (section == "taskbar") layout._taskbarRaw.Add(raw.TrimEnd());
+                if (line.Length == 0 || line.StartsWith("#") || line.StartsWith(";")) continue;
 
                 int eq = line.IndexOf('=');
                 if (eq <= 0) continue;
