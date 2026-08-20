@@ -19,7 +19,8 @@ set WPF=%NETDIR%\WPF
 
 set CHANNEL=%1
 if not defined CHANNEL set CHANNEL=%DIIISPL_CHANNEL%
-if /i "%CHANNEL%"=="dev" (
+if /i "%CHANNEL%"=="dev" (set CHANNEL=dev) else (set CHANNEL=stable)
+if "%CHANNEL%"=="dev" (
   set DEFINE=/define:DEV
   set TASKBAR="%~dp0ExplorerTap.cs" "%~dp0TaskbarSettings.cs" "%~dp0TaskbarWatcher.cs" "%~dp0TaskbarWindow.cs"
   echo === Сборка Dev: с панелью задач ===
@@ -34,6 +35,12 @@ rem не разъезжается с версией: версия говорит
 rem Файл создаётся при каждой сборке и в репозиторий не попадает; без git номер 0.
 set BUILD=0
 for /f "delims=" %%I in ('git -C "%~dp0." rev-list --count HEAD 2^>nul') do set BUILD=%%I
+rem Канал записываем рядом с программой: пакет собирается из готового exe и
+rem раньше принимал на веру, что канал у них общий. Собрал build.cmd dev, потом
+rem по привычке build-msi.cmd без аргумента — и получался «стабильный» пакет с
+rem Dev-программой: раздел панели задач на месте, а библиотеки в пакете нет.
+> "%~dp0.channel" echo %CHANNEL%
+
 > "%~dp0BuildInfo.g.cs" echo // Создаётся build.cmd при каждой сборке. Править незачем.
 >> "%~dp0BuildInfo.g.cs" echo namespace DIIISPL { internal static class BuildInfo { public const string Number = "%BUILD%"; } }
 

@@ -61,7 +61,7 @@ namespace DIIISPL
         private bool _dirty;
         private bool _capturingHotkey;
         private bool _renaming;
-        private string _activeProfileName;
+        private bool _applying;          // идёт перестроение экранов — второй раз не пускаем
 
         public MainWindow()
         {
@@ -83,6 +83,12 @@ namespace DIIISPL
             {
                 e.Cancel = true;                  // окно не закрывается, а прячется в трей
                 if (_dirty && !AskToSave()) return;
+
+                // Незавершённые режимы окно с собой в трей не уносит: иначе при
+                // следующем открытии поверх заголовка висит поле ввода со старым
+                // именем или окно молча ждёт нажатия клавиши для сочетания.
+                CancelRename();
+                _capturingHotkey = false;
                 Hide();
             };
 
@@ -114,7 +120,12 @@ namespace DIIISPL
             _statusBar.Padding = new Thickness(20, 8, 20, 12);
             _statusBar.Visibility = Visibility.Collapsed;
             _status.Style = (Style)Application.Current.Resources["Caption"];
-            _status.TextTrimming = TextTrimming.CharacterEllipsis;
+            // Перенос, а не многоточие: после применения сюда попадают все
+            // предупреждения разом, и в одну строку они не помещались — человек
+            // видел «Раскладка применена» и обрезанное начало того, что пошло не
+            // так. Читать их негде: подсказки и прокрутки у полосы нет.
+            _status.TextWrapping = TextWrapping.Wrap;
+            _status.MaxHeight = 72;
             _statusBar.Child = _status;
             Grid.SetRow(_statusBar, 1);
             root.Children.Add(_statusBar);
@@ -488,6 +499,29 @@ namespace DIIISPL
             _canvas.Live = _live;
         }
 
+        /// <summary>
+        /// Перечитать список, оставшись на том же профиле и не тронув несохранённое.
+        ///
+        /// Зовётся, когда список надо освежить не по просьбе человека: сменилась
+        /// картинка экранов, окно достали из трея. Прежде обе точки звали
+        /// `ReloadProfiles(null)`, а это значит «выбрать первый»: человек ничего
+        /// не делал, а выделение прыгало на чужой профиль. С несохранённой правкой
+        /// выходило хуже — на ровном месте появлялся вопрос «Сохранить правки?».
+        /// </summary>
+        public void RefreshProfiles()
+        {
+            if (_dirty)
+            {
+                // Несохранённое чужими руками не трогаем: список строк освежим,
+                // а профиль на холсте оставим как есть.
+                RefreshProfileList();
+                SelectListItemFor(_current);
+                UpdateHeader();
+                return;
+            }
+            ReloadProfiles(_current != null ? _current.Name : null);
+        }
+
         public void ReloadProfiles(string selectName)
         {
             _profiles = Store.LoadAll();
@@ -515,12 +549,10 @@ namespace DIIISPL
             _updating = true;
             _profileList.Items.Clear();
             var live = new List<MonitorInfo>(_live.Values);
-            _activeProfileName = null;
 
             foreach (var l in _profiles)
             {
                 bool isActive = l.MatchesCurrent(live);
-                if (isActive) _activeProfileName = l.Name;
 
                 var item = new ListBoxItem();
                 item.Style = (Style)Application.Current.Resources["ProfileItem"];
@@ -578,9 +610,13 @@ namespace DIIISPL
             var menu = new ContextMenu();
             menu.Style = (Style)Application.Current.Resources["FlyoutMenu"];
 
+            // Ответ SelectProfile читаем обязательно: если человек передумал в
+            // вопросе о несохранённом, перехода не было, и «текущий» — прежний
+            // профиль. Прежде пункт молча переименовывал и удалял не ту строку,
+            // по которой щёлкнули.
             menu.Items.Add(MenuAction("Переименовать", "F2", delegate
             {
-                SelectProfile(layout);
+                if (!SelectProfile(layout)) return;
                 BeginRename();
             }));
             menu.Items.Add(MenuAction("Переместить вверх", "Alt+↑", delegate { MoveProfile(layout, -1); }));
@@ -592,7 +628,7 @@ namespace DIIISPL
 
             menu.Items.Add(MenuAction("Удалить", "", delegate
             {
-                SelectProfile(layout);
+                if (!SelectProfile(layout)) return;
                 DeleteCurrent();
             }));
             return menu;
@@ -618,7 +654,11 @@ namespace DIIISPL
             _profiles.Insert(target, layout);
             Store.SaveOrder(_profiles);
             RefreshProfileList();
-            SelectListItemFor(layout);
+
+            // Выделение остаётся на том профиле, который открыт, а не прыгает на
+            // переставленный. Прежде из меню чужой строки список подсвечивал одно,
+            // а заголовок, холст и «Сохранить» относились к другому.
+            SelectListItemFor(_current);
             Raise(ProfilesChanged);
         }
 
@@ -630,7 +670,14 @@ namespace DIIISPL
             _updating = false;
         }
 
-        private void SelectProfile(Layout layout)
+        /// <summary>
+        /// Перейти на профиль. Ложь означает «не перешли»: человек передумал в
+        /// вопросе о несохранённом. Ответ обязаны читать все, кто зовёт: следом
+        /// за переходом обычно идёт действие над «текущим» профилем, и если
+        /// переход не состоялся, действие достанется прежнему. Так пункт
+        /// «Переименовать» в меню чужой строки переименовывал не ту.
+        /// </summary>
+        private bool SelectProfile(Layout layout)
         {
             // Раньше правки сохранялись молча при любом переключении — так профиль можно было
             // перезаписать, сам того не заметив. Теперь решение всегда за пользователем.
@@ -638,7 +685,7 @@ namespace DIIISPL
             {
                 // Передумали — возвращаем выделение на прежний профиль, иначе
                 // список показывал бы один, а на холсте остался бы другой.
-                if (!AskToSave()) { SelectListItemFor(_current); return; }
+                if (!AskToSave()) { SelectListItemFor(_current); return false; }
             }
             _current = layout;
             _currentOriginalName = layout.Name;
@@ -652,6 +699,7 @@ namespace DIIISPL
             UpdateProperties();
             UpdateStatus(null);
             SelectListItemFor(layout);
+            return true;
         }
 
         /// <summary>Добавляет в профиль мониторы, которых в нём ещё нет (подключили новый — он сразу виден).</summary>
@@ -701,9 +749,11 @@ namespace DIIISPL
             Store.Save(layout);
             ReloadProfiles(layout.Name);
             Raise(ProfilesChanged);
-            UpdateStatus("Создан профиль из текущей раскладки. Переименуйте и назначьте сочетание клавиш.");
-            _nameBox.Focus();
-            _nameBox.SelectAll();
+            UpdateStatus("Создан профиль из текущей раскладки. Назовите его и назначьте сочетание клавиш.");
+            // Просить переименовать и не открыть поле — значит просить впустую:
+            // прежде фокус отдавали спрятанному _nameBox, курсор не появлялся
+            // нигде, и набранное уходило в никуда.
+            BeginRename();
         }
 
         private void DeleteCurrent()
@@ -718,6 +768,18 @@ namespace DIIISPL
             _current = null;
             ReloadProfiles(null);
             Raise(ProfilesChanged);
+        }
+
+        /// <summary>
+        /// Спросить про несохранённое перед выходом из программы. Ложь — человек
+        /// передумал, выходить нельзя. Зовётся из меню значка в трее: там выход
+        /// идёт мимо закрытия окна.
+        /// </summary>
+        public bool AskBeforeClosing()
+        {
+            if (!_dirty) return true;
+            if (!IsVisible) Show();       // спрашивать о профиле, которого не видно, нечестно
+            return AskToSave();
         }
 
         /// <summary>
@@ -779,27 +841,46 @@ namespace DIIISPL
             if (report) UpdateStatus("Сохранено.");
         }
 
+        /// <summary>
+        /// Применить раскладку. Работа идёт в стороннем потоке, а не здесь.
+        ///
+        /// Прежде `Applier.Apply` вызывался прямо в потоке окна, а внутри — паузы
+        /// на секунды и запасные попытки: окно замирало, Windows вешала на
+        /// заголовок «Не отвечает», и никакого «применяю…» при этом не было.
+        /// Человек решал, что промазал мимо кнопки, и жал ещё раз-другой —
+        /// нажатия копились и после разморозки перестраивали дисплеи подряд.
+        /// Это ровно та нагрузка, от которой 19.08.2026 машина ушла в синий
+        /// экран, и единственной защитой от неё оставался затвор в 1,2 с.
+        /// </summary>
         private void ApplyCurrent()
         {
-            if (_current == null) return;
+            if (_current == null || _applying) return;
             SaveCurrent(false);
-            var result = Applier.Apply(_current);
-            ReloadLive();
-            _canvas.Refresh();
-            RefreshProfileList();
 
-            var parts = new List<string>();
-            if (result.Success) parts.Add("Раскладка применена.");
-            else parts.Add("Не удалось: " + result.Error);
-            foreach (string w in result.Warnings) parts.Add(w);
-            UpdateStatus(string.Join("  ", parts.ToArray()));
-        }
+            Layout layout = _current;
+            _applying = true;
+            _applyButton.IsEnabled = false;
+            UpdateStatus("Перестраиваю экраны…");
 
-        public void ApplyByName(string name)
-        {
-            var layout = Store.LoadByName(name);
-            if (layout == null) return;
-            Applier.Apply(layout);
+            System.Threading.ThreadPool.QueueUserWorkItem(delegate
+            {
+                ApplyResult result = Applier.Apply(layout);
+                Dispatcher.BeginInvoke(new Action(delegate
+                {
+                    _applying = false;
+                    _applyButton.IsEnabled = _current != null;
+
+                    ReloadLive();
+                    _canvas.Refresh();
+                    RefreshProfileList();
+
+                    var parts = new List<string>();
+                    if (result.Success) parts.Add("Раскладка применена.");
+                    else parts.Add("Не удалось: " + result.Error);
+                    foreach (string w in result.Warnings) parts.Add(w);
+                    UpdateStatus(string.Join("  ", parts.ToArray()));
+                }));
+            });
         }
 
         private static void Raise(Action a) { if (a != null) a(); }
@@ -822,9 +903,6 @@ namespace DIIISPL
         private void CommitRename(bool keep)
         {
             if (!_renaming) return;
-            _renaming = false;
-            _nameBox.Visibility = Visibility.Collapsed;
-            _nameText.Visibility = Visibility.Visible;
 
             if (keep && _current != null)
             {
@@ -834,19 +912,44 @@ namespace DIIISPL
                     // Имя, уже занятое другим профилем, не берём. Прежде брали:
                     // Store.Rename удалял свой файл и писал поверх чужого — тёзка
                     // исчезал молча, вместе со всей раскладкой.
+                    //
+                    // Поле при этом остаётся открытым: закрыть его и потерять
+                    // набранное — значит заставить набирать всё заново, и уже
+                    // не видя перед собой того, что не подошло.
                     string clash = Store.NameInUse(name, _currentOriginalName);
                     if (clash != null)
                     {
                         UpdateStatus("Профиль «" + clash + "» уже есть — придумайте другое имя.");
-                        UpdateHeader();
+                        _nameBox.Focus();
+                        _nameBox.SelectAll();
                         return;
                     }
+
+                    // Имя — такая же правка профиля, как всё остальное, и на диск
+                    // уходит вместе со всем остальным. Прежде здесь стоял
+                    // SaveCurrent: переименование молча записывало заодно и
+                    // несохранённую раскладку — без вопроса, который программа
+                    // обязательно задаёт в других местах.
                     _current.Name = name;
-                    SaveCurrent(false);
+                    MarkDirty();
                     RefreshProfileList();
-                    Raise(ProfilesChanged);
+                    SelectListItemFor(_current);
                 }
             }
+
+            _renaming = false;
+            _nameBox.Visibility = Visibility.Collapsed;
+            _nameText.Visibility = Visibility.Visible;
+            UpdateHeader();
+        }
+
+        /// <summary>Закрыть поле имени, ничего не меняя.</summary>
+        private void CancelRename()
+        {
+            if (!_renaming) return;
+            _renaming = false;
+            _nameBox.Visibility = Visibility.Collapsed;
+            _nameText.Visibility = Visibility.Visible;
             UpdateHeader();
         }
 
@@ -898,6 +1001,15 @@ namespace DIIISPL
 
         private void UpdateHeader()
         {
+            // Захват сочетания живёт ровно до следующей перерисовки заголовка.
+            //
+            // Прежде флаг гасился только по Esc, Delete и удачному сочетанию, а
+            // кнопке возвращали обычную надпись отсюда — из любого места, где
+            // меняется профиль. Оба признака захвата исчезали, сам захват
+            // оставался: окно переставало слышать клавиатуру вовсе, а первая же
+            // нажатая клавиша уезжала горячей в чужой профиль и сразу на диск.
+            _capturingHotkey = false;
+
             _updating = true;
             _nameText.Text = _current != null ? _current.Name : "";
             _nameHint.Text = DescribeCurrent();
@@ -1128,7 +1240,15 @@ namespace DIIISPL
         {
             if (_updating || _canvas.Selected == null) return;
             var d = _canvas.Selected;
-            if (!primary) { _updating = true; _primarySwitch.IsChecked = true; _updating = false; return; }
+            if (!primary)
+            {
+                // Основной обязан быть ровно один, поэтому снять галочку нельзя —
+                // но раньше она просто прыгала обратно, и переключатель выглядел
+                // заедающим. Сказать, что делать вместо этого, стоит одной строки.
+                _updating = true; _primarySwitch.IsChecked = true; _updating = false;
+                UpdateStatus("Основной экран всегда один. Чтобы сменить его, отметьте «Основной» у другого монитора.");
+                return;
+            }
             foreach (var o in _current.Displays) o.Primary = ReferenceEquals(o, d);
             _canvas.Normalize();
             _canvas.Relayout();
@@ -1317,6 +1437,19 @@ namespace DIIISPL
             if (!Hotkey.TryParse(combo, out mods, out vk, out err))
             {
                 UpdateStatus(combo + " — " + err + ". Нажмите другое сочетание или Esc.");
+                return;
+            }
+
+            // Одно сочетание на два профиля назначалось бодрым «назначено», а
+            // потом всплывала подсказка «занято другой программой»: никакой
+            // другой программы нет, занято своим же профилем, и какой из двух
+            // остался рабочим — из окна не видно. Ищем тёзку заранее.
+            foreach (var other in _profiles)
+            {
+                if (ReferenceEquals(other, _current)) continue;
+                if (!string.Equals(other.Hotkey, combo, StringComparison.OrdinalIgnoreCase)) continue;
+                UpdateStatus(combo + " уже назначено профилю «" + other.Name +
+                             "». Сначала снимите его там — Delete в режиме выбора сочетания.");
                 return;
             }
 

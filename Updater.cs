@@ -192,6 +192,17 @@ namespace DIIISPL
             {
                 string dir = Path.Combine(Path.GetTempPath(), "DIIISPL-update");
                 Directory.CreateDirectory(dir);
+
+                // Прошлые пакеты убираем здесь, а не после установки: там файл
+                // ещё читает msiexec. Иначе они копились по полтора мегабайта
+                // за обновление и оставались лежать даже после удаления
+                // программы — папку эту создаём мы, и убрать её некому.
+                try
+                {
+                    foreach (string old in Directory.GetFiles(dir, "*.msi"))
+                        try { File.Delete(old); } catch { }
+                }
+                catch { }
                 // Только имя файла и ничего больше. Имя приходит с сервера, а Path.Combine
                 // при корневом втором аргументе выбрасывает первый целиком: «C:\…\что.msi»
                 // или «..\..\что.msi» увели бы запись из временной папки куда угодно —
@@ -375,7 +386,11 @@ namespace DIIISPL
                 // человека к происходящему.
                 var start = new ProcessStartInfo(
                     Path.Combine(Environment.SystemDirectory, "msiexec.exe"));
-                start.Arguments = "/i \"" + msiPath + "\" /qb /norestart";
+                // DIIISPLRELAUNCH=1 просит установщик поднять программу заново.
+                // Без него обновление изнутри кончалось исчезновением значка из
+                // трея: /qb — это установка без последнего окна, а запуск висел
+                // только на его кнопке «Готово».
+                start.Arguments = "/i \"" + msiPath + "\" DIIISPLRELAUNCH=1 /qb /norestart";
                 start.UseShellExecute = true;
                 Process.Start(start);
                 return true;

@@ -171,11 +171,25 @@ namespace DIIISPL
             if (File.Exists(p)) File.Delete(p);
         }
 
+        /// <summary>
+        /// Записать профиль, а прежний файл убрать — но только после того, как
+        /// новый лёг на диск.
+        ///
+        /// Прежде порядок был обратным: сначала `File.Delete`, потом `Save`. Если
+        /// запись не удавалась — а не удаться ей есть от чего: слишком длинное
+        /// имя перебирает предел пути в 260 знаков, кончилось место, файл занят —
+        /// от профиля не оставалось ни нового, ни старого. Пропадала вся
+        /// раскладка целиком, вместе с сочетанием клавиш.
+        /// </summary>
         public static void Rename(string oldName, Layout layout)
         {
             string oldPath = PathFor(oldName);
-            if (File.Exists(oldPath) && !string.Equals(oldName, layout.Name, StringComparison.Ordinal)) File.Delete(oldPath);
             Save(layout);
+
+            if (string.Equals(oldName, layout.Name, StringComparison.Ordinal)) return;
+            if (string.Equals(oldPath, PathFor(layout.Name), StringComparison.OrdinalIgnoreCase)) return;
+            try { if (File.Exists(oldPath)) File.Delete(oldPath); }
+            catch { /* не удалился — останется лишний файл, но профиль цел */ }
         }
 
         public static string UniqueName(string baseName)

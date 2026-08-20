@@ -190,7 +190,15 @@ namespace DIIISPL
             {
                 if (!d.Enabled || d.CloneGroup < 0) continue;
                 MonitorInfo mon;
-                if (!byId.TryGetValue(d.Identity, out mon) || !mon.Active) return false;
+
+                // Участник, которого нет на месте, — это не «дубль не сложился»,
+                // а «складывать не из чего». Прежде здесь стоял отказ, и отказ
+                // этот был вечным: монитор не подключён, значит условие не
+                // выполнится никогда. Каждое применение такого профиля гнало
+                // систему через два лишних перестроения топологии — самую
+                // тяжёлую операцию в программе, ту самую, из-за которой
+                // 19.08.2026 машина ушла в синий экран.
+                if (!byId.TryGetValue(d.Identity, out mon) || !mon.Active) continue;
                 uint src;
                 if (!groupSource.TryGetValue(d.CloneGroup, out src)) groupSource[d.CloneGroup] = mon.SourceId;
                 else if (src != mon.SourceId) return false;
@@ -498,6 +506,41 @@ namespace DIIISPL
                 else if (src != mon.SourceId)
                     res.Warnings.Add("«" + d.Name + "» не встал в дублирование — Windows развела экраны.");
             }
+
+            // Позиции и основной экран — то единственное, что расходится, когда
+            // заявку отбило и раскладку расставила сама Windows. Прежде их никто
+            // не сверял: в окне писалось «Раскладка применена», а на столе стояло
+            // не то, и профиль после этого никогда не отмечался точкой «применён
+            // сейчас» — потому что применено было другое.
+            var movedNames = new List<string>();
+            LayoutDisplay wantPrimary = null;
+            foreach (var d in layout.Displays) if (d.Enabled && d.Primary) { wantPrimary = d; break; }
+
+            int shiftX = 0, shiftY = 0;
+            if (wantPrimary != null)
+            {
+                MonitorInfo p;
+                if (byId.TryGetValue(wantPrimary.Identity, out p) && p.Active)
+                {
+                    // Раскладка считается от основного экрана: он стоит в (0,0),
+                    // и общий сдвиг всей картины ошибкой не является.
+                    shiftX = p.X - wantPrimary.X;
+                    shiftY = p.Y - wantPrimary.Y;
+                    if (p.X != 0 || p.Y != 0)
+                        res.Warnings.Add("Основным экраном Windows сделала не «" + wantPrimary.Name + "».");
+                }
+            }
+
+            foreach (var d in layout.Displays)
+            {
+                if (!d.Enabled) continue;
+                MonitorInfo mon;
+                if (!byId.TryGetValue(d.Identity, out mon) || !mon.Active) continue;
+                if (mon.X - d.X != shiftX || mon.Y - d.Y != shiftY) movedNames.Add(d.Name);
+            }
+            if (movedNames.Count > 0)
+                res.Warnings.Add("Windows расставила по-своему: " + string.Join(", ", movedNames.ToArray()) +
+                                 ". Раскладка на экране и в профиле теперь разные.");
 
             if (notTurnedOn.Count > 0)
                 res.Warnings.Add("Не включились: " + string.Join(", ", notTurnedOn.ToArray()) +

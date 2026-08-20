@@ -478,6 +478,23 @@ namespace DIIISPL
             if (enabled.Count == 0) return "Не выбран ни один монитор.";
             if (enabled.Count == 1) return null;
 
+            // Наложение — единственное, что Windows точно не примет. Проверялось
+            // оно только при включении монитора переключателем, а перетаскивание
+            // мышью проходило мимо: карточки лежали внахлёст, внизу было тихо, и
+            // «Применить» записывало на диск невозможную раскладку. Windows потом
+            // расставляла экраны по-своему, а окно продолжало показывать своё.
+            for (int i = 0; i < enabled.Count; i++)
+                for (int j = i + 1; j < enabled.Count; j++)
+                {
+                    var a = enabled[i];
+                    var b = enabled[j];
+                    if (a.CloneGroup >= 0 && a.CloneGroup == b.CloneGroup) continue;   // дубль лежит поверх намеренно
+                    if (a.X < b.X + b.DesktopWidth && b.X < a.X + a.DesktopWidth &&
+                        a.Y < b.Y + b.DesktopHeight && b.Y < a.Y + a.DesktopHeight)
+                        return "«" + a.Name + "» и «" + b.Name + "» налезают друг на друга — разведите их: " +
+                               "рабочие столы наложенными быть не могут.";
+                }
+
             var reached = new List<LayoutDisplay>();
             reached.Add(enabled[0]);
             bool grew = true;

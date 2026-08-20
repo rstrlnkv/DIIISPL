@@ -29,7 +29,14 @@ namespace DIIISPL
                     case "apply":
                     case "switch": return ApplyProfile(args);
                     case "delete": return DeleteProfile(args);
-                    default: return Help();
+                    default:
+                        // Опечатка в команде не должна выглядеть удачей: прежде
+                        // `/aply "Кино"` печатал справку и возвращал 0, и ни
+                        // человек, ни скрипт не узнавали, что ничего не применено.
+                        Console.WriteLine();
+                        Console.WriteLine("Не знаю команды «" + cmd + "». Вот что есть:");
+                        Help();
+                        return 2;
                 }
             }
             catch (Exception ex)
@@ -245,7 +252,23 @@ namespace DIIISPL
             // им поверх файла: одна команда молча уносила и назначенное сочетание
             // клавиш, и место в списке, и секцию вида панели задач.
             var existing = Store.LoadByName(args[1]);
-            if (existing != null) layout.AdoptSettingsFrom(existing);
+
+            // Профиль ищется по имени, а файл выбирается по очищенному имени — и
+            // это разные вещи. `/save "Дом "` с лишним пробелом не находил «Дом»,
+            // зато писал ровно в его файл: свежий снимок ложился поверх, унося и
+            // сочетание клавиш, и место в списке, и вид панели задач. В консоли
+            // при этом бодро писалось «Сохранено».
+            if (existing == null)
+            {
+                string clash = Store.NameInUse(args[1], null);
+                if (clash != null)
+                {
+                    Console.WriteLine("Имя «" + args[1] + "» ложится в тот же файл, что и профиль «" + clash + "».");
+                    Console.WriteLine("Возьмите другое имя или переснимите существующий: /save \"" + clash + "\"");
+                    return 2;
+                }
+            }
+            else layout.AdoptSettingsFrom(existing);
 
             Store.Save(layout);
             Console.WriteLine((existing != null ? "Переснято: " : "Сохранено: ") + layout.Name);

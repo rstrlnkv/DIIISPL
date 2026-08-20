@@ -487,6 +487,9 @@ namespace DIIISPL
         public static readonly Guid WINTRUST_ACTION_GENERIC_VERIFY_V2 =
             new Guid("00AAC56B-CD44-11d0-8CC2-00C04FC295EE");
 
+        /// <summary>«Места не хватило» — для QueryDisplayConfig это просьба спросить размеры заново.</summary>
+        public const int ERROR_INSUFFICIENT_BUFFER = 122;
+
         /// <summary>Подпись цела, но корень сертификата в системе не установлен.</summary>
         public const int CERT_E_UNTRUSTEDROOT = unchecked((int)0x800B0109);
         public const int CERT_E_CHAINING = unchecked((int)0x800B010A);

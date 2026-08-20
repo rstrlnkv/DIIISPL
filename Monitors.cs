@@ -151,15 +151,30 @@ namespace DIIISPL
         {
             paths = new Native.DISPLAYCONFIG_PATH_INFO[0];
             modes = new Native.DISPLAYCONFIG_MODE_INFO[0];
-            uint pathCount, modeCount;
-            if (Native.GetDisplayConfigBufferSizes(Native.QDC_ALL_PATHS, out pathCount, out modeCount) != 0) return false;
-            var p = new Native.DISPLAYCONFIG_PATH_INFO[pathCount];
-            var m = new Native.DISPLAYCONFIG_MODE_INFO[modeCount];
-            if (Native.QueryDisplayConfig(Native.QDC_ALL_PATHS, ref pathCount, p, ref modeCount, m, IntPtr.Zero) != 0) return false;
-            if (p.Length != pathCount) Array.Resize(ref p, (int)pathCount);
-            if (m.Length != modeCount) Array.Resize(ref m, (int)modeCount);
-            paths = p; modes = m;
-            return true;
+            // Между «сколько надо места» и «отдай данные» конфигурация может
+            // смениться, и тогда система отвечает ERROR_INSUFFICIENT_BUFFER —
+            // это не поломка, а просьба спросить размеры заново. Прежде все коды
+            // сливались в один отказ, Enumerate отдавал пустой список, и Missing,
+            // который зовёт его через 1300 мс после смены режима — в самый
+            // неустойчивый момент, — читал это как «не включился ни один
+            // монитор» и запускал лишнее тяжёлое перестроение.
+            for (int attempt = 0; attempt < 4; attempt++)
+            {
+                uint pathCount, modeCount;
+                if (Native.GetDisplayConfigBufferSizes(Native.QDC_ALL_PATHS, out pathCount, out modeCount) != 0) return false;
+
+                var p = new Native.DISPLAYCONFIG_PATH_INFO[pathCount];
+                var m = new Native.DISPLAYCONFIG_MODE_INFO[modeCount];
+                int rc = Native.QueryDisplayConfig(Native.QDC_ALL_PATHS, ref pathCount, p, ref modeCount, m, IntPtr.Zero);
+                if (rc == Native.ERROR_INSUFFICIENT_BUFFER) continue;
+                if (rc != 0) return false;
+
+                if (p.Length != pathCount) Array.Resize(ref p, (int)pathCount);
+                if (m.Length != modeCount) Array.Resize(ref m, (int)modeCount);
+                paths = p; modes = m;
+                return true;
+            }
+            return false;
         }
 
         private static void DisambiguateIdentities(List<MonitorInfo> list)
@@ -263,6 +278,14 @@ namespace DIIISPL
             int rc = Native.DisplayConfigSetDeviceInfo(ref hdr);
             if (rc == 0)
             {
+                // Дать линку согласоваться. Мгновенным переключение не бывает, и в
+                // соседнем коде это признано паузами в 600–700 мс. Без выдержки
+                // проверка почти всегда читала «ещё не изменилось», и вдогонку
+                // уходил старый вызов — а на сборках 24H2+ он управляет уже не
+                // HDR, а расширенным цветовым охватом, который никто не просил
+                // трогать и который программа не умеет вернуть.
+                System.Threading.Thread.Sleep(400);
+
                 var check = new MonitorInfo();
                 check.Adapter = adapter;
                 check.TargetId = targetId;
@@ -277,7 +300,13 @@ namespace DIIISPL
             set.header.id = targetId;
             set.value = enable ? 1u : 0u;
             int rc2 = Native.DisplayConfigSetDeviceInfo(ref set);
-            return rc == 0 ? rc2 : rc;
+
+            // Успех старого вызова — это успех, даже если новый пакет система не
+            // знает. Прежде здесь возвращалась ошибка нового: на Windows 10 и на
+            // сборках 11 до 24H2 — ровно там, ради чего запасной путь и написан, —
+            // HDR включался, а программа сообщала «видеокарта не принимает такое
+            // сочетание режимов» и не заносила монитор в список изменённых.
+            return rc2 == 0 ? 0 : (rc != 0 ? rc : rc2);
         }
 
         private static void FillModes(MonitorInfo mon)

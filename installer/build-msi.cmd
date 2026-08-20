@@ -23,6 +23,24 @@ if not exist "%ROOT%\DIIISPL.exe" (
   echo Нет DIIISPL.exe — сначала соберите программу: build.cmd %CHANNEL%
   exit /b 1
 )
+
+rem Канал программы и канал пакета обязаны совпадать. Прежде здесь верили на
+rem слово: собрал build.cmd dev, потом по привычке build-msi.cmd без аргумента —
+rem и выходил «стабильный» пакет с Dev-программой. В окне значок DEV и раздел
+rem настроек панели задач, а библиотеки оформления в пакете нет: раздел не
+rem работает, и объяснить это человеку нечем. Собиралось это молча, до конца.
+set BUILTCHANNEL=
+if exist "%ROOT%\.channel" set /p BUILTCHANNEL=<"%ROOT%\.channel"
+for /f "tokens=* delims= " %%C in ("%BUILTCHANNEL%") do set BUILTCHANNEL=%%C
+if not defined BUILTCHANNEL (
+  echo Неизвестно, каким каналом собрана программа. Пересоберите: build.cmd %CHANNEL%
+  exit /b 1
+)
+if /i not "%BUILTCHANNEL%"=="%CHANNEL%" (
+  echo Программа собрана каналом %BUILTCHANNEL%, а пакет просят каналом %CHANNEL%.
+  echo Пересоберите программу: build.cmd %CHANNEL%
+  exit /b 1
+)
 rem Эти три собирать нечем — они просто лежат в репозитории. Прежний совет
 rem «соберите программу» отправлял человека делать то, что не помогает.
 for %%F in ("%ROOT%\DIIISPL.ico" "%ROOT%\LICENSE" "%ROOT%\README.md") do (
@@ -36,10 +54,20 @@ if "%CHANNEL%"=="dev" if not exist "%ROOT%\DIIISPL.ExplorerTAP.dll" (
   exit /b 1
 )
 
+rem nuget.exe в репозиторий не кладётся, и качает его build-native.cmd — а тот
+rem на стабильном канале не запускается вовсе. На своей машине файл оставался от
+rem прежних сборок Dev, и нехватка не всплывала; на чистом сборщике стабильный
+rem выпуск падал здесь. Качаем сами, если его нет.
+set NUGET=%ROOT%\native\nuget.exe
+if not exist "%NUGET%" (
+  echo === nuget.exe ===
+  powershell -NoProfile -Command "Invoke-WebRequest https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -OutFile '%NUGET%' -UseBasicParsing" || exit /b 1
+)
+
 set WIX=%HERE%wix\wix\tools
 if not exist "%WIX%\candle.exe" (
   echo === Набор WiX ===
-  "%ROOT%\native\nuget.exe" install WiX -Version 3.14.1 -OutputDirectory "%HERE%wix" -NonInteractive -ExcludeVersion || exit /b 1
+  "%NUGET%" install WiX -Version 3.14.1 -OutputDirectory "%HERE%wix" -NonInteractive -ExcludeVersion || exit /b 1
 )
 
 rem Двоичные файлы раскладываются копиями и подписываются уже там. На месте их

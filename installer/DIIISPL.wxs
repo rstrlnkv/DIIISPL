@@ -56,6 +56,34 @@
     <!-- Иначе в списке установленных программ расположение и размер остаются пустыми. -->
     <SetProperty Id="ARPINSTALLLOCATION" Value="[INSTALLFOLDER]" After="CostFinalize" />
 
+    <!--
+      Обновление обязано встать туда же, где стояла прежняя версия, и не
+      возвращать ярлык, от которого отказались.
+
+      Обновление из окна программы идёт с ключом /qb, то есть без единого
+      вопроса. Пока установщик ничего не помнил, это значило: программу,
+      поставленную в D:\Programs, обновление молча переносило в
+      C:\Program Files, а в меню «Пуск» появлялся ярлык, которого человек не
+      просил. Заодно ломался автозапуск — в нём записан путь к прежнему файлу.
+
+      Папку помним записью в реестре, а про ярлык спрашивать реестр не нужно:
+      у его компонента ключ и так лежит там, и само наличие ключа означает
+      «ярлык ставили».
+    -->
+    <Property Id="INSTALLFOLDER">
+      <RegistrySearch Id="PrevInstallFolder" Root="HKLM" Key="Software\DIIISPL"
+                      Name="InstallFolder" Type="directory" Win64="yes" />
+    </Property>
+
+    <Property Id="PREVSHORTCUT">
+      <RegistrySearch Id="PrevShortcut" Root="HKLM" Key="Software\DIIISPL"
+                      Name="StartMenuShortcut" Type="raw" Win64="yes" />
+    </Property>
+
+    <SetProperty Id="INSTALLSHORTCUT" Value="0" After="AppSearch" Sequence="both">
+      WIX_UPGRADE_DETECTED AND NOT PREVSHORTCUT
+    </SetProperty>
+
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFiles64Folder">
         <Directory Id="INSTALLFOLDER" Name="DIIISPL" />
@@ -87,6 +115,12 @@
 
       <Component Id="Readme" Guid="*" Win64="yes">
         <File Id="README.md" Source="$(var.SourceDir)\README.md" KeyPath="yes" />
+      </Component>
+
+      <!-- Куда поставили. Читается при следующем обновлении, см. RegistrySearch выше. -->
+      <Component Id="InstallState" Guid="*" Win64="yes">
+        <RegistryValue Root="HKLM" Key="Software\DIIISPL" Name="InstallFolder"
+                       Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
       </Component>
     </DirectoryRef>
 
@@ -125,6 +159,7 @@
       <?endif ?>
       <ComponentRef Id="License" />
       <ComponentRef Id="Readme" />
+      <ComponentRef Id="InstallState" />
       <ComponentRef Id="StartMenuShortcut" />
     </Feature>
 
@@ -133,6 +168,53 @@
     <Property Id="WixShellExecTarget" Value="[#DIIISPL.exe]" />
     <CustomAction Id="LaunchApplication" BinaryKey="WixCA" DllEntry="WixShellExec"
                   Impersonate="yes" Return="ignore" />
+
+    <!--
+      Вернуть программу в трей после обновления изнутри.
+
+      Обновление идёт с /qb: последнего окна с кнопкой «Готово» нет, а запуск
+      висел только на ней. Получалось так: человек нажал «Обновить», установщик
+      закрыл работающую копию, заменил файлы — и всё. Значок из трея исчез, окно
+      не вернулось, ничего не сказано; со стороны это выглядит как «обновление
+      уронило программу».
+
+      Свойство передаёт сам Updater, поэтому обычная установка руками этим путём
+      не идёт — там за запуск по-прежнему отвечает галочка в последнем окне.
+      Действие немедленное и без ожидания: оно выполняется от имени того, кто
+      обновлялся, а держать установщик открытым, пока живёт программа, незачем.
+    -->
+    <Property Id="DIIISPLRELAUNCH" Secure="yes" />
+    <SetProperty Id="RelaunchExe" Value="[INSTALLFOLDER]DIIISPL.exe"
+                 Before="RelaunchInTray" Sequence="execute" />
+    <CustomAction Id="RelaunchInTray" Property="RelaunchExe" ExeCommand="/tray"
+                  Execute="immediate" Return="asyncNoWait" />
+
+    <!--
+      Убрать запись автозапуска при удалении программы.
+
+      Автозапуск включает сама программа — пунктом в меню значка в трее, — и
+      запись при этом ложится в ветку пользователя. Пакет ставится на всю машину,
+      про эту запись не знает, и после удаления она оставалась висеть: Windows
+      при каждом входе пыталась запустить файл, которого больше нет.
+
+      Действие именно немедленное. Отложенные при установке на машину выполняются
+      от имени системы, и HKCU там — ветка системной учётной записи, а не того,
+      кто удаляет; запись пользователя так не достать. Немедленное идёт в его
+      собственной ветке.
+
+      Return="ignore" обязателен: если автозапуск не включали, reg вернёт «нет
+      такого значения», и удаление пакета не должно на этом останавливаться.
+    -->
+    <SetProperty Id="DIIISPLREGEXE" Value="[System64Folder]reg.exe"
+                 Before="CleanAutoStart" Sequence="execute" />
+    <CustomAction Id="CleanAutoStart" Property="DIIISPLREGEXE"
+                  ExeCommand="delete &quot;HKCU\Software\Microsoft\Windows\CurrentVersion\Run&quot; /v DIIISPL /f"
+                  Execute="immediate" Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="CleanAutoStart" Before="RemoveFiles">REMOVE="ALL"</Custom>
+      <Custom Action="RelaunchInTray" After="InstallFinalize">DIIISPLRELAUNCH="1" AND NOT REMOVE="ALL"</Custom>
+    </InstallExecuteSequence>
 
     <!-- Свой набор окон: выбор папки плюс отдельный вопрос про ярлык, см. DIIISPLUI.wxs. -->
     <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />

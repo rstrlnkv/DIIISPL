@@ -99,11 +99,29 @@ jobs:
           Remove-Item $path -Force
           "DIIISPL_SIGN_THUMBPRINT=$($cert.Thumbprint)" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
 
+      # «.\» обязательна. У шагов run на windows-раннере оболочка — PowerShell,
+      # а он принципиально не ищет исполняемые файлы в текущем каталоге: голое
+      # «build.cmd» кончается «The term is not recognized». Соседние шаги живы
+      # только потому, что в их строках есть разделитель пути, и PowerShell
+      # считает их относительным путём.
       - name: Программа
-        run: build.cmd ${{ env.DIIISPL_CHANNEL }}
+        run: .\build.cmd ${{ env.DIIISPL_CHANNEL }}
 
       - name: Установщик
-        run: installer\build-msi.cmd ${{ env.DIIISPL_CHANNEL }}
+        run: .\installer\build-msi.cmd ${{ env.DIIISPL_CHANNEL }}
+
+      # Выпуск без подписи программа у себя не поставит: она сверяет установщик
+      # с известным отпечатком. Собирается он при этом до конца и зеленеет —
+      # поэтому проверяем здесь, до публикации, а не после жалобы пользователя.
+      - name: Пакет подписан
+        shell: pwsh
+        run: |
+          $msi = "DIIISPL-$env:DIIISPL_VERSION-$env:DIIISPL_CHANNEL-x64.msi"
+          $sig = Get-AuthenticodeSignature $msi
+          if ($sig.SignerCertificate -eq $null) {
+            throw "Пакет $msi собран без подписи — такой выпуск программа не поставит."
+          }
+          Write-Host "Подписан: $($sig.SignerCertificate.Thumbprint)"
 
       - name: Выпуск
         uses: softprops/action-gh-release@v2

@@ -76,6 +76,7 @@ namespace DIIISPL
             _messageWindow.AddHook(WndProc);
 
             AdoptOldAutoStart();
+            FixAutoStartPath();
 
 #if DEV
             ExplorerTap.RestoreWhenProcessExits = true;   // трей живёт долго — при выходе вернём панель
@@ -220,7 +221,7 @@ namespace DIIISPL
         private void ShowManager()
         {
             _window.ReloadLive();
-            _window.ReloadProfiles(null);
+            _window.RefreshProfiles();
             _window.Show();
             if (_window.WindowState == WindowState.Minimized) _window.WindowState = WindowState.Normal;
             _window.Activate();
@@ -252,6 +253,11 @@ namespace DIIISPL
 
         private void Quit()
         {
+            // Спрашиваем до выхода, а не через Closing окна: Shutdown закрывает окна,
+            // не глядя на отмену, — вопрос показывался, ответ «я передумал» ничего
+            // не менял, и правки пропадали вместе с программой.
+            if (_window != null && !_window.AskBeforeClosing()) return;
+
 #if DEV
             TaskbarWatcher.Stop();
             if (ExplorerTap.Available) ExplorerTap.RestoreAll();
@@ -332,7 +338,7 @@ namespace DIIISPL
                 if (_window != null && _window.IsVisible)
                 {
                     _window.ReloadLive();
-                    _window.ReloadProfiles(null);
+                    _window.RefreshProfiles();
                 }
             }
             else if (_showMessage != 0 && msg == (int)_showMessage)
@@ -366,6 +372,61 @@ namespace DIIISPL
             catch { }
         }
 
+        /// <summary>
+        /// Поправить запись автозапуска, если она указывает не туда.
+        ///
+        /// Путь записывается один раз — в тот момент, когда человек включил
+        /// автозапуск. Программу с тех пор могли переставить в другую папку или
+        /// удалить и поставить заново: запись остаётся прежней, Windows каждый
+        /// вход запускает несуществующий файл, а в программе пункт меню при этом
+        /// отмечен галочкой. Настройка есть, работы от неё нет.
+        ///
+        /// Раз запись существует — автозапуск человек включал сознательно, и наше
+        /// дело здесь только выправить путь, а не решать за него.
+        /// </summary>
+        private static void FixAutoStartPath()
+        {
+            try
+            {
+                using (RegistryKey k = Registry.CurrentUser.OpenSubKey(RunKey, true))
+                {
+                    if (k == null) return;
+                    string current = k.GetValue(AppName) as string;
+                    if (string.IsNullOrEmpty(current)) return;
+
+                    // Правим только запись на несуществующий файл. Не «на другой» —
+                    // копий программы на машине может быть несколько, и запущенная
+                    // не имеет права молча забирать вход в Windows у той, которую
+                    // человек туда поставил.
+                    string path = current.Trim();
+                    if (path.StartsWith("\""))
+                    {
+                        int end = path.IndexOf('"', 1);
+                        if (end < 0) return;
+                        path = path.Substring(1, end - 1);
+                    }
+                    else
+                    {
+                        int space = path.IndexOf(' ');
+                        if (space > 0) path = path.Substring(0, space);
+                    }
+
+                    if (System.IO.File.Exists(path)) return;
+                    k.SetValue(AppName, AutoStartCommand);
+                }
+            }
+            catch { }
+        }
+
+        /// <summary>Строка, которой программа прописывает себя в автозапуск.</summary>
+        private static string AutoStartCommand
+        {
+            get
+            {
+                return "\"" + System.Reflection.Assembly.GetExecutingAssembly().Location + "\" /tray";
+            }
+        }
+
         public static bool AutoStartEnabled
         {
             get
@@ -384,7 +445,7 @@ namespace DIIISPL
                     using (RegistryKey k = Registry.CurrentUser.OpenSubKey(RunKey, true))
                     {
                         if (k == null) return;
-                        if (value) k.SetValue(AppName, "\"" + System.Reflection.Assembly.GetExecutingAssembly().Location + "\" /tray");
+                        if (value) k.SetValue(AppName, AutoStartCommand);
                         else if (k.GetValue(AppName) != null) k.DeleteValue(AppName, false);
                     }
                 }
