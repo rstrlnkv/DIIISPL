@@ -302,7 +302,6 @@ namespace DIIISPL
                 {
                     WL("СБОЙ");
                     foreach (string p in problems) WL("        · " + p);
-                    foreach (string n in res.Notes) WL("        [ход] " + n);
                     foreach (string w in res.Warnings) WL("        [пред] " + w);
                     foreach (var m in Monitors.Enumerate())
                         WL("        [факт] " + m.Name + " " + (m.Active ? "вкл" : "выкл") +
