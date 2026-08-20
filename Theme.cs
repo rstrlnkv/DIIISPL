@@ -167,7 +167,14 @@ namespace DIIISPL
     <Setter Property='CornerRadius' Value='8'/>
   </Style>
 
+  <!--
+    Пунктирную рамку фокуса WPF рисует поверх чужого оформления и выглядит она
+    здесь поломкой: у кнопки «О программе» после щелчка появлялась странная
+    окантовка. Своё состояние наведения и нажатия у кнопок есть, а этой рамке
+    в тёмном окне с закруглениями места нет.
+  -->
   <Style x:Key='Btn' TargetType='Button'>
+    <Setter Property='FocusVisualStyle' Value='{x:Null}'/>
     <Setter Property='FontFamily' Value='{StaticResource UiFont}'/>
     <Setter Property='FontSize' Value='14'/>
     <Setter Property='Foreground' Value='{StaticResource Text}'/>
@@ -285,6 +292,7 @@ namespace DIIISPL
   </Style>
 
   <Style x:Key='Combo' TargetType='ComboBox'>
+    <Setter Property='FocusVisualStyle' Value='{x:Null}'/>
     <Setter Property='FontFamily' Value='{StaticResource UiFont}'/>
     <Setter Property='FontSize' Value='14'/>
     <Setter Property='Foreground' Value='{StaticResource Text}'/>
@@ -343,6 +351,7 @@ namespace DIIISPL
   </Style>
 
   <Style x:Key='Switch' TargetType='CheckBox'>
+    <Setter Property='FocusVisualStyle' Value='{x:Null}'/>
     <Setter Property='Cursor' Value='Hand'/>
     <Setter Property='Template'>
       <Setter.Value>
@@ -378,6 +387,7 @@ namespace DIIISPL
   </Style>
 
   <Style x:Key='ProfileItem' TargetType='ListBoxItem'>
+    <Setter Property='FocusVisualStyle' Value='{x:Null}'/>
     <Setter Property='Padding' Value='0'/>
     <Setter Property='Margin' Value='0,0,0,4'/>
     <Setter Property='Template'>
@@ -385,9 +395,14 @@ namespace DIIISPL
         <ControlTemplate TargetType='ListBoxItem'>
           <Border x:Name='Bd' Background='Transparent' CornerRadius='6' Padding='10,8'>
             <Grid>
+              <!--
+                Полоска стоит в отступе строки, а содержимое отодвинуто от неё:
+                прежде между полоской и первой буквой оставалось три точки, и
+                они читались как одно пятно.
+              -->
               <Border x:Name='Bar' Width='3' Height='18' CornerRadius='2' HorizontalAlignment='Left'
-                      Background='{StaticResource Accent}' Visibility='Collapsed' Margin='-6,0,0,0'/>
-              <ContentPresenter/>
+                      Background='{StaticResource Accent}' Visibility='Collapsed' Margin='-7,0,0,0'/>
+              <ContentPresenter Margin='4,0,0,0'/>
             </Grid>
           </Border>
           <ControlTemplate.Triggers>

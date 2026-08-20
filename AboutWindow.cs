@@ -36,9 +36,15 @@ namespace DIIISPL
         {
             Title = "О программе";
             Width = 560;
-            Height = 700;
             MinWidth = 480;
             MinHeight = 520;
+
+            // Высота по содержимому, а не намертво заданная. Прежде стояло 700, и
+            // окно всегда открывалось с полосой прокрутки — при том что не влезала
+            // из него пара десятков точек. Прокрутка внутри осталась: на невысоком
+            // экране она нужна, и потолок ей ставит рабочая область.
+            SizeToContent = SizeToContent.Height;
+            MaxHeight = Math.Max(MinHeight, SystemParameters.WorkArea.Height - 80);
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
             Background = (Brush)Application.Current.Resources["Bg"];
             UseLayoutRounding = true;
