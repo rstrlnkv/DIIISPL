@@ -57,13 +57,16 @@ namespace DIIIX
             _cards.Clear();
             if (Layout == null) return;
 
-            _dockLine.Height = 1;
-            _dockLine.Background = (Brush)Application.Current.Resources["Stroke"];
-            Children.Add(_dockLine);
+            // Полоса разрывается подписью: два отрезка по бокам и текст между ними.
+            foreach (Border line in new[] { _dockLineLeft, _dockLineRight })
+            {
+                line.Height = 1;
+                line.Background = (Brush)Application.Current.Resources["Stroke"];
+                Children.Add(line);
+            }
 
-            _dockLabel.Text = "НЕ В ПРОФИЛЕ · ПЕРЕТАЩИТЕ НАВЕРХ, ЧТОБЫ ДОБАВИТЬ";
+            _dockLabel.Text = "НЕ В ПРОФИЛЕ · ПЕРЕТАЩИТЕ НАВЕРХ";
             _dockLabel.Style = (Style)Application.Current.Resources["SectionHeader"];
-            _dockLabel.TextAlignment = TextAlignment.Center;
             Children.Add(_dockLabel);
 
             foreach (var d in Layout.Displays)
@@ -174,7 +177,8 @@ namespace DIIIX
             double dockHeight = disabled.Count > 0 ? DockHeight + 56 : 0;
             Visibility dockVisible = disabled.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             _dockLabel.Visibility = dockVisible;
-            _dockLine.Visibility = dockVisible;
+            _dockLineLeft.Visibility = dockVisible;
+            _dockLineRight.Visibility = dockVisible;
 
             double pad = 26;
             double areaH = Math.Max(60, ActualHeight - dockHeight);
@@ -204,13 +208,27 @@ namespace DIIIX
             double y = ActualHeight - DockHeight - 14;
             _dockTop = y - 44;
 
-            _dockLine.Width = Math.Max(1, ActualWidth - pad * 2);
-            SetLeft(_dockLine, pad);
-            SetTop(_dockLine, _dockTop);
+            // Подпись посередине, полоса — двумя отрезками по её краям.
+            _dockLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            double textW = _dockLabel.DesiredSize.Width;
+            double textH = _dockLabel.DesiredSize.Height;
+            double center = ActualWidth / 2;
+            double gap = 14;
 
-            _dockLabel.Width = Math.Max(1, ActualWidth);
-            SetLeft(_dockLabel, 0);
-            SetTop(_dockLabel, _dockTop + 12);
+            SetLeft(_dockLabel, center - textW / 2);
+            SetTop(_dockLabel, _dockTop);
+
+            double lineY = _dockTop + textH / 2;
+            double leftEnd = center - textW / 2 - gap;
+            double rightStart = center + textW / 2 + gap;
+
+            _dockLineLeft.Width = Math.Max(0, leftEnd - pad);
+            SetLeft(_dockLineLeft, pad);
+            SetTop(_dockLineLeft, lineY);
+
+            _dockLineRight.Width = Math.Max(0, ActualWidth - pad - rightStart);
+            SetLeft(_dockLineRight, rightStart);
+            SetTop(_dockLineRight, lineY);
 
             double total = disabled.Count * DockWidth + Math.Max(0, disabled.Count - 1) * 12;
             double x = Math.Max(pad, (ActualWidth - total) / 2);
@@ -228,7 +246,8 @@ namespace DIIIX
         private double _dockTop = double.MaxValue;
         private readonly Dictionary<LayoutDisplay, Point> _dockSlots = new Dictionary<LayoutDisplay, Point>();
         private readonly TextBlock _dockLabel = new TextBlock();
-        private readonly Border _dockLine = new Border();
+        private readonly Border _dockLineLeft = new Border();
+        private readonly Border _dockLineRight = new Border();
 
         /// <summary>Обновить позиции и оформление без пересоздания.</summary>
         public void Refresh()

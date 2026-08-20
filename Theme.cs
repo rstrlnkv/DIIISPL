@@ -181,7 +181,7 @@ namespace DIIIX
         <ControlTemplate TargetType='Button'>
           <Border x:Name='Bd' Background='{TemplateBinding Background}' BorderBrush='{TemplateBinding BorderBrush}'
                   BorderThickness='1' CornerRadius='4' Padding='{TemplateBinding Padding}'>
-            <ContentPresenter HorizontalAlignment='Center' VerticalAlignment='Center'/>
+            <ContentPresenter HorizontalAlignment='{TemplateBinding HorizontalContentAlignment}' VerticalAlignment='Center'/>
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property='IsMouseOver' Value='True'>
@@ -214,7 +214,7 @@ namespace DIIIX
       <Setter.Value>
         <ControlTemplate TargetType='Button'>
           <Border x:Name='Bd' Background='Transparent' CornerRadius='4' Padding='{TemplateBinding Padding}'>
-            <ContentPresenter HorizontalAlignment='Center' VerticalAlignment='Center'/>
+            <ContentPresenter HorizontalAlignment='{TemplateBinding HorizontalContentAlignment}' VerticalAlignment='Center'/>
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property='IsMouseOver' Value='True'>

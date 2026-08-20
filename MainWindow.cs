@@ -141,11 +141,41 @@ namespace DIIIX
             brandSub.Margin = new Thickness(0, 2, 0, 14);
             top.Children.Add(brandSub);
 
+            // Создание профиля и действия над ним — в шапке списка, рядом с его
+            // заголовком: они относятся к списку, а не к окну целиком.
+            var headerRow = new Grid();
+            headerRow.Margin = new Thickness(0, 0, 0, 6);
+            headerRow.ColumnDefinitions.Add(new ColumnDefinition());
+            headerRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
             var header = new TextBlock();
             header.Text = "ПРОФИЛИ";
             header.Style = (Style)Application.Current.Resources["SectionHeader"];
-            header.Margin = new Thickness(0, 0, 0, 8);
-            top.Children.Add(header);
+            header.VerticalAlignment = VerticalAlignment.Center;
+            headerRow.Children.Add(header);
+
+            var headerButtons = new StackPanel();
+            headerButtons.Orientation = Orientation.Horizontal;
+            Grid.SetColumn(headerButtons, 1);
+
+            var newButton = SmallButton("+", "Новый профиль из текущей раскладки мониторов");
+            newButton.Click += delegate { NewFromCurrent(); };
+            headerButtons.Children.Add(newButton);
+
+            var moreButton = SmallButton("···", "Переименовать, переставить, удалить");
+            moreButton.Margin = new Thickness(2, 0, 0, 0);
+            moreButton.Click += delegate
+            {
+                if (_current == null) return;
+                var menu = BuildProfileMenu(_current);
+                menu.PlacementTarget = moreButton;
+                menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+                menu.IsOpen = true;
+            };
+            headerButtons.Children.Add(moreButton);
+
+            headerRow.Children.Add(headerButtons);
+            top.Children.Add(headerRow);
 
             panel.Children.Add(top);
 
@@ -164,53 +194,36 @@ namespace DIIIX
             Grid.SetRow(_profileList, 1);
             panel.Children.Add(_profileList);
 
-            var buttons = new StackPanel();
-            buttons.Margin = new Thickness(0, 10, 0, 8);
-            Grid.SetRow(buttons, 2);
+            // «О программе» — строкой того же вида, что и профили выше: в MagicKeys
+            // это такой же пункт списка, и глазу привычнее видеть здесь строку, а не
+            // кнопку другой формы.
+            var about = new Button();
+            about.Style = (Style)Application.Current.Resources["BtnSubtle"];
+            about.Content = "О программе";
+            about.Padding = new Thickness(10, 8, 10, 8);
+            about.Height = double.NaN;
+            about.HorizontalContentAlignment = HorizontalAlignment.Left;
+            about.HorizontalAlignment = HorizontalAlignment.Stretch;
+            about.Margin = new Thickness(0, 8, 0, 0);
+            about.Click += delegate { ShowAbout(); };
+            Grid.SetRow(about, 2);
+            panel.Children.Add(about);
 
-            var newButton = new Button();
-            newButton.Style = (Style)Application.Current.Resources["Btn"];
-            newButton.Content = Glyph("", "Новый профиль");
-            newButton.HorizontalContentAlignment = HorizontalAlignment.Left;
-            newButton.ToolTip = "Создать профиль из текущей раскладки мониторов";
-            newButton.Click += delegate { NewFromCurrent(); };
-
-            // Действия над самим профилем — переименовать, переставить, удалить — собраны
-            // в одном меню. Раньше «Удалить» стояло отдельной кнопкой в общем ряду: самое
-            // опасное действие оказывалось самым доступным, да ещё рядом со справкой.
-            var moreButton = new Button();
-            moreButton.Style = (Style)Application.Current.Resources["Btn"];
-            moreButton.Content = "···";
-            moreButton.Width = 38;
-            moreButton.Margin = new Thickness(6, 0, 0, 0);
-            moreButton.ToolTip = "Переименовать, переставить, удалить";
-            moreButton.Click += delegate
-            {
-                if (_current == null) return;
-                var menu = BuildProfileMenu(_current);
-                menu.PlacementTarget = moreButton;
-                menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Top;
-                menu.IsOpen = true;
-            };
-
-            var newRow = new Grid();
-            newRow.ColumnDefinitions.Add(new ColumnDefinition());
-            newRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            Grid.SetColumn(moreButton, 1);
-            newRow.Children.Add(newButton);
-            newRow.Children.Add(moreButton);
-            buttons.Children.Add(newRow);
-
-            var aboutButton = new Button();
-            aboutButton.Style = (Style)Application.Current.Resources["BtnSubtle"];
-            aboutButton.Content = Glyph("", "О программе");
-            aboutButton.HorizontalContentAlignment = HorizontalAlignment.Left;
-            aboutButton.Margin = new Thickness(0, 4, 0, 0);
-            aboutButton.Click += delegate { ShowAbout(); };
-            buttons.Children.Add(aboutButton);
-
-            panel.Children.Add(buttons);
             return panel;
+        }
+
+        /// <summary>Квадратная кнопка на одну-две буквы — для шапки списка.</summary>
+        private static Button SmallButton(string caption, string tip)
+        {
+            var b = new Button();
+            b.Style = (Style)Application.Current.Resources["BtnSubtle"];
+            b.Content = caption;
+            b.Width = 28;
+            b.Height = 26;
+            b.Padding = new Thickness(0);
+            b.FontSize = 15;
+            b.ToolTip = tip;
+            return b;
         }
 
         private static UIElement Glyph(string glyph, string text)
