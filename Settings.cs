@@ -80,8 +80,17 @@ namespace DIIISPL
         /// </summary>
         public static string Language
         {
-            get { string v = Get("language"); return v == Text.Russian || v == Text.English ? v : Text.Auto; }
-            set { Set("language", value == Text.Russian || value == Text.English ? value : ""); }
+            get
+            {
+                string v = Get("language");
+                foreach (string c in Lang.Codes) if (c == v) return v;
+                return Text.Auto;
+            }
+            set
+            {
+                foreach (string c in Lang.Codes) if (c == value) { Set("language", value); return; }
+                Set("language", "");   // всё прочее — «по Windows»
+            }
         }
 
         /// <summary>Версия, от которой отказались: про неё больше не напоминаем.</summary>
