@@ -468,7 +468,7 @@ namespace DIIISPL
             _fieldHz = Field(Text.Refresh, _hzCombo, 100);
             _fieldRot = Field(Text.Rotation, _rotCombo, 120);
             _fieldClone = Field(Text.Cloning, _cloneCombo, 170);
-            _fieldHdr = Field("HDR", _hdrCombo, 120);
+            _fieldHdr = Field(Text.Hdr, _hdrCombo, 120);
 
             _offNote.Style = (Style)Application.Current.Resources["Caption"];
             _offNote.Text = Text.TurnOnNote;
@@ -1256,10 +1256,13 @@ namespace DIIISPL
             FillRates(d, live);
 
             var rotItems = new List<Item>();
+            // Со стороной, а не голыми градусами: «270°» не говорит человеку,
+            // куда повернётся экран, а проверять это, перевернув рабочий стол, —
+            // дорогое удовольствие.
             rotItems.Add(new Item(Text.RotPlain, Native.DISPLAYCONFIG_ROTATION_IDENTITY));
-            rotItems.Add(new Item("90°", Native.DISPLAYCONFIG_ROTATION_ROTATE90));
-            rotItems.Add(new Item("180°", Native.DISPLAYCONFIG_ROTATION_ROTATE180));
-            rotItems.Add(new Item("270°", Native.DISPLAYCONFIG_ROTATION_ROTATE270));
+            rotItems.Add(new Item(Text.Rot90, Native.DISPLAYCONFIG_ROTATION_ROTATE90));
+            rotItems.Add(new Item(Text.Rot180, Native.DISPLAYCONFIG_ROTATION_ROTATE180));
+            rotItems.Add(new Item(Text.Rot270, Native.DISPLAYCONFIG_ROTATION_ROTATE270));
             _rotCombo.ItemsSource = rotItems;
             foreach (Item it in rotItems) if ((uint)it.Value == d.Rotation) _rotCombo.SelectedItem = it;
 

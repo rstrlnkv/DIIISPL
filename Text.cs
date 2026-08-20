@@ -43,18 +43,34 @@ namespace DIIISPL
             }
         }
 
+        private static readonly object _lock = new object();
+
+        /// <summary>
+        /// Словари собираются целиком и только потом попадают в поля. Иначе
+        /// сосед, зашедший за строкой в этот момент, видел бы наполовину готовое:
+        /// таблицу уже есть, запасной ещё нет — и промах по ключу заканчивался
+        /// бы падением. Растущий словарь читать тем более нельзя.
+        /// </summary>
         private static void Load()
         {
-            _code = Resolve(Settings.Language);
+            lock (_lock)
+            {
+                if (_table != null) return;
 
-            _table = Lang.Table(_code);
-            _fallback = _code == Lang.Codes[0] ? _table : Lang.Table(Lang.Codes[0]);
+                string code = Resolve(Settings.Language);
+                var table = Lang.Table(code);
+                var fallback = code == Lang.Codes[0] ? table : Lang.Table(Lang.Codes[0]);
 
-            // Файл поверх встроенного словаря, а не вместо него: перевод, в котором
-            // чего-то не хватает, дополняется тем, что программа знает сама, и окно
-            // не остаётся с пустыми местами.
-            LangFile.Overlay(_code, _table);
-            if (!ReferenceEquals(_fallback, _table)) LangFile.Overlay(Lang.Codes[0], _fallback);
+                // Файл поверх встроенного словаря, а не вместо него: перевод, в котором
+                // чего-то не хватает, дополняется тем, что программа знает сама, и окно
+                // не остаётся с пустыми местами.
+                LangFile.Overlay(code, table);
+                if (!ReferenceEquals(fallback, table)) LangFile.Overlay(Lang.Codes[0], fallback);
+
+                _fallback = fallback;
+                _code = code;
+                _table = table;      // последним: по нему судят, загружено ли
+            }
         }
 
         /// <summary>
@@ -67,8 +83,17 @@ namespace DIIISPL
             var all = AvailableCodes();
             foreach (string c in all) if (c == setting) return c;
 
-            string system = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
-            foreach (string c in all) if (c == system) return c;
+            // Спрашиваем оба языка системы. Первый — язык, которым человек
+            // пользуется; второй — язык, на котором Windows поставлена. Обычно
+            // они совпадают, но не всегда: у процесса язык бывает английским на
+            // насквозь русской Windows, и тогда программа заговорила бы
+            // по-английски там, где всё вокруг по-русски.
+            foreach (string system in new string[] {
+                        CultureInfo.CurrentUICulture.TwoLetterISOLanguageName,
+                        CultureInfo.InstalledUICulture.TwoLetterISOLanguageName })
+                foreach (string c in all)
+                    if (c == system) return c;
+
             return Lang.Codes[0];
         }
 
@@ -123,13 +148,45 @@ namespace DIIISPL
 
         private static string G(string key, params object[] args)
         {
-            return string.Format(CultureInfo.InvariantCulture, G(key), args);
+            return Fill(G(key), key, args);
         }
 
         /// <summary>
-        /// Форма после числа. У английского их две, у русского три, у арабского
-        /// шесть — поэтому выбор формы принадлежит языку, а не месту вызова.
+        /// Подставить значения в строку — и пережить перевод, который обещает
+        /// больше, чем ему дают.
+        ///
+        /// Переводы приходят файлами от людей, и «{2}» там, где программа
+        /// передаёт два значения, — обычная опечатка. Без этой оговорки она
+        /// роняла окно: строка складывается прямо во время отрисовки, и
+        /// FormatException выходил наружу. Ошибка в чужом файле не должна
+        /// стоить работающей программы — берём английскую строку, а если и она
+        /// не сходится, показываем шаблон как есть.
+        /// </summary>
+        private static string Fill(string format, string key, object[] args)
+        {
+            try { return string.Format(CultureInfo.InvariantCulture, format, args); }
+            catch (FormatException) { }
+
+            string english;
+            if (_fallback != null && _fallback.TryGetValue(key, out english) && english != format)
+            {
+                try { return string.Format(CultureInfo.InvariantCulture, english, args); }
+                catch (FormatException) { }
+            }
+            return format;
+        }
+
+        /// <summary>
+        /// Форма после числа. У английского их две, у русского три — поэтому
+        /// выбор формы делается здесь, а не в месте вызова: там о нём забыли бы.
         /// Ключи ищутся как «имя.one», «имя.few», «имя.many».
+        ///
+        /// Правило пока знает два языка: русское — для русского, английское —
+        /// для остальных. Язык, приехавший файлом, третью форму задать может
+        /// (ключ «имя.few» из файла попадёт в словарь), а вот выбрать её
+        /// программа сумеет только для русского. Для польского или чешского это
+        /// заметно; чинится, когда такой перевод появится, — гадать о правилах
+        /// языка, которого ещё нет, значит написать их неправильно.
         /// </summary>
         private static string Plural(string key, int n)
         {
@@ -150,7 +207,7 @@ namespace DIIISPL
                 _table.TryGetValue(key + ".many", out v) ||
                 _fallback.TryGetValue(key + "." + form, out v) ||
                 _fallback.TryGetValue(key + ".many", out v))
-                return string.Format(CultureInfo.InvariantCulture, v, n);
+                return Fill(v, key + "." + form, new object[] { n });
             return key;
         }
 
@@ -174,7 +231,6 @@ namespace DIIISPL
         public static string HotkeyButton { get { return G("win.hotkeyButton"); } }
         public static string PressCombo { get { return G("win.pressCombo"); } }
         public static string MonitorsCount(int n) { return G("win.monitors", n); }
-        public static string MonitorsCount(int on, int all) { return G("win.monitorsOf", on, all); }
         public static string KeyLabel(string combo) { return G("win.key", combo); }
 
         // ------------------------------------------------------------------ свойства монитора
@@ -186,13 +242,9 @@ namespace DIIISPL
         public static string Rotation { get { return G("prop.rotation"); } }
         public static string Cloning { get { return G("prop.clone"); } }
         public static string Hdr { get { return G("prop.hdr"); } }
-        public static string RotNone { get { return G("rot.none"); } }
         public static string Rot90 { get { return G("rot.90"); } }
         public static string Rot180 { get { return G("rot.180"); } }
         public static string Rot270 { get { return G("rot.270"); } }
-        public static string CloneOff { get { return G("clone.off"); } }
-        public static string CloneWith(string name) { return G("clone.with", name); }
-        public static string HdrKeep { get { return G("hdr.keep"); } }
         public static string HdrOn { get { return G("hdr.on"); } }
         public static string HdrOff { get { return G("hdr.off"); } }
 
@@ -251,8 +303,6 @@ namespace DIIISPL
         public static string ComboNeedsModifier { get { return G("combo.needsModifier"); } }
 
         // ------------------------------------------------------------------ мониторы и коды системы
-        public static string NotInUse { get { return G("mon.notInUse"); } }
-        public static string DisplayNumbered(uint id) { return G("mon.display", id); }
         public static string ConnBuiltIn { get { return G("mon.builtIn"); } }
         public static string ConnDigital { get { return G("mon.digital"); } }
         public static string ErrNoRights { get { return G("err.noRights"); } }
@@ -274,7 +324,7 @@ namespace DIIISPL
         public static string RunAtLogon { get { return G("tray.runAtLogon"); } }
         public static string AboutMenu { get { return G("tray.about"); } }
         public static string BusyWait { get { return G("tray.busy"); } }
-        public static string HotkeyProblem(string combo, string why) { return combo + " — " + why; }
+        public static string HotkeyProblem(string combo, string why) { return G("err.hotkeyProblem", combo, why); }
         public static string HotkeyShared(string combo, string a, string b) { return G("tray.hotkeyShared", combo, a, b); }
         public static string HotkeyTakenElsewhere(string combo) { return G("tray.hotkeyTaken", combo); }
         public static string HotkeysNotSet(string list) { return G("tray.hotkeysNotSet", list); }
@@ -415,6 +465,7 @@ namespace DIIISPL
         public static string CliLangNeedCode { get { return G("cli.lang.needCode"); } }
         public static string CliLangBadCode { get { return G("cli.lang.badCode"); } }
         public static string CliLangWritten(string path) { return G("cli.lang.written", path); }
+        public static string CliLangLeft(int n) { return G("cli.lang.left", n); }
         public static string CliLangHowTo { get { return G("cli.lang.howTo"); } }
 
         // ------------------------------------------------------------------ «О программе»
@@ -444,6 +495,7 @@ namespace DIIISPL
         public static string LangRestart { get { return G("about.langRestart"); } }
         public static string LangRestartTitle(string language) { return G("about.langRestartTitle", language); }
         public static string LangRestartOk { get { return G("about.langRestartOk"); } }
+        public static string LangRestartFailed { get { return G("about.langRestartFailed"); } }
 
         // ------------------------------------------------------------------ панель задач (Dev)
         public static string TbState(string key) { return G("tb." + key); }

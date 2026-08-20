@@ -237,7 +237,7 @@ namespace DIIISPL
             if (args.Length < 2) { Console.WriteLine(Text.CliLangNeedCode); return 2; }
 
             string code = args[1].Trim().ToLowerInvariant();
-            if (code.Length == 0 || code.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) >= 0)
+            if (!LangFile.IsUsableCode(code))
             {
                 Console.WriteLine(Text.CliLangBadCode);
                 return 2;
@@ -245,6 +245,12 @@ namespace DIIISPL
 
             string path = LangFile.WriteTemplate(code);
             Console.WriteLine(Text.CliLangWritten(path));
+
+            // Сколько строк ещё английские. Без этого числа переводчик узнаёт о
+            // пропущенном только увидев его в чужом окне.
+            int left = Text.Missing(code).Count;
+            if (left > 0) Console.WriteLine(Text.CliLangLeft(left));
+
             Console.WriteLine(Text.CliLangHowTo);
             return 0;
         }

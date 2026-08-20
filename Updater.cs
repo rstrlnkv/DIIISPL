@@ -106,7 +106,7 @@ namespace DIIISPL
                 bool skippedEarly = false;
                 foreach (var item in releases)
                 {
-                    Release r = Read(item);
+                    Release r = Read(item, channel);
                     if (r == null) continue;
                     if (Truthy(item, "draft")) continue;
                     // на канале Stable сборки Dev не предлагаем
@@ -148,7 +148,7 @@ namespace DIIISPL
             }
         }
 
-        private static Release Read(Dictionary<string, object> item)
+        private static Release Read(Dictionary<string, object> item, string channel)
         {
             string tag = Field(item, "tag_name");
             Version v = ParseVersion(tag);
@@ -174,9 +174,17 @@ namespace DIIISPL
                         if (asset == null) continue;
                         string name = Field(asset, "name");
                         if (name == null || !name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase)) continue;
+
+                        // Свой канал — вперёд. Сейчас в выпуске один пакет, и
+                        // выбирать не из чего; но если в один выпуск когда-нибудь
+                        // лягут оба, стабильная копия не должна молча поставить
+                        // себе Dev просто потому, что тот оказался первым.
+                        bool mine = name.IndexOf("-" + channel + "-", StringComparison.OrdinalIgnoreCase) >= 0;
+                        if (r.FileName != null && !mine) continue;
+
                         r.FileName = name;
                         r.FileUrl = Field(asset, "browser_download_url");
-                        break;
+                        if (mine) break;
                     }
                 }
             }
@@ -484,7 +492,7 @@ namespace DIIISPL
             return map.TryGetValue(key, out v) && v is bool && (bool)v;
         }
 
-        /// <summary>«сегодня», «вчера», «3 дня назад» — для строки о последней проверке.</summary>
+        /// <summary>«только что», «5 мин назад», «3 дня назад» — для строки о последней проверке.</summary>
         public static string Ago(DateTime? moment)
         {
             if (!moment.HasValue) return Text.NeverChecked;

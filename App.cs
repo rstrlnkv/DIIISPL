@@ -68,6 +68,7 @@ namespace DIIISPL
         private void Start(bool startHidden)
         {
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            MatchCultureToLanguage();
             Resources.MergedDictionaries.Add(Theme.Build());
 
             _messageWindow = new HwndSource(0, 0, 0, 0, 0, "DIIISPLMessages", IntPtr.Zero);
@@ -259,13 +260,38 @@ namespace DIIISPL
 #endif
 
         /// <summary>
-        /// Перезапустить программу — так меняется язык.
+        /// Подтянуть под выбранный язык всё остальное, что показывает Windows:
+        /// разделитель дробей у частоты обновления и надписи в чужих окнах —
+        /// меню правки в поле ввода, кнопки системных сообщений.
+        ///
+        /// Без этого английское окно на русской Windows показывало «59,94 Hz»:
+        /// текст переведён, а число осталось по-русски. Внутренние файлы это не
+        /// затрагивает — их программа пишет и читает независимо от культуры.
+        /// </summary>
+        private static void MatchCultureToLanguage()
+        {
+            try
+            {
+                var culture = System.Globalization.CultureInfo.GetCultureInfo(Text.Code);
+                System.Threading.Thread.CurrentThread.CurrentCulture = culture;
+                System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
+            }
+            catch { /* язык из файла может не иметь культуры в Windows — не беда */ }
+        }
+
+        /// <summary>
+        /// Перезапустить программу на другом языке.
+        ///
+        /// Настройку пишем здесь, а не до вызова: отсюда можно уйти ни с чем —
+        /// идёт перестроение экранов или человек передумал закрывать окно с
+        /// правками. Записанный заранее язык в таком случае оставался бы в
+        /// файле и менял бы окно при следующем запуске, хотя человек отменил.
         ///
         /// Мьютекс единственного экземпляра отпускаем до запуска новой копии:
         /// иначе она увидит занятое имя, покажет окно этой копии и выйдет, а
         /// смена языка не случится вовсе.
         /// </summary>
-        public void RestartForLanguage()
+        public void RestartForLanguage(string code)
         {
             if (ApplyBusy.Active)
             {
@@ -273,6 +299,9 @@ namespace DIIISPL
                 return;
             }
             if (_window != null && !_window.AskBeforeClosing()) return;
+
+            string previous = Settings.Language;
+            Settings.Language = code;
 
             try
             {
@@ -287,7 +316,19 @@ namespace DIIISPL
                 start.UseShellExecute = true;
                 System.Diagnostics.Process.Start(start);
             }
-            catch { /* не запустилась — по крайней мере не закрываем эту */ }
+            catch
+            {
+                // Новая копия не поднялась. Закрыть эту значило бы оставить
+                // человека вообще без программы: значка нет, горячих клавиш нет,
+                // и ничего не сказано. Остаёмся жить на прежнем языке — и снова
+                // занимаем имя единственного экземпляра, которое только что
+                // освободили, иначе рядом сможет встать вторая копия.
+                Settings.Language = previous;
+                try { bool mine; _mutex = new Mutex(true, "Local\\DIIISPL.SingleInstance", out mine); }
+                catch { }
+                Balloon(Text.LangRestartFailed, Forms.ToolTipIcon.Warning);
+                return;
+            }
 
             Cleanup();
             Shutdown();

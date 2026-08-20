@@ -144,10 +144,22 @@ set MSI=%ROOT%\DIIISPL-%VERSION%-%CHANNEL%-x64.msi
   -out "%HERE%obj\ru-ru.msi" "%HERE%obj\DIIISPL.wixobj" "%HERE%obj\DIIISPLUI.wixobj" || exit /b 1
 
 echo === Переводы внутрь пакета ===
-rem -t language: сравниваются только тексты. Без этого разницей считались бы и
-rem файлы программы, одинаковые в обеих сборках, — перевод переписывал бы их
-rem поверх самих себя.
-"%WIX%\torch.exe" -nologo -p -t language "%MSI%" "%HERE%obj\ru-ru.msi" -out "%HERE%obj\ru-ru.mst" || exit /b 1
+rem -t language задаёт набор проверок для языкового перевода. Файлы программы в
+rem разницу не попадают не поэтому, а потому, что в обеих сборках они побайтно
+rem одни и те же.
+rem
+rem -serr f разрешает переводу менять кодовую страницу базы: у русской сборки она
+rem 1251 против английских 1252. Windows применяет такой перевод и без этого
+rem разрешения, а вот всё остальное — ручная установка с TRANSFORMS, установка
+rem из общей папки, перепаковка — упирается в ошибку.
+rem Проверки перечислены поштучно: -t и -serr вместе torch не принимает, а
+rem несколько букв в одном ключе не понимает — только по одной за раз.
+rem
+rem -val l/r/u — то же, что даёт «-t language»: перевод не ляжет на чужой язык,
+rem чужой продукт или чужую версию. -serr b — тоже оттуда. Ради -serr f всё это и
+rem выписано: русская сборка держит кодовую страницу 1251 против английских 1252,
+rem и без разрешения менять её torch отказывается строить перевод вовсе.
+"%WIX%\torch.exe" -nologo -p -val l -val r -val u -serr b -serr f "%MSI%" "%HERE%obj\ru-ru.msi" -out "%HERE%obj\ru-ru.mst" || exit /b 1
 powershell -NoProfile -ExecutionPolicy Bypass -File "%HERE%embed-lang.ps1" -Msi "%MSI%" -Transform 1049="%HERE%obj\ru-ru.mst" || exit /b 1
 
 echo === Подпись пакета ===

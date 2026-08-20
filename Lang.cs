@@ -17,7 +17,7 @@ namespace DIIISPL
     ///
     /// Английский — запасной. Ключ, которого в языке нет, берётся из него, и это
     /// осознанный размен: неполный перевод показывает английскую строку, а не
-    /// пустое место и не имя ключа. Полноту можно спросить у <see cref="Text.Missing"/>.
+    /// пустое место и не имя ключа. Сколько строк ещё английские, скажет `/lang`.
     ///
     /// Подстановки — через {0}, {1}: порядок слов в языках разный, и только так
     /// переводчик может его поменять, не трогая код.
@@ -73,8 +73,7 @@ namespace DIIISPL
             d["win.hotkeyButton"] = "Keyboard shortcut";
             d["win.pressCombo"] = "Press a shortcut…";
             d["win.monitors"] = "monitors: {0}";
-            d["win.monitorsOf"] = "monitors: {0}/{1}";
-            d["win.key"] = "key {0}";
+            d["win.key"] = "shortcut {0}";
 
             // свойства монитора
             d["prop.pick"] = "Select a monitor";
@@ -85,13 +84,9 @@ namespace DIIISPL
             d["prop.rotation"] = "Rotation";
             d["prop.clone"] = "Duplicate";
             d["prop.hdr"] = "HDR";
-            d["rot.none"] = "None";
-            d["rot.90"] = "90° clockwise";
+            d["rot.90"] = "90° right";
             d["rot.180"] = "180°";
-            d["rot.270"] = "90° counter-clockwise";
-            d["clone.off"] = "Separate desktop";
-            d["clone.with"] = "Duplicate with “{0}”";
-            d["hdr.keep"] = "Leave as is";
+            d["rot.270"] = "90° left";
             d["hdr.on"] = "Turn on";
             d["hdr.off"] = "Turn off";
 
@@ -134,14 +129,13 @@ namespace DIIISPL
             d["hdr.noOnPlain"] = "“{0}”: HDR did not turn on. Usually the cable cannot carry it at the chosen mode.";
 
             // сочетания клавиш
+            d["err.hotkeyProblem"] = "{0} — {1}";
             d["combo.empty"] = "empty shortcut";
             d["combo.noKey"] = "no key given in “{0}”";
             d["combo.unknownKey"] = "unknown key “{0}”";
             d["combo.needsModifier"] = "add Ctrl, Alt or Win — otherwise the key stops working in every other program";
 
             // мониторы и коды системы
-            d["mon.notInUse"] = "not in use";
-            d["mon.display"] = "Display {0}";
             d["mon.builtIn"] = "built-in";
             d["mon.digital"] = "digital";
             d["err.noRights"] = "the system did not allow changing the layout";
@@ -164,7 +158,7 @@ namespace DIIISPL
             d["tray.hotkeyTaken"] = "{0} — taken by another program";
             d["tray.hotkeysNotSet"] = "Could not assign: {0}";
             d["tray.applyFailed"] = "“{0}” failed: {1}";
-            d["tray.applyDoneMore"] = "Layout “{0}” applied. {1} more note(s) — open the window.";
+            d["tray.applyDoneMore"] = "Layout “{0}” applied. There is more to read: {1} — open the window.";
             d["tray.applyDone"] = "Layout “{0}” applied.";
 
             // обновления
@@ -206,7 +200,7 @@ namespace DIIISPL
             d["win.dontSave"] = "Don’t save";
             d["win.saved"] = "Saved.";
             d["win.rebuilding"] = "Rearranging the screens…";
-            d["win.moreNotes"] = " {0} more note(s) — open the window.";
+            d["win.moreNotes"] = " and {0} more — open the window.";
             d["win.nameUnchanged"] = "The name is unchanged: profile “{0}” already exists.";
             d["win.nameTaken"] = "Profile “{0}” already exists — pick another name. Esc — keep the old one.";
             d["win.taskbarButton"] = "Taskbar";
@@ -221,7 +215,7 @@ namespace DIIISPL
             d["win.noHdrInClone"] = "HDR is unavailable while duplicating";
             d["rot.plain"] = "Normal";
             d["clone.separate"] = "Separate";
-            d["clone.dup"] = "Duplicate: {0}";
+            d["clone.dup"] = "Together with {0}";
             d["hdr.leave"] = "Leave alone";
             d["win.primaryOnlyOne"] = "There is always exactly one primary screen. To change it, mark “Primary” on another monitor.";
             d["win.cloneModes"] = "The resolutions differ — while duplicating, Windows fits the picture to a common mode.";
@@ -289,11 +283,12 @@ namespace DIIISPL
             d["cli.notFound"] = "Profile not found: {0}";
             d["cli.appliedName"] = "Applied: {0}";
             d["cli.deleted"] = "Deleted: {0}";
-            d["cli.help.lang"] = "  DIIISPL.exe /lang cs           write a translation template for the language «cs»";
+            d["cli.help.lang"] = "  DIIISPL.exe /lang cs        write a translation template for the language \"cs\"";
             d["cli.lang.needCode"] = "  Give a language code, for example: /lang cs";
             d["cli.lang.badCode"] = "  A language code is a short word without slashes or colons: cs, de, pl.";
             d["cli.lang.written"] = "  Template written: {0}";
-            d["cli.lang.howTo"] = "  Translate the values after «=», save as UTF-8, and pick the language in About.";
+            d["cli.lang.left"] = "  Not translated yet: {0}";
+            d["cli.lang.howTo"] = "  Translate the values after \"=\", save as UTF-8, and pick the language in About.";
 
             // «О программе»
             d["about.tagline"] = "Monitor layouts for Windows 11";
@@ -320,8 +315,9 @@ namespace DIIISPL
             d["about.downloading"] = "downloading the installer…";
             d["about.installerStarted"] = "the installer has started";
             d["about.langRestart"] = "The program will restart to switch the language.";
-            d["about.langRestartTitle"] = "Switch to {0}?";
+            d["about.langRestartTitle"] = "Switch the language to {0}?";
             d["about.langRestartOk"] = "Switch and restart";
+            d["about.langRestartFailed"] = "Could not restart to switch the language — the program stays as it was.";
 
             // панель задач — только в сборках Dev
             d["tb.desktop"] = "Desktop is visible";
@@ -337,7 +333,7 @@ namespace DIIISPL
             d["tb.look.default"] = "As in the system";
             d["tb.look.opaque"] = "Opaque";
             d["tb.look.clear"] = "Transparent";
-            d["tb.look.blur"] = "Blur";
+            d["tb.look.blur"] = "Blurred";
             d["tb.look.acrylic"] = "Acrylic";
             d["tb.look.keep"] = "Leave alone";
             d["tb.signals"] = "  signals: battery saver={0}, Start={1}, search={2}, task view={3}";
@@ -400,8 +396,7 @@ namespace DIIISPL
             d["win.hotkeyButton"] = "Сочетание клавиш";
             d["win.pressCombo"] = "Нажмите сочетание…";
             d["win.monitors"] = "мониторов: {0}";
-            d["win.monitorsOf"] = "мониторов: {0}/{1}";
-            d["win.key"] = "клавиша {0}";
+            d["win.key"] = "сочетание {0}";
 
             d["prop.pick"] = "Выберите монитор";
             d["prop.enabled"] = "Включён";
@@ -411,13 +406,9 @@ namespace DIIISPL
             d["prop.rotation"] = "Поворот";
             d["prop.clone"] = "Дублирование";
             d["prop.hdr"] = "HDR";
-            d["rot.none"] = "Без поворота";
-            d["rot.90"] = "90° по часовой";
+            d["rot.90"] = "90° вправо";
             d["rot.180"] = "180°";
-            d["rot.270"] = "90° против часовой";
-            d["clone.off"] = "Отдельный экран";
-            d["clone.with"] = "Дублировать с «{0}»";
-            d["hdr.keep"] = "Не трогать";
+            d["rot.270"] = "90° влево";
             d["hdr.on"] = "Включить";
             d["hdr.off"] = "Выключить";
 
@@ -457,13 +448,12 @@ namespace DIIISPL
             d["hdr.noOnCloned"] = "«{0}»: HDR не включился. Выходам в дублировании Windows расширенный цвет не даёт: чтобы включить HDR, разведите экраны врастяжку.";
             d["hdr.noOnPlain"] = "«{0}»: HDR не включился. Обычно это нехватка пропускной способности кабеля на выбранном режиме.";
 
+            d["err.hotkeyProblem"] = "{0} — {1}";
             d["combo.empty"] = "пустое сочетание";
             d["combo.noKey"] = "не указана клавиша в «{0}»";
             d["combo.unknownKey"] = "неизвестная клавиша «{0}»";
             d["combo.needsModifier"] = "добавьте Ctrl, Alt или Win — иначе клавиша перестанет работать в других программах";
 
-            d["mon.notInUse"] = "не используется";
-            d["mon.display"] = "Дисплей {0}";
             d["mon.builtIn"] = "встроенный";
             d["mon.digital"] = "цифровой";
             d["err.noRights"] = "система не дала прав на смену раскладки";
@@ -475,7 +465,7 @@ namespace DIIISPL
 
             d["tray.startFailed"] = "Не удалось запустить {0}:\n\n{1}\n\nПодробности: %AppData%\\{2}\\error.log";
             d["tray.hint"] = "DIIISPL продолжает работать здесь: горячие клавиши переключают раскладки. Совсем выйти — пункт «Выход» в этом меню.";
-            d["tray.newVersion"] = "Вышла версия {0}. Открыть «О программе», чтобы обновиться.";
+            d["tray.newVersion"] = "Вышла версия {0}. Откройте «О программе», чтобы обновиться.";
             d["tray.noProfiles"] = "Профилей пока нет";
             d["tray.manager"] = "Менеджер раскладок…";
             d["tray.runAtLogon"] = "Запускать при входе в Windows";
@@ -488,7 +478,7 @@ namespace DIIISPL
             d["tray.applyDoneMore"] = "Раскладка «{0}» применена. Ещё замечаний: {1} — откройте окно.";
             d["tray.applyDone"] = "Раскладка «{0}» применена.";
 
-            d["upd.gibberish"] = "GitHub ответил непонятным";
+            d["upd.gibberish"] = "GitHub ответил чем-то непонятным";
             d["upd.onlyPre"] = "готовых выпусков пока нет — то, что вышло, помечено предварительным. Такие приходят на канале Dev";
             d["upd.noReleases"] = "выпусков пока нет";
             d["upd.unreachable"] = "не удалось связаться с GitHub";
@@ -546,7 +536,7 @@ namespace DIIISPL
             d["win.noHdrInClone"] = "при дублировании HDR недоступен";
             d["rot.plain"] = "Обычный";
             d["clone.separate"] = "Отдельно";
-            d["clone.dup"] = "Дубль: {0}";
+            d["clone.dup"] = "Вместе с {0}";
             d["hdr.leave"] = "Не менять";
             d["win.primaryOnlyOne"] = "Основной экран всегда один. Чтобы сменить его, отметьте «Основной» у другого монитора.";
             d["win.cloneModes"] = "Разрешения различаются — при дублировании Windows подгонит картинку под общий режим.";
@@ -573,7 +563,7 @@ namespace DIIISPL
             d["cli.noMonitors"] = "  мониторы не найдены";
             d["cli.key"] = "    ключ:      {0}";
             d["cli.state"] = "    состояние: {0}";
-            d["cli.on"] = "включён, {0}x{1} @ {2},{3}, {4} Гц, source {5}";
+            d["cli.on"] = "включён, {0}x{1} @ {2},{3}, {4} Гц, источник {5}";
             d["cli.primarySuffix"] = ", основной";
             d["cli.off"] = "выключен";
             d["cli.hdrLine"] = "    HDR:       {0}";
@@ -583,7 +573,7 @@ namespace DIIISPL
             d["cli.preferred"] = "    предпочт.: {0}x{1} {2} Гц";
             d["cli.modes"] = "    режимов:   {0}{1}";
             d["cli.modesApprox"] = " (список приблизительный)";
-            d["cli.outputs"] = "    выходы:    source {0}";
+            d["cli.outputs"] = "    выходы:    источник {0}";
             d["cli.profileNotFound"] = "  профиль не найден: {0}";
             d["cli.profileIs"] = "  профиль: {0}";
             d["cli.colorLine"] = "{0}, цвет {1}, линия {2}";
@@ -613,10 +603,11 @@ namespace DIIISPL
             d["cli.notFound"] = "Профиль не найден: {0}";
             d["cli.appliedName"] = "Применено: {0}";
             d["cli.deleted"] = "Удалено: {0}";
-            d["cli.help.lang"] = "  DIIISPL.exe /lang cs           записать образец перевода для языка «cs»";
+            d["cli.help.lang"] = "  DIIISPL.exe /lang cs        записать образец перевода для языка «cs»";
             d["cli.lang.needCode"] = "  Укажите код языка, например: /lang cs";
             d["cli.lang.badCode"] = "  Код языка — короткое слово без косых черт и двоеточий: cs, de, pl.";
             d["cli.lang.written"] = "  Образец записан: {0}";
+            d["cli.lang.left"] = "  Ещё не переведено строк: {0}";
             d["cli.lang.howTo"] = "  Переведите значения после «=», сохраните в UTF-8 и выберите язык в «О программе».";
 
             d["about.tagline"] = "Раскладки мониторов для Windows 11";
@@ -643,8 +634,9 @@ namespace DIIISPL
             d["about.downloading"] = "скачиваю установщик…";
             d["about.installerStarted"] = "установщик запущен";
             d["about.langRestart"] = "Программа перезапустится, чтобы сменить язык.";
-            d["about.langRestartTitle"] = "Перейти на {0}?";
+            d["about.langRestartTitle"] = "Сменить язык на «{0}»?";
             d["about.langRestartOk"] = "Сменить и перезапустить";
+            d["about.langRestartFailed"] = "Не удалось перезапуститься для смены языка — программа осталась прежней.";
 
             d["tb.desktop"] = "Виден рабочий стол";
             d["tb.visibleWindow"] = "Открыто окно";
@@ -659,8 +651,8 @@ namespace DIIISPL
             d["tb.look.default"] = "Как в системе";
             d["tb.look.opaque"] = "Непрозрачная";
             d["tb.look.clear"] = "Прозрачная";
-            d["tb.look.blur"] = "Размытие";
-            d["tb.look.acrylic"] = "Акрил";
+            d["tb.look.blur"] = "Размытая";
+            d["tb.look.acrylic"] = "Акриловая";
             d["tb.look.keep"] = "Не менять";
             d["tb.signals"] = "  сигналы: экономия заряда={0}, «Пуск»={1}, поиск={2}, представление задач={3}";
             d["tb.barsFound"] = "  панелей задач: {0}";

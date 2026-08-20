@@ -49,17 +49,6 @@ namespace DIIISPL
         public List<Resolution> Modes = new List<Resolution>();
         public bool ModesAreApproximate;
 
-        public string ShortInfo
-        {
-            get
-            {
-                if (!Active) return Text.NotInUse;
-                string s = Width + "×" + Height;
-                if (Hz > 0) s += " · " + Hz.ToString("0.##") + " " + Text.Hz;
-                if (HdrEnabled) s += " · HDR";
-                return s;
-            }
-        }
     }
 
     internal static class Monitors
@@ -106,7 +95,13 @@ namespace DIIISPL
                         mon.PreferredHeight = mon.Edid.PreferredHeight;
                     }
                     if (string.IsNullOrEmpty(mon.Name))
-                        mon.Name = string.IsNullOrEmpty(tn.monitorFriendlyDeviceName) ? Text.DisplayNumbered(path.targetInfo.id) : tn.monitorFriendlyDeviceName;
+                        // Запасное имя — по-английски и мимо словаря: оно попадает
+                        // в файл профиля, а служебные файлы пишутся на одном языке.
+                        // Иначе профиль, снятый в русском окне, приносил бы
+                        // «Дисплей 2» на английскую машину — и наоборот.
+                        mon.Name = string.IsNullOrEmpty(tn.monitorFriendlyDeviceName)
+                            ? "Display " + path.targetInfo.id
+                            : tn.monitorFriendlyDeviceName;
                     if (string.IsNullOrEmpty(mon.Identity))
                         mon.Identity = "PATH:" + (string.IsNullOrEmpty(tn.monitorDevicePath) ? key : tn.monitorDevicePath);
 

@@ -31,6 +31,30 @@ namespace DIIISPL
         public const string FolderName = "lang";
         public const string Extension = ".lang";
 
+        /// <summary>
+        /// Годится ли строка кодом языка. Отсекает не только запрещённые в именах
+        /// файлов знаки, но и имена устройств: `/lang nul` бодро отвечал «образец
+        /// записан», а запись уходила в никуда, и файла не появлялось.
+        /// </summary>
+        public static bool IsUsableCode(string code)
+        {
+            if (string.IsNullOrEmpty(code) || code.Length > 32) return false;
+            if (code.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) return false;
+            if (code.Trim('.', ' ').Length == 0) return false;
+            if (code == Text.Auto) return false;
+
+            foreach (string device in Devices)
+                if (string.Equals(code, device, StringComparison.OrdinalIgnoreCase)) return false;
+            return true;
+        }
+
+        private static readonly string[] Devices =
+        {
+            "CON", "PRN", "AUX", "NUL",
+            "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+            "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+        };
+
         /// <summary>Наложить файл языка на готовый словарь. Файла нет — словарь не меняется.</summary>
         public static void Overlay(string code, Dictionary<string, string> table)
         {
@@ -61,6 +85,11 @@ namespace DIIISPL
                     {
                         string code = Path.GetFileNameWithoutExtension(f).ToLowerInvariant();
                         if (code.Length == 0 || found.Contains(code)) continue;
+
+                        // «auto» в настройках значит «как в Windows». Файл с таким
+                        // именем стал бы языком для всех, кто ничего не выбирал.
+                        if (code == Text.Auto) continue;
+
                         found.Add(code);
                     }
                 }
@@ -93,6 +122,27 @@ namespace DIIISPL
             var mine = Lang.Table(code);
             LangFile.Overlay(code, mine);
 
+            // Формы после числа есть не во всех языках сразу: «.few» живёт только
+            // в русском. Строй образец по одному английскому — и переводчик на
+            // польский о третьей форме не узнал бы вовсе.
+            //
+            // Значение при этом берём английское, от формы «.many» того же ключа:
+            // русская строка в чешском образце сбивала бы с толку не меньше, чем
+            // отсутствие строки вовсе.
+            foreach (string other in Lang.Codes)
+            {
+                if (other == Lang.Codes[0]) continue;
+                foreach (var kv in Lang.Table(other))
+                {
+                    if (full.ContainsKey(kv.Key)) continue;
+
+                    string english;
+                    int dot = kv.Key.LastIndexOf('.');
+                    if (dot > 0 && full.TryGetValue(kv.Key.Substring(0, dot) + ".many", out english))
+                        full[kv.Key] = english;
+                }
+            }
+
             var keys = new List<string>(full.Keys);
             keys.Sort(StringComparer.Ordinal);
 
@@ -100,7 +150,9 @@ namespace DIIISPL
             sb.AppendLine("# DIIISPL translation file");
             sb.AppendLine("# key = text.  Lines starting with # or ; are comments.");
             sb.AppendLine("# {0}, {1} … are values the program puts in — keep them, reorder if the language needs it.");
-            sb.AppendLine("# Use \\n where the text has to break a line.");
+            sb.AppendLine("# For a literal curly brace write it twice: {{ }}.");
+            sb.AppendLine("# Use \\n where the text has to break a line, and \\\\n for a backslash before «n».");
+            sb.AppendLine("# A space right after «=» belongs to the format; further spaces are part of the text.");
             sb.AppendLine("# A line still in English has not been translated yet.");
             sb.AppendLine("# Save as UTF-8.");
             sb.AppendLine();
@@ -136,10 +188,24 @@ namespace DIIISPL
         /// Перенос строки — обратно в «\n». Строка формата однострочная: настоящий
         /// перенос в образце разорвал бы значение надвое, и вторая половина
         /// пропала бы при чтении.
+        ///
+        /// Обратная косая перед «n» удваивается — иначе путь вида `C:\notes` после
+        /// круга через образец молча превратился бы в две строки.
         /// </summary>
         private static string Escape(string value)
         {
-            return value.Replace("\r\n", "\\n").Replace("\n", "\\n");
+            return value.Replace("\\n", "\\\\n")
+                        .Replace("\r\n", "\\n")
+                        .Replace("\n", "\\n");
+        }
+
+        /// <summary>Обратно: «\\n» — это две буквы, «\n» — перенос строки.</summary>
+        private static string Unescape(string value)
+        {
+            const string keep = "\u0001";     // метка на время разбора; в текстах не встречается
+            return value.Replace("\\\\n", keep)
+                        .Replace("\\n", "\n")
+                        .Replace(keep, "\\n");
         }
 
         // ------------------------------------------------------------------ пути
@@ -169,19 +235,32 @@ namespace DIIISPL
         {
             foreach (string raw in File.ReadAllLines(path, Encoding.UTF8))
             {
-                string line = raw.Trim();
-                if (line.Length == 0 || line.StartsWith("#") || line.StartsWith(";")) continue;
+                string line = raw.TrimEnd('\r', '\n');
+                string probe = line.Trim();
+                if (probe.Length == 0 || probe.StartsWith("#") || probe.StartsWith(";")) continue;
 
                 int eq = line.IndexOf('=');
                 if (eq <= 0) continue;
 
                 string key = line.Substring(0, eq).Trim();
-                string value = line.Substring(eq + 1).Trim();
                 if (key.Length == 0) continue;
+
+                // Значение обрезать нельзя: у восьми десятков строк пробел с краю
+                // несёт смысл. Ими выровнена вся справка командной строки, и ими
+                // же приклеиваются хвосты вроде « ещё 2 замечания» — обрезка
+                // склеивала бы слова. Снимается ровно один пробел — тот, что
+                // ставится при записи вокруг знака равенства.
+                string value = line.Substring(eq + 1);
+                if (value.Length > 0 && value[0] == ' ') value = value.Substring(1);
+
+                // Стёртое значение — не пустая надпись, а «переведи это». Стереть
+                // текст после «=» проще, чем удалить строку, и человек вправе
+                // ждать, что программа возьмёт своё.
+                if (value.Length == 0) continue;
 
                 // «\n» в файле — перевод строки: строки формата однострочные, а в
                 // паре сообщений перенос нужен по смыслу.
-                table[key] = value.Replace("\\n", "\n");
+                table[key] = Unescape(value);
             }
         }
     }
