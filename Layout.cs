@@ -85,16 +85,30 @@ namespace DIIISPL
             var active = new Dictionary<string, MonitorInfo>();
             foreach (var m in live) if (m.Active) active[m.Identity] = m;
 
-            int wanted = 0;
-            foreach (var d in Displays) if (d.Enabled) wanted++;
-            if (wanted == 0 || wanted != active.Count) return false;
+            // Мониторы, которых сейчас нет на месте, из сверки выпадают — иначе
+            // «уже применено» не сходилось бы никогда.
+            //
+            // Applier такой монитор из заявки честно выбрасывает, говорит об этом
+            // предупреждением и считает применение удавшимся; сверка же требовала
+            // его присутствия — и профиль, где выключен телевизор или отсоединён
+            // второй экран ноутбука, оказывался «не применённым» всегда. А раз
+            // так, отпадал и быстрый выход в Applier: каждое нажатие уже нажатой
+            // горячей клавиши перестраивало дисплеи заново, с морганием экрана и
+            // пересогласованием HDR. Именно от этого быстрый выход и написан.
+            var present = new List<LayoutDisplay>();
+            foreach (var d in Displays)
+            {
+                if (!d.Enabled) continue;
+                if (!active.ContainsKey(d.Identity)) continue;
+                present.Add(d);
+            }
+            if (present.Count == 0 || present.Count != active.Count) return false;
 
             var groupSource = new Dictionary<int, uint>();
             var soloSources = new List<uint>();
 
-            foreach (var d in Displays)
+            foreach (var d in present)
             {
-                if (!d.Enabled) continue;
                 MonitorInfo mon;
                 if (!active.TryGetValue(d.Identity, out mon)) return false;
                 if (mon.Width != d.Width || mon.Height != d.Height) return false;
@@ -127,16 +141,16 @@ namespace DIIISPL
             // выше, и повторное нажатие горячей клавиши каждый раз перестраивало
             // дисплеи заново, моргая экраном и дёргая HDR.
             LayoutDisplay primary = null;
-            foreach (var d in Displays) if (d.Enabled && d.Primary) { primary = d; break; }
+            foreach (var d in present) if (d.Primary) { primary = d; break; }
 
             if (primary != null)
             {
                 if (!active[primary.Identity].Primary) return false;
 
                 // Лишние «основные» допустимы только как спутники той же группы дубля.
-                foreach (var d in Displays)
+                foreach (var d in present)
                 {
-                    if (!d.Enabled || ReferenceEquals(d, primary)) continue;
+                    if (ReferenceEquals(d, primary)) continue;
                     if (!active[d.Identity].Primary) continue;
                     if (d.CloneGroup < 0 || d.CloneGroup != primary.CloneGroup) return false;
                 }
@@ -144,15 +158,14 @@ namespace DIIISPL
 
             // позиции сверяем относительно основного экрана — сам сдвиг значения не имеет
             LayoutDisplay origin = null;
-            foreach (var d in Displays) if (d.Enabled && d.Primary) { origin = d; break; }
-            if (origin == null) foreach (var d in Displays) if (d.Enabled) { origin = d; break; }
+            foreach (var d in present) if (d.Primary) { origin = d; break; }
+            if (origin == null) foreach (var d in present) { origin = d; break; }
             if (origin == null) return false;
 
             MonitorInfo originMon = active[origin.Identity];
             int dx = originMon.X - origin.X, dy = originMon.Y - origin.Y;
-            foreach (var d in Displays)
+            foreach (var d in present)
             {
-                if (!d.Enabled) continue;
                 MonitorInfo mon = active[d.Identity];
                 if (mon.X != d.X + dx || mon.Y != d.Y + dy) return false;
             }
@@ -360,24 +373,32 @@ namespace DIIISPL
             string temp = file + ".new";
             try
             {
-                File.WriteAllText(temp, text, encoding);
-                // Без запасной копии: она осталась бы лежать рядом с профилями
-                // и попала бы в список как второй файл. Replace без неё — обычная
-                // подмена записи в каталоге.
-                File.Replace(temp, file, null);
+                try
+                {
+                    File.WriteAllText(temp, text, encoding);
+                    // Без запасной копии: она осталась бы лежать рядом с профилями.
+                    // Replace без неё — обычная подмена записи в каталоге.
+                    File.Replace(temp, file, null);
+                }
+                catch (IOException)
+                {
+                    // Replace не работает через границу тома и на сетевых дисках, где
+                    // папка профилей вполне может оказаться. Тогда пишем как раньше:
+                    // хуже, но лучше, чем не сохранить.
+                    File.WriteAllText(file, text, encoding);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    File.WriteAllText(file, text, encoding);
+                }
             }
-            catch (IOException)
+            finally
             {
-                // Replace не работает через границу тома и на сетевых дисках, где
-                // папка профилей вполне может оказаться. Тогда пишем как раньше:
-                // хуже, но лучше, чем не сохранить.
-                File.WriteAllText(file, text, encoding);
-                try { if (File.Exists(temp)) File.Delete(temp); }
-                catch { }
-            }
-            catch (UnauthorizedAccessException)
-            {
-                File.WriteAllText(file, text, encoding);
+                // Уборка обязана быть здесь, а не в ветках catch. Прежде она стояла
+                // после запасной записи — и на файле «только для чтения» не
+                // выполнялась вовсе: запасная запись бросала то же самое
+                // исключение, и `.new` оставался лежать навсегда. То есть уборка
+                // не работала ровно на том отказе, ради которого catch и написан.
                 try { if (File.Exists(temp)) File.Delete(temp); }
                 catch { }
             }
@@ -392,6 +413,18 @@ namespace DIIISPL
             foreach (string raw in File.ReadAllLines(file, Encoding.UTF8))
             {
                 string line = raw.Trim();
+
+                // Секция панели задач запоминается целиком, дословно и раньше всего
+                // остального: сборка, которая её не понимает, обязана вернуть в файл
+                // всё, а не только то, что похоже на знакомое «ключ = значение».
+                //
+                // «Раньше всего» — не мелочь. Прежде захват стоял ниже пропуска
+                // комментариев и пустых строк, и измерено было так: пометки, которыми
+                // человек подписал себе секцию в Dev, после первого же сохранения в
+                // Stable исчезали, а отступы съедались. Запоминаем `raw`, а не
+                // обрезанное: восстановить отступ иначе неоткуда.
+                if (section == "taskbar" && !line.StartsWith("[")) layout._taskbarRaw.Add(raw.TrimEnd());
+
                 if (line.Length == 0 || line.StartsWith("#") || line.StartsWith(";")) continue;
                 if (line.StartsWith("["))
                 {
@@ -399,12 +432,6 @@ namespace DIIISPL
                     if (section == "display") { cur = new LayoutDisplay(); layout.Displays.Add(cur); }
                     continue;
                 }
-
-                // Секция панели задач запоминается целиком и **до** разбора: сборка,
-                // которая её не понимает, обязана вернуть в файл всё, а не только
-                // строки, похожие на знакомое «ключ = значение». Прежде запись без
-                // равенства не доживала до этого списка и пропадала при сохранении.
-                if (section == "taskbar") layout._taskbarRaw.Add(line);
 
                 int eq = line.IndexOf('=');
                 if (eq <= 0) continue;

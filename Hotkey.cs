@@ -133,8 +133,16 @@ namespace DIIISPL
                 string p = parts[i].Trim();
                 if (p.Length == 0)
                 {
-                    // случай "Ctrl++" — плюс как клавиша
-                    if (i == parts.Length - 1 && keyPart == null) { keyPart = "+"; continue; }
+                    // Случай «Ctrl++» — плюс как клавиша. Проверка по самой строке,
+                    // а не по числу частей: «Ctrl+» — незаконченный ввод — тоже даёт
+                    // пустой хвост, и прежде он молча превращался в рабочее
+                    // сочетание Ctrl+«=». Человек не дописал имя клавиши, а сочетание
+                    // ему всё равно назначили.
+                    if (i == parts.Length - 1 && keyPart == null && text.EndsWith("++"))
+                    {
+                        keyPart = "+";
+                        continue;
+                    }
                     continue;
                 }
                 if (string.Equals(p, "Ctrl", StringComparison.OrdinalIgnoreCase) || string.Equals(p, "Control", StringComparison.OrdinalIgnoreCase)) modifiers |= MOD_CONTROL;

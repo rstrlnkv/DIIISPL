@@ -79,11 +79,13 @@ namespace DIIISPL
             string s = new string(chars).Trim();
             if (s.Length == 0) return "profile";
 
-            // Имена устройств DOS заняты навсегда и на любом расширении: файла
-            // «CON.layout» не бывает — попытка создать его кончается ошибкой прямо
-            // в момент сохранения. Профиль с таким именем создать никто не мешает,
-            // поэтому уводим имя файла в сторону, а имя профиля внутри файла
-            // остаётся тем, которое выбрал человек.
+            // Имена устройств DOS уводим в сторону — но не потому, что «CON.layout»
+            // создать нельзя: измерено, что можно. Windows 11 отдаёт такой файл как
+            // обычный, он читается и попадает в перечисление. Причина проще: этих
+            // имён избегает почти всё, что работает с файлами, — архиваторы,
+            // облачные папки, старые утилиты, — и профиль с именем «CON» рискует
+            // не пережить копирования на другую машину. Имя профиля внутри файла
+            // при этом остаётся тем, которое выбрал человек.
             if (IsReservedName(s)) return "_" + s;
             return s;
         }
@@ -125,6 +127,23 @@ namespace DIIISPL
                 if (string.Equals(l.Name, name, StringComparison.CurrentCultureIgnoreCase)) return l.Name;
                 if (string.Equals(Sanitize(l.Name), file, StringComparison.OrdinalIgnoreCase)) return l.Name;
             }
+
+            // Имя внутри файла и имя самого файла — разные вещи, и профили задуманы
+            // переносимыми: файл могли скопировать руками, и тогда «Дом.layout»
+            // содержит имя «Работа». Сверка только по именам изнутри этого не видит,
+            // а Save всё равно ляжет в «Дом.layout» и затрёт его. Поэтому спрашиваем
+            // и сам каталог.
+            try
+            {
+                string target = PathFor(name);
+                if (File.Exists(target))
+                {
+                    if (exceptName == null) return Path.GetFileNameWithoutExtension(target);
+                    if (!string.Equals(target, PathFor(exceptName), StringComparison.OrdinalIgnoreCase))
+                        return Path.GetFileNameWithoutExtension(target);
+                }
+            }
+            catch { /* каталог недоступен — тогда и столкновения не проверить */ }
             return null;
         }
 

@@ -62,12 +62,30 @@ namespace DIIISPL
                 try { gate._held = gate._mutex.WaitOne(MaxWaitMs); }
                 catch (AbandonedMutexException)
                 {
-                    // Сосед умер, не отпустив: владение перешло к нам, и отпустить его
-                    // обязаны мы. Но умер он посреди перестроения, а значит отметку
-                    // времени поставить не успел — верить ей нельзя, и паузу надо
-                    // выдержать целиком. Это тот момент, когда она нужнее всего.
+                    // Сосед умер, не отпустив: владение перешло к нам, и отпустить
+                    // его обязаны мы.
                     gate._held = true;
                     gate._forceFullPause = true;
+                }
+
+                // На брошенный мьютекс полагаться нельзя, и это измерено: он
+                // приходит только если на момент смерти описатель держал кто-то
+                // ещё. Когда умерший был единственным, ядро уничтожает объект
+                // целиком, здесь создаётся новый — никем не брошенный, — ожидание
+                // проходит мгновенно, а в файле лежит конец **позапрошлого**
+                // применения, то есть пауза не выдерживается вовсе.
+                //
+                // Поэтому смерть посреди перестроения отмечается своим файлом:
+                // он создаётся перед первым обращением к дисплеям и убирается по
+                // окончании. Мы держим очередь — значит между началом и концом
+                // сейчас никого нет; уцелевший файл может означать только одно:
+                // прошлый перестраивал экраны и не дожил до конца. Это ровно тот
+                // случай, ради которого пауза и написана.
+                if (gate._held && File.Exists(BusyPath))
+                {
+                    gate._forceFullPause = true;
+                    try { File.Delete(BusyPath); }
+                    catch { }
                 }
             }
             catch
@@ -81,6 +99,8 @@ namespace DIIISPL
         /// <summary>Выдержать паузу с прошлого перестроения. Звать перед тем, как трогать дисплеи.</summary>
         public void Wait()
         {
+            MarkBusy();
+
             if (_forceFullPause)
             {
                 _forceFullPause = false;
@@ -114,6 +134,9 @@ namespace DIIISPL
             }
             catch { /* некуда записать — останется пауза внутри процесса */ }
             _fallback = DateTime.UtcNow;
+
+            try { if (File.Exists(BusyPath)) File.Delete(BusyPath); }
+            catch { }
         }
 
         public void Dispose()
@@ -131,9 +154,31 @@ namespace DIIISPL
         /// <summary>«Когда было прошлое перестроение — неизвестно». Значит ждать полностью.</summary>
         private static readonly DateTime Unknown = DateTime.MinValue;
 
+        /// <summary>
+        /// Раньше 2020 года отметки быть не может, и это не придирка к календарю.
+        /// Обрывок недописанного числа — «638000» вместо девятнадцати знаков —
+        /// разбирается успешно и даёт дату первого века: пауза выходит
+        /// отрицательной длины, то есть затвор открывается мгновенно. Измерено:
+        /// «638000» и «6» пропускали без задержки, тогда как «abc» — нет.
+        /// </summary>
+        private static readonly long MinPlausibleTicks = new DateTime(2020, 1, 1).Ticks;
+
         private static string StampPath
         {
             get { return Path.Combine(Store.DataDir, "last-apply"); }
+        }
+
+        /// <summary>Файл «идёт перестроение». Уцелел — значит прошлый не дожил до конца.</summary>
+        private static string BusyPath
+        {
+            get { return Path.Combine(Store.DataDir, "apply-busy"); }
+        }
+
+        /// <summary>Пометить, что дисплеи вот-вот тронут. Снимает пометку Stamp.</summary>
+        private static void MarkBusy()
+        {
+            try { File.WriteAllText(BusyPath, DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture)); }
+            catch { }
         }
 
         private static DateTime Read()
@@ -156,6 +201,8 @@ namespace DIIISPL
                 if (!long.TryParse(text.Trim(), NumberStyles.Integer,
                                    CultureInfo.InvariantCulture, out ticks))
                     return Unknown;      // мусор или обрывок недописанного — не знаем
+
+                if (ticks < MinPlausibleTicks) return Unknown;   // обрывок недописанного числа
 
                 var stamped = new DateTime(ticks, DateTimeKind.Utc);
                 // Часы могли перевести назад: отметка из будущего означает,
