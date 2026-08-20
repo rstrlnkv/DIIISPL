@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -323,7 +324,13 @@ namespace DIIISPL
             _nameText.FontSize = 24;
             _nameText.VerticalAlignment = VerticalAlignment.Center;
             _nameText.Margin = new Thickness(2, 0, 0, 0);
-            _nameText.MinWidth = 240;
+            // Сжиматься название должно сильнее, чем кажется разумным. Ряд кнопок
+            // справа растёт по своему содержимому, и при узком окне — особенно в
+            // сборках Dev, где кнопок на одну больше, — сумма перестаёт помещаться:
+            // раньше при 240 сетка вылезала за край и кнопки уезжали за границу
+            // окна. Название под многоточием читается хуже, но остаётся на месте
+            // и целиком видно в списке слева.
+            _nameText.MinWidth = 120;
             _nameText.TextTrimming = TextTrimming.CharacterEllipsis;
             _nameText.Cursor = Cursors.IBeam;
             _nameText.ToolTip = Text.RenameTip;
@@ -1146,10 +1153,11 @@ namespace DIIISPL
             if (_current != null)
                 foreach (TaskbarState s in TaskbarSettings.Order) if (_current.Taskbar[s].Enabled) on++;
 
-            _taskbarButton.Content = Glyph("", on > 0 ? Text.TaskbarButtonN(on) : Text.TaskbarButton);
-            _taskbarButton.ToolTip = ExplorerTap.Available
-                ? Text.TaskbarTip
-                : Text.TaskbarMissing;
+            _taskbarButton.Content = Glyph("", on > 0 ? on.ToString(CultureInfo.InvariantCulture) : "");
+            // Что это за кнопка — в подсказке: на самой кнопке места нет.
+            _taskbarButton.ToolTip = (ExplorerTap.Available ? Text.TaskbarTip : Text.TaskbarMissing)
+                                     + Environment.NewLine
+                                     + (on > 0 ? Text.TaskbarButtonN(on) : Text.TaskbarButton);
         }
 #endif
 

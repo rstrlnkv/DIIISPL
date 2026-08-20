@@ -97,6 +97,10 @@
       второй раз выполняется уже после окон.
     -->
     <Property Id="SHORTCUTCHOSEN" Secure="yes" />
+
+    <!-- Отметка «идём путём „Изменить“»: по ней окна знают, куда возвращает
+         кнопка «Назад». Ставится и снимается в DIIISPLUI.wxs. -->
+    <Property Id="DIIISPLCHANGING" Secure="yes" />
     <SetProperty Id="INSTALLSHORTCUT" Value="0" After="AppSearch" Sequence="both">
       (WIX_UPGRADE_DETECTED OR Installed) AND NOT PREVSHORTCUT AND NOT SHORTCUTCHOSEN
     </SetProperty>

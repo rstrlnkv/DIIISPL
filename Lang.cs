@@ -96,8 +96,8 @@ namespace DIIISPL
             d["canvas.badgePrimary"] = "Primary";
             d["canvas.badgeClone"] = "Duplicate";
             d["canvas.noneSelected"] = "No monitor is selected.";
-            d["canvas.gap"] = "There is a gap between the monitors — put them edge to edge, or Windows will move them itself.";
-            d["canvas.overlap"] = "“{0}” and “{1}” overlap — move them apart: desktops cannot overlap.";
+            d["canvas.gap"] = "There is a gap between the monitors — put them edge to edge, or Windows will move them for you.";
+            d["canvas.overlap"] = "“{0}” and “{1}” run into each other — move them apart: desktops cannot overlap.";
 
             // применение
             d["apply.busy"] = "the screens are already being rearranged — wait and try again";
@@ -116,16 +116,16 @@ namespace DIIISPL
             d["apply.gotRate"] = "“{0}”: refresh rate {1} Hz instead of {2} Hz.";
             d["apply.noRotation"] = "“{0}”: Windows did not apply the screen rotation.";
             d["apply.notCloned"] = "“{0}” did not join the duplicate — Windows separated the screens.";
-            d["apply.didNotTurnOn"] = "Did not turn on: {0}. Usually the monitor has no power, or sleeps so deeply the card cannot see it.";
-            d["apply.stayedOn"] = "Stayed on against the profile: {0}.";
+            d["apply.didNotTurnOn"] = "Did not turn on: {0}. Usually the monitor has no power, or sleeps so deeply the graphics card cannot see it.";
+            d["apply.stayedOn"] = "Still on, though the profile turns them off: {0}.";
             d["apply.notPrimary"] = "“{0}” did not become primary — Windows chose another screen.";
-            d["apply.moved"] = "Windows arranged them its own way: {0}. The screens no longer match the profile — fix the layout and apply again.";
+            d["apply.moved"] = "Windows rearranged them on its own: {0}. The screens no longer match the profile — fix the layout and apply again.";
             d["hdr.notInClone"] = "HDR does not work while duplicating. Separate the screens and it can be turned on for each.";
             d["hdr.unavailable"] = "“{0}”: this output does not offer HDR right now — there is nothing to turn on.";
             d["hdr.failedOn"] = "“{0}”: could not turn HDR on — {1}";
             d["hdr.failedOff"] = "“{0}”: could not turn HDR off — {1}";
             d["hdr.comesBack"] = "“{0}”: could not turn HDR off — the system turns it back on.";
-            d["hdr.noOnCloned"] = "“{0}”: HDR did not turn on. Windows gives no wide colour to duplicated outputs: to use HDR, extend the screens instead.";
+            d["hdr.noOnCloned"] = "“{0}”: HDR did not turn on. Windows gives no advanced colour to duplicated outputs: to use HDR, extend the screens instead.";
             d["hdr.noOnPlain"] = "“{0}”: HDR did not turn on. Usually the cable cannot carry it at the chosen mode.";
 
             // сочетания клавиш
@@ -211,7 +211,7 @@ namespace DIIISPL
             d["win.ownTaskbar"] = "its own taskbar look";
             d["win.nowOn"] = "on now";
             d["win.nowOff"] = "off now";
-            d["win.nowUnplugged"] = "not connected right now";
+            d["win.nowUnplugged"] = "not connected now";
             d["win.noHdrInClone"] = "HDR is unavailable while duplicating";
             d["rot.plain"] = "Normal";
             d["clone.separate"] = "Separate";
@@ -263,6 +263,7 @@ namespace DIIISPL
             d["cli.noTaskbarFile"] = "  The file that draws the taskbar look is missing.";
             d["cli.pickLook"] = "  Pick a look: {0}";
             d["cli.barsFound"] = "  taskbars found: {0}";
+            d["cli.lineOnly"] = "  the last word can only be “line”";
             d["cli.colorFormat"] = "  the colour is written as AARRGGBB, or shorter — RRGGBB";
             d["cli.applied"] = "  applied: {0}";
             d["cli.failed"] = "  failed: {0}";
@@ -301,7 +302,7 @@ namespace DIIISPL
             d["about.language"] = "Language";
             d["about.whatsNew"] = "What’s new";
             d["about.footer"] = "© 2026 {0} · GPL-3.0";
-            d["about.devHint"] = "Dev builds arrive before the general release and can do more — set the taskbar look, for one. In exchange, something is broken in them more often.";
+            d["about.devHint"] = "Dev builds arrive before the general release and can do more — set the taskbar look, for one. In exchange, they break more often.";
             d["about.stableHint"] = "Only finished releases arrive. What is still being worked on — the taskbar look — is in Dev builds only.";
             d["about.check"] = "Check";
             d["about.checking"] = "checking…";
@@ -418,7 +419,7 @@ namespace DIIISPL
             d["canvas.badgeClone"] = "Дубль";
             d["canvas.noneSelected"] = "Не выбран ни один монитор.";
             d["canvas.gap"] = "Между мониторами есть разрыв — придвиньте их вплотную, иначе Windows сдвинет их сама.";
-            d["canvas.overlap"] = "«{0}» и «{1}» налезают друг на друга — разведите их: рабочие столы наложенными быть не могут.";
+            d["canvas.overlap"] = "«{0}» и «{1}» налезают друг на друга — разведите их: рабочие столы перекрываться не могут.";
 
             d["apply.busy"] = "экраны уже перестраиваются — подождите и повторите";
             d["apply.refused"] = "Windows отклонила раскладку: {0}";
@@ -464,7 +465,7 @@ namespace DIIISPL
             d["err.unexplained"] = "система не объяснила причину";
 
             d["tray.startFailed"] = "Не удалось запустить {0}:\n\n{1}\n\nПодробности: %AppData%\\{2}\\error.log";
-            d["tray.hint"] = "DIIISPL продолжает работать здесь: горячие клавиши переключают раскладки. Совсем выйти — пункт «Выход» в этом меню.";
+            d["tray.hint"] = "DIIISPL продолжает работать здесь: сочетания клавиш переключают раскладки. Совсем выйти — пункт «Выход» в этом меню.";
             d["tray.newVersion"] = "Вышла версия {0}. Откройте «О программе», чтобы обновиться.";
             d["tray.noProfiles"] = "Профилей пока нет";
             d["tray.manager"] = "Менеджер раскладок…";
@@ -583,6 +584,7 @@ namespace DIIISPL
             d["cli.noTaskbarFile"] = "  В программе не хватает файла для оформления панели задач.";
             d["cli.pickLook"] = "  Укажите вид: {0}";
             d["cli.barsFound"] = "  панелей задач: {0}";
+            d["cli.lineOnly"] = "  последним словом может быть только «line»";
             d["cli.colorFormat"] = "  цвет пишется как AARRGGBB или короче — RRGGBB";
             d["cli.applied"] = "  применено: {0}";
             d["cli.failed"] = "  не удалось: {0}";

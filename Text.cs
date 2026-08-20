@@ -435,6 +435,7 @@ namespace DIIISPL
         public static string CliNoTaskbarFile { get { return G("cli.noTaskbarFile"); } }
         public static string CliPickLook(string names) { return G("cli.pickLook", names); }
         public static string CliBarsFound(int n) { return G("cli.barsFound", n); }
+        public static string CliLineOnly { get { return G("cli.lineOnly"); } }
         public static string CliColorFormat { get { return G("cli.colorFormat"); } }
         public static string CliApplied(string what) { return G("cli.applied", what); }
         public static string CliFailed(string why) { return G("cli.failed", why); }

@@ -143,21 +143,45 @@ namespace DIIISPL
                 return 2;
             }
 
+            // Опечатка в названии вида не должна выглядеть удачей. Прежде
+            // «acrilic» разбиралось в «обычную» панель, команда бодро отвечала
+            // «применено», и человек искал причину в чём угодно, кроме буквы.
+            string wanted = args[1].Trim().ToLowerInvariant();
+            bool known = false;
+            foreach (string n in ExplorerTap.Names) if (n == wanted) known = true;
+            if (!known)
+            {
+                Console.WriteLine(Text.CliPickLook(string.Join(", ", ExplorerTap.Names)));
+                return 2;
+            }
+
             var bars = ExplorerTap.FindTaskbars();
             Console.WriteLine(Text.CliBarsFound(bars.Count));
 
-            var look = ExplorerTap.Parse(args[1]);
+            var look = ExplorerTap.Parse(wanted);
             uint color = 0x00000000;
             if (args.Length > 2 && !ExplorerTap.TryParseColor(args[2], out color))
             {
                 Console.WriteLine(Text.CliColorFormat);
                 return 2;
             }
-            bool showLine = args.Length > 3 && args[3].Trim().ToLowerInvariant() == "line";
+
+            // То же и с последним словом: тихо проглоченное «line1» оставляло
+            // человека гадать, почему линии у края нет.
+            bool showLine = false;
+            if (args.Length > 3)
+            {
+                if (args[3].Trim().ToLowerInvariant() != "line")
+                {
+                    Console.WriteLine(Text.CliLineOnly);
+                    return 2;
+                }
+                showLine = true;
+            }
 
             bool ok = ExplorerTap.ApplyAll(look, color, 9.0f, showLine);
             Console.WriteLine(ok
-                ? Text.CliApplied(ExplorerTap.Describe(args[1].ToLowerInvariant()))
+                ? Text.CliApplied(ExplorerTap.Describe(wanted))
                 : Text.CliFailed(ExplorerTap.LastError));
             return ok ? 0 : 1;
         }

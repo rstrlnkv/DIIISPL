@@ -208,6 +208,10 @@ namespace DIIISPL
             string path = null;
             try
             {
+                // Прежний пакет мы держим открытым, чтобы его не подменили; пока
+                // не отпустим, его не удалить и поверх него не записать.
+                Unhold();
+
                 string dir = Path.Combine(Path.GetTempPath(), "DIIISPL-update");
                 Directory.CreateDirectory(dir);
 
@@ -245,9 +249,20 @@ namespace DIIISPL
                     client.DownloadFile(url, path);
                 }
 
+                // Держим файл открытым от проверки подписи до запуска установщика.
+                //
+                // Между этими мгновениями пакет лежит во временной папке, куда
+                // пишет любая программа этого пользователя. Проверили подпись,
+                // человек прочитал, что нового, подумал минуту, нажал «Обновить» —
+                // и запустился уже не тот файл, который проверяли. Открытый на
+                // чтение с запретом записи, он подменён быть не может: msiexec его
+                // прочитает, а переписать не сможет никто.
+                Hold(path);
+
                 string wrong = SignatureProblem(path);
                 if (wrong != null)
                 {
+                    Unhold();
                     Forget(path);
                     error = wrong;
                     return null;
@@ -390,6 +405,26 @@ namespace DIIISPL
             catch { }
         }
 
+        /// <summary>
+        /// Проверенный пакет, который держим открытым, чтобы его не подменили.
+        /// Живёт до запуска установщика — тот закрывает программу сам.
+        /// </summary>
+        private static FileStream _held;
+
+        private static void Hold(string path)
+        {
+            Unhold();
+            try { _held = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read); }
+            catch { _held = null; }     // не удержали — подпись всё равно проверим
+        }
+
+        private static void Unhold()
+        {
+            if (_held == null) return;
+            try { _held.Dispose(); } catch { }
+            _held = null;
+        }
+
         // ------------------------------------------------------------------ установка
         /// <summary>
         /// Запустить установщик и выйти. Дальше работает он: закрывает эту копию,
@@ -398,6 +433,20 @@ namespace DIIISPL
         public static bool Install(string msiPath, out string error)
         {
             error = null;
+
+            // Подпись сверяем ещё раз, прямо перед запуском. Обычно файл всё это
+            // время открыт нами и подменить его нельзя, но открыть удаётся не
+            // всегда — а установщик получает полное доверие человека, и одна
+            // лишняя секунда здесь дешевле чужого пакета с правами системы.
+            string wrong = SignatureProblem(msiPath);
+            if (wrong != null)
+            {
+                Unhold();
+                Forget(msiPath);
+                error = wrong;
+                return false;
+            }
+
             try
             {
                 // Полный путь обязателен. По голому имени ShellExecute ищет и в текущем

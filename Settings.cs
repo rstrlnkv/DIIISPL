@@ -123,10 +123,37 @@ namespace DIIISPL
             }
         }
 
+        /// <summary>
+        /// Каким файл был, когда мы его читали. По этой паре видно, что его
+        /// переписали мимо нас.
+        /// </summary>
+        private static DateTime _stamp;
+        private static long _size = -1;
+
         private static void Load()
         {
             // Звать только под замком.
-            if (_values != null) return;
+            //
+            // Перечитываем, если файл на диске изменился. Прежде настройки
+            // читались один раз за запуск, и это значило две неприятности сразу:
+            // правка блокнотом при работающей программе не подхватывалась и
+            // затиралась первой же записью, а вторая копия — `DIIISPL.exe /apply`
+            // из планировщика или ярлыка — писала своё, и окно, ничего об этом не
+            // зная, возвращало старое.
+            DateTime stamp = DateTime.MinValue;
+            long size = -1;
+            try
+            {
+                var info = new FileInfo(FilePath);
+                if (info.Exists) { stamp = info.LastWriteTimeUtc; size = info.Length; }
+            }
+            catch { /* не спросить — считаем, что не менялся */ }
+
+            if (_values != null && stamp == _stamp && size == _size) return;
+
+            _stamp = stamp;
+            _size = size;
+
             var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             try
             {
@@ -152,6 +179,11 @@ namespace DIIISPL
                 lines.Add("# DIIISPL settings");   // служебный файл — только по-английски
                 foreach (var kv in _values) lines.Add(kv.Key + " = " + kv.Value);
                 File.WriteAllLines(FilePath, lines.ToArray(), System.Text.Encoding.UTF8);
+
+                // Запомнить файл таким, каким мы его оставили: иначе следующее же
+                // чтение сочтёт свою собственную запись чужой правкой.
+                var info = new FileInfo(FilePath);
+                if (info.Exists) { _stamp = info.LastWriteTimeUtc; _size = info.Length; }
             }
             catch { /* некуда записать — настройки проживут до выхода из программы */ }
         }

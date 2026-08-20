@@ -607,11 +607,65 @@ namespace DIIISPL
                    layout._taskbarRaw[layout._taskbarRaw.Count - 1].Length == 0)
                 layout._taskbarRaw.RemoveAt(layout._taskbarRaw.Count - 1);
 
+            layout.Normalize();
             layout.DropLoneCloneGroups();
 #if DEV
             if (!layout.Taskbar.Versioned) layout.Taskbar.DropUntouchedSpecialCases();
 #endif
             return layout;
+        }
+
+        /// <summary>
+        /// Привести значения к тем, что вообще бывают.
+        ///
+        /// Профили — обычный текст, и README прямо зовёт править их блокнотом.
+        /// Значит в файл попадают опечатки: «rotation = 7», «hz = -60», «width =
+        /// 0», два раздела с одним и тем же монитором. Программа такое переживала
+        /// по-разному: поворот превращался в невозможный, и Windows отвергала
+        /// раскладку целиком; отрицательная частота уезжала в заявку драйверу;
+        /// второй раздел с тем же монитором давал два разных состояния одного
+        /// экрана, и какое победит, зависело от порядка перебора.
+        ///
+        /// Чиним молча и в сторону «как будто не задано»: человек, правивший файл
+        /// руками, увидит в окне честное состояние и поправит его там.
+        /// </summary>
+        private void Normalize()
+        {
+            var seen = new Dictionary<string, LayoutDisplay>(StringComparer.OrdinalIgnoreCase);
+            var keep = new List<LayoutDisplay>();
+
+            foreach (LayoutDisplay d in Displays)
+            {
+                // Поворот бывает только четырёх видов; всё прочее — «как обычно».
+                if (d.Rotation < 1 || d.Rotation > 4) d.Rotation = 1;
+
+                // Размер и частота: ноль означает «не задано», и Applier подставит
+                // то, что монитор умеет. Отрицательное значение не означает ничего.
+                if (d.Width < 0) d.Width = 0;
+                if (d.Height < 0) d.Height = 0;
+                if (d.Hz < 0 || d.Hz > 1000) d.Hz = 0;
+
+                // HDR: «не трогать», «выключить», «включить».
+                if (d.Hdr < -1 || d.Hdr > 1) d.Hdr = -1;
+
+                // Номер группы дублирования — либо -1, либо неотрицательный.
+                if (d.CloneGroup < -1) d.CloneGroup = -1;
+
+                if (string.IsNullOrEmpty(d.Identity)) continue;
+
+                // Один монитор — одно состояние. Побеждает последний: так правка
+                // руками работает как обычно, дописал ниже — оно и в силе.
+                LayoutDisplay before;
+                if (seen.TryGetValue(d.Identity, out before)) keep.Remove(before);
+                seen[d.Identity] = d;
+                keep.Add(d);
+            }
+
+            if (keep.Count != Displays.Count)
+            {
+                Displays.Clear();
+                Displays.AddRange(keep);
+            }
         }
 
         /// <summary>
