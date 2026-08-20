@@ -374,7 +374,10 @@ namespace DIIISPL
         {
             if (code == Text.Code) return;
 
-            var ask = new ConfirmDialog(Text.LangRestartTitle(Lang.NativeName(code)),
+            // Text.NameOf, а не Lang.NativeName: у языка, приехавшего файлом,
+            // встроенного имени нет, и вопрос звучал бы «Перейти на English?»
+            // при нажатии на «Čeština».
+            var ask = new ConfirmDialog(Text.LangRestartTitle(Text.NameOf(code)),
                                         Text.LangRestart, Text.LangRestartOk);
             ask.Owner = this;
             if (ask.ShowDialog() != true) return;

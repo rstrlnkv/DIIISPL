@@ -97,12 +97,17 @@ if not exist "%NETDIR%\csc.exe" set NETDIR=%WINDIR%\Microsoft.NET\Framework\v4.0
 echo === Лицензия ===
 powershell -NoProfile -ExecutionPolicy Bypass -File "%HERE%make-license-rtf.ps1" -Source "%ROOT%\LICENSE" -Target "%HERE%LICENSE.rtf" || exit /b 1
 
-rem Код продукта выводится из номера версии, а не берётся случайным. Пакет
-rem собирается по разу на язык, и перевод внутрь встаёт разницей между сборками:
-rem случайные коды сделали бы «переводом» подмену всего продукта. Одна и та же
-rem версия даёт один и тот же код, разные версии — разные, и замена прежней
-rem версии новой продолжает работать.
-for /f %%G in ('powershell -NoProfile -Command "$b=[Security.Cryptography.MD5]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes('DIIISPL %VERSION% %CHANNEL%')); ([guid][byte[]]$b).ToString().ToUpperInvariant()"') do set PRODUCTCODE=%%G
+rem Код продукта задаётся здесь, а не звёздочкой в разметке. Пакет собирается по
+rem разу на язык, и перевод внутрь встаёт разницей между сборками: звёздочка дала
+rem бы каждой сборке свой код, и «перевод» первым делом подменял бы продукт
+rem целиком.
+rem
+rem Код при этом новый на каждую сборку, а не выведенный из номера версии. Так
+rem было и раньше, и это верно: одинаковый код при одинаковой версии означает
+rem «тот же самый продукт», и повторная установка того же выпуска — например,
+rem чтобы починить испорченную — упирается в «уже установлена» вместо того чтобы
+rem просто пройти.
+for /f %%G in ('powershell -NoProfile -Command "[guid]::NewGuid().ToString().ToUpperInvariant()"') do set PRODUCTCODE=%%G
 if not defined PRODUCTCODE (
   echo Не удалось вычислить код продукта.
   exit /b 1
