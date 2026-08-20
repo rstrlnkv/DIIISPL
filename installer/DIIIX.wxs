@@ -125,6 +125,10 @@
     <!-- Свой набор окон: выбор папки плюс отдельный вопрос про ярлык, см. DIIIXUI.wxs. -->
     <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
     <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+
+    <!-- Свои картинки вместо стандартных из набора WiX. -->
+    <WixVariable Id="WixUIBannerBmp" Value="$(var.ArtDir)\banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="$(var.ArtDir)\dialog.bmp" />
     <UIRef Id="WixUI_DIIIX" />
 
     <UI>

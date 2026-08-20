@@ -22,9 +22,9 @@
         последовательности он не подтягивается, и без этих строк установщик
         не собирается — готовые окна ссылаются на стили, которых нет.
       -->
-      <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8" />
-      <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12" />
-      <TextStyle Id="WixUI_Font_Title"  FaceName="Tahoma" Size="9" Bold="yes" />
+      <TextStyle Id="WixUI_Font_Normal" FaceName="Segoe UI" Size="9" />
+      <TextStyle Id="WixUI_Font_Bigger" FaceName="Segoe UI" Size="13" />
+      <TextStyle Id="WixUI_Font_Title"  FaceName="Segoe UI Semibold" Size="11" />
       <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
 
       <!-- Своё окно: один вопрос — создавать ли ярлык. -->

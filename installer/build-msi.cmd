@@ -33,13 +33,20 @@ copy /y "%ROOT%\DIIIX.exe" "%HERE%obj\stage\" >nul || exit /b 1
 copy /y "%ROOT%\DIIIX.ExplorerTAP.dll" "%HERE%obj\stage\" >nul || exit /b 1
 call "%HERE%sign.cmd" "%HERE%obj\stage\DIIIX.exe" "%HERE%obj\stage\DIIIX.ExplorerTAP.dll" || exit /b 1
 
+echo === Картинки окон ===
+set NETDIR=%WINDIR%\Microsoft.NET\Framework64\v4.0.30319
+if not exist "%NETDIR%\csc.exe" set NETDIR=%WINDIR%\Microsoft.NET\Framework\v4.0.30319
+"%NETDIR%\csc.exe" /nologo /target:exe /codepage:65001 /out:"%HERE%obj\makeart.exe" ^
+  /r:System.dll /r:System.Drawing.dll "%HERE%MakeArt.cs" || exit /b 1
+"%HERE%obj\makeart.exe" "%HERE%obj" || exit /b 1
+
 echo === Лицензия ===
 powershell -NoProfile -ExecutionPolicy Bypass -File "%HERE%make-license-rtf.ps1" -Source "%ROOT%\LICENSE" -Target "%HERE%LICENSE.rtf" || exit /b 1
 
 echo === Сборка пакета ===
 if not exist "%HERE%obj" mkdir "%HERE%obj"
 "%WIX%\candle.exe" -nologo -arch x64 ^
-  -dSourceDir="%ROOT%" -dBinDir="%HERE%obj\stage" -dLicenseRtf="%HERE%LICENSE.rtf" ^
+  -dSourceDir="%ROOT%" -dBinDir="%HERE%obj\stage" -dLicenseRtf="%HERE%LICENSE.rtf" -dArtDir="%HERE%obj" ^
   -ext WixUtilExtension -ext WixUIExtension ^
   -out "%HERE%obj\\" "%HERE%DIIIX.wxs" "%HERE%DIIIXUI.wxs" || exit /b 1
 
