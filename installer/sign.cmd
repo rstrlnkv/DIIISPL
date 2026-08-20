@@ -1,6 +1,6 @@
 @echo off
 rem Подписать переданные файлы. Отпечаток сертификата берётся из sign.thumbprint
-rem рядом с этим скриптом или из переменной DIIIX_SIGN_THUMBPRINT.
+rem рядом с этим скриптом или из переменной DIIISPL_SIGN_THUMBPRINT.
 rem
 rem Без сертификата подпись молча пропускается: сборка не должна ломаться у того,
 rem у кого его нет, — а нет его у всех, кроме владельца ключа.
@@ -8,7 +8,7 @@ setlocal enabledelayedexpansion
 
 set THUMB=
 if exist "%~dp0sign.thumbprint" set /p THUMB=<"%~dp0sign.thumbprint"
-if not defined THUMB set THUMB=%DIIIX_SIGN_THUMBPRINT%
+if not defined THUMB set THUMB=%DIIISPL_SIGN_THUMBPRINT%
 if not defined THUMB (
   echo Подпись пропущена: сертификат не задан.
   exit /b 0
@@ -28,7 +28,7 @@ rem Метка времени обязательна: без неё подпис
 rem в тот день, когда истечёт сертификат, — даже для давно выпущенных файлов.
 "%SIGNTOOL%" sign /q /sha1 %THUMB% /fd SHA256 /td SHA256 ^
   /tr http://timestamp.digicert.com ^
-  /d "DIIIX — раскладки мониторов" ^
+  /d "DIIISPL — раскладки мониторов" ^
   %* || exit /b 1
 
 exit /b 0

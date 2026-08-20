@@ -1,5 +1,5 @@
 @echo off
-rem Сборка DIIIX.ExplorerTAP.dll — библиотеки оформления панели задач.
+rem Сборка DIIISPL.ExplorerTAP.dll — библиотеки оформления панели задач.
 rem Требуется Visual Studio Build Tools 2026 с рабочей нагрузкой C++ и Windows SDK.
 setlocal
 
@@ -20,7 +20,7 @@ set NUGET=%~dp0nuget.exe
 
 rem Короткий каталог для промежуточных файлов: заголовки C++/WinRT легко
 rem перешагивают ограничение в 260 символов, если собирать на месте.
-set BUILDDIR=%TEMP%\diiix-native
+set BUILDDIR=%TEMP%\diiispl-native
 if not exist "%BUILDDIR%" mkdir "%BUILDDIR%"
 
 if not exist "%NUGET%" (
@@ -51,7 +51,7 @@ echo === Сборка библиотеки ===
   /p:ForceImportAfterCppTargets="%BUILDDIR%\paths.props" ^
   /p:IntDir=%BUILDDIR%\obj\ ^
   /p:OutDir=%BUILDDIR%\bin\ ^
-  /p:TargetName=DIIIX.ExplorerTAP || exit /b 1
+  /p:TargetName=DIIISPL.ExplorerTAP || exit /b 1
 
-copy /y "%BUILDDIR%\bin\DIIIX.ExplorerTAP.dll" "%~dp0..\DIIIX.ExplorerTAP.dll" >nul || exit /b 1
-echo Готово: %~dp0..\DIIIX.ExplorerTAP.dll
+copy /y "%BUILDDIR%\bin\DIIISPL.ExplorerTAP.dll" "%~dp0..\DIIISPL.ExplorerTAP.dll" >nul || exit /b 1
+echo Готово: %~dp0..\DIIISPL.ExplorerTAP.dll

@@ -1,4 +1,4 @@
-// DIIIX — менеджер раскладок мониторов для Windows.
+// DIIISPL — менеджер раскладок мониторов для Windows.
 // Copyright (C) 2026 r.strlnkv
 // Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
 //
@@ -11,7 +11,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 
-namespace DIIIX.Tools
+namespace DIIISPL.Tools
 {
     internal static class MakeArt
     {
@@ -70,7 +70,7 @@ namespace DIIIX.Tools
             var bmp = new Bitmap(493, 312, PixelFormat.Format24bppRgb);
             using (Graphics g = Prepare(bmp))
             {
-                // Правая половина ровно белая, без градиента: флажок «Запустить DIIIX»
+                // Правая половина ровно белая, без градиента: флажок «Запустить DIIISPL»
                 // на последнем окне рисует свой фон поверх картинки, и на градиенте
                 // от него оставалась светлая полоса.
                 using (var white = new SolidBrush(Color.White))
@@ -136,7 +136,7 @@ namespace DIIIX.Tools
         {
             using (var font = new Font("Segoe UI Semibold", size, FontStyle.Regular, GraphicsUnit.Point))
             using (var brush = new SolidBrush(color))
-                g.DrawString("DIIIX", font, brush, x, y);
+                g.DrawString("DIIISPL", font, brush, x, y);
         }
 
         private static Graphics Prepare(Bitmap bmp)

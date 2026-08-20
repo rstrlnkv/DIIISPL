@@ -1,8 +1,8 @@
-// DIIIX — менеджер раскладок мониторов для Windows.
+// DIIISPL — менеджер раскладок мониторов для Windows.
 // Copyright (C) 2026 r.strlnkv
 // Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
 //
-// Этот модуль работает со вспомогательной библиотекой DIIIX.ExplorerTAP.dll, основанной
+// Этот модуль работает со вспомогательной библиотекой DIIISPL.ExplorerTAP.dll, основанной
 // на компоненте ExplorerTAP проекта TranslucentTB (https://github.com/TranslucentTB/TranslucentTB),
 // © Charles Milette и участники, GPLv3. Библиотека публикует внутри проводника COM-службу
 // оформления панели задач, а здесь — только вызовы к ней.
@@ -11,7 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
-namespace DIIIX
+namespace DIIISPL
 {
     /// <summary>Вид панели задач, как его понимает служба оформления.</summary>
     internal enum TaskbarLook
@@ -32,7 +32,7 @@ namespace DIIIX
     /// </summary>
     internal static class ExplorerTap
     {
-        private const string TapDll = "DIIIX.ExplorerTAP.dll";
+        private const string TapDll = "DIIISPL.ExplorerTAP.dll";
         private static readonly Guid IID_TaskbarAppearanceService = new Guid("d255d70a-b6f7-4b66-9fc6-b290a598a1d3");
 
         [DllImport(TapDll, CharSet = CharSet.Unicode)]
@@ -110,7 +110,7 @@ namespace DIIIX
                 _service = (ITaskbarAppearanceService)Marshal.GetObjectForIUnknown(raw);
                 Marshal.Release(raw);
 
-                // Просим вернуть панель к системному виду при закрытии DIIIX — но только если
+                // Просим вернуть панель к системному виду при закрытии DIIISPL — но только если
                 // программа живёт долго. Для однократной команды это самоубийственно:
                 // процесс завершается сразу, и служба тут же откатывает всё, что мы задали.
                 if (RestoreWhenProcessExits)

@@ -11,7 +11,7 @@
 static constexpr Util::null_terminated_wstring_view MUTEX_GUID = L"344635E9-9AE4-4E60-B128-D53E25AB70A7";
 
 // Event used to signal when the TAP is ready
-static constexpr Util::null_terminated_wstring_view TAP_READY_EVENT = L"DIIIXTAP_Ready";
+static constexpr Util::null_terminated_wstring_view TAP_READY_EVENT = L"DIIISPLTAP_Ready";
 
 // Current version of the API used for IPC with the TAP
 static constexpr std::uint32_t TAP_API_VERSION = 4;

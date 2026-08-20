@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!--
-  DIIIX — менеджер раскладок мониторов для Windows.
+  DIIISPL — менеджер раскладок мониторов для Windows.
   Copyright (C) 2026 r.strlnkv
   Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
 
@@ -12,7 +12,7 @@
   <?define Version = "1.0.0" ?>
 
   <Product Id="*"
-           Name="DIIIX"
+           Name="DIIISPL"
            Language="1049"
            Codepage="1251"
            Version="$(var.Version)"
@@ -22,7 +22,7 @@
     <Package InstallerVersion="500"
              Compressed="yes"
              InstallScope="perMachine"
-             Description="DIIIX — раскладки мониторов"
+             Description="DIIISPL — раскладки мониторов"
              Comments="Свободная программа под GNU GPL v3 или новее"
              Languages="1049"
              SummaryCodepage="1251" />
@@ -31,35 +31,35 @@
 
     <!-- Новая версия заменяет прежнюю, а не встаёт рядом с ней. -->
     <MajorUpgrade AllowSameVersionUpgrades="yes"
-                  DowngradeErrorMessage="Уже установлена более новая версия DIIIX." />
+                  DowngradeErrorMessage="Уже установлена более новая версия DIIISPL." />
 
     <!--
       Программа живёт в трее и держит открытой библиотеку внутри проводника.
       Если её не закрыть, файлы окажутся занятыми и установка потребует перезагрузки.
     -->
-    <util:CloseApplication Id="CloseDIIIX"
-                           Target="DIIIX.exe"
+    <util:CloseApplication Id="CloseDIIISPL"
+                           Target="DIIISPL.exe"
                            CloseMessage="yes"
                            TerminateProcess="1"
                            RebootPrompt="no" />
 
-    <Icon Id="DIIIX.ico" SourceFile="$(var.SourceDir)\DIIIX.ico" />
-    <Property Id="ARPPRODUCTICON" Value="DIIIX.ico" />
-    <Property Id="ARPURLINFOABOUT" Value="https://github.com/rstrlnkv/DIIIX" />
+    <Icon Id="DIIISPL.ico" SourceFile="$(var.SourceDir)\DIIISPL.ico" />
+    <Property Id="ARPPRODUCTICON" Value="DIIISPL.ico" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/rstrlnkv/DIIISPL" />
 
     <!-- Иначе в списке установленных программ расположение и размер остаются пустыми. -->
     <SetProperty Id="ARPINSTALLLOCATION" Value="[INSTALLFOLDER]" After="CostFinalize" />
 
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFiles64Folder">
-        <Directory Id="INSTALLFOLDER" Name="DIIIX" />
+        <Directory Id="INSTALLFOLDER" Name="DIIISPL" />
       </Directory>
       <Directory Id="ProgramMenuFolder" />
     </Directory>
 
     <DirectoryRef Id="INSTALLFOLDER">
       <Component Id="MainProgram" Guid="*" Win64="yes">
-        <File Id="DIIIX.exe" Source="$(var.BinDir)\DIIIX.exe" KeyPath="yes" />
+        <File Id="DIIISPL.exe" Source="$(var.BinDir)\DIIISPL.exe" KeyPath="yes" />
       </Component>
 
       <!--
@@ -67,7 +67,7 @@
         работает, поэтому она вынесена в свою возможность, которую можно не ставить.
       -->
       <Component Id="TaskbarLibrary" Guid="*" Win64="yes">
-        <File Id="DIIIX.ExplorerTAP.dll" Source="$(var.BinDir)\DIIIX.ExplorerTAP.dll" KeyPath="yes" />
+        <File Id="DIIISPL.ExplorerTAP.dll" Source="$(var.BinDir)\DIIISPL.ExplorerTAP.dll" KeyPath="yes" />
       </Component>
 
       <!-- По компоненту на файл: у обоих нет версии, а такие в один не складываются. -->
@@ -95,18 +95,18 @@
           даже при снятом флажке.
         -->
         <Condition>INSTALLSHORTCUT = "1"</Condition>
-        <Shortcut Id="DIIIXShortcut"
-                  Name="DIIIX"
+        <Shortcut Id="DIIISPLShortcut"
+                  Name="DIIISPL"
                   Description="Раскладки мониторов"
-                  Target="[INSTALLFOLDER]DIIIX.exe"
+                  Target="[INSTALLFOLDER]DIIISPL.exe"
                   WorkingDirectory="INSTALLFOLDER"
-                  Icon="DIIIX.ico" />
-        <RegistryValue Root="HKLM" Key="Software\DIIIX" Name="StartMenuShortcut"
+                  Icon="DIIISPL.ico" />
+        <RegistryValue Root="HKLM" Key="Software\DIIISPL" Name="StartMenuShortcut"
                        Type="integer" Value="1" KeyPath="yes" />
       </Component>
     </DirectoryRef>
 
-    <Feature Id="Main" Title="DIIIX" Level="1" Absent="disallow"
+    <Feature Id="Main" Title="DIIISPL" Level="1" Absent="disallow"
              ConfigurableDirectory="INSTALLFOLDER"
              Description="Менеджер раскладок мониторов.">
       <ComponentRef Id="MainProgram" />
@@ -117,19 +117,19 @@
     </Feature>
 
     <!-- Предложить запуск сразу после установки. -->
-    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Запустить DIIIX" />
-    <Property Id="WixShellExecTarget" Value="[#DIIIX.exe]" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Запустить DIIISPL" />
+    <Property Id="WixShellExecTarget" Value="[#DIIISPL.exe]" />
     <CustomAction Id="LaunchApplication" BinaryKey="WixCA" DllEntry="WixShellExec"
                   Impersonate="yes" Return="ignore" />
 
-    <!-- Свой набор окон: выбор папки плюс отдельный вопрос про ярлык, см. DIIIXUI.wxs. -->
+    <!-- Свой набор окон: выбор папки плюс отдельный вопрос про ярлык, см. DIIISPLUI.wxs. -->
     <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
     <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
 
     <!-- Свои картинки вместо стандартных из набора WiX. -->
     <WixVariable Id="WixUIBannerBmp" Value="$(var.ArtDir)\banner.bmp" />
     <WixVariable Id="WixUIDialogBmp" Value="$(var.ArtDir)\dialog.bmp" />
-    <UIRef Id="WixUI_DIIIX" />
+    <UIRef Id="WixUI_DIIISPL" />
 
     <UI>
       <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication">

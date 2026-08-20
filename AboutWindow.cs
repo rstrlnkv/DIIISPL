@@ -1,4 +1,4 @@
-// DIIIX — менеджер раскладок мониторов для Windows.
+// DIIISPL — менеджер раскладок мониторов для Windows.
 // Copyright (C) 2026 r.strlnkv
 // Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
 
@@ -9,7 +9,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 
-namespace DIIIX
+namespace DIIISPL
 {
     /// <summary>
     /// О программе: что она делает, чего не делает, на чём стоит и под какой лицензией
@@ -59,7 +59,7 @@ namespace DIIIX
                 Ui.Bullet("Не включает HDR при дублировании, если выбранный режим не проходит " +
                        "по кабелю: это ограничение железа, а не программы."),
                 Ui.Bullet("Не хранит ничего в системе, кроме своей записи автозапуска: профили " +
-                       "лежат обычным текстом в %AppData%\\DIIIX."),
+                       "лежат обычным текстом в %AppData%\\DIIISPL."),
                 Ui.Bullet("Не переключает раскладки чаще раза в секунду — плотная очередь таких " +
                        "перестроек способна уронить видеодрайвер.")));
 

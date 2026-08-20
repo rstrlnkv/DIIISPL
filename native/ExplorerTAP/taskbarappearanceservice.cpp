@@ -1,4 +1,4 @@
-#include "diiixlog.hpp"
+#include "diiispllog.hpp"
 #include "taskbarappearanceservice.hpp"
 #include <RpcProxy.h>
 #include <shellapi.h>
@@ -37,11 +37,11 @@ HRESULT TaskbarAppearanceService::GetVersion(DWORD* apiVersion) noexcept
 
 HRESULT TaskbarAppearanceService::SetTaskbarAppearance(HWND taskbar, TaskbarBrush brush, UINT color) try
 {
-	DiiixLog(L"SetTaskbarAppearance: вызвана");
+	DiiisplLog(L"SetTaskbarAppearance: вызвана");
 
 	if (auto info = GetTaskbarInfo(taskbar))
 	{
-		DiiixLog(std::wstring(L"  control=") + (info->background.control ? L"есть" : L"НЕТ") +
+		DiiisplLog(std::wstring(L"  control=") + (info->background.control ? L"есть" : L"НЕТ") +
 		         L", originalFill=" + (info->background.originalFill ? L"есть" : L"НЕТ"));
 
 		// Кисть фона могла быть ещё не назначена в момент, когда прямоугольник
@@ -49,7 +49,7 @@ HRESULT TaskbarAppearanceService::SetTaskbarAppearance(HWND taskbar, TaskbarBrus
 		if (info->background.control && !info->background.originalFill)
 		{
 			info->background.originalFill = info->background.control.Fill();
-			DiiixLog(std::wstring(L"  перечитал Fill: ") + (info->background.originalFill ? L"получилось" : L"всё равно пусто"));
+			DiiisplLog(std::wstring(L"  перечитал Fill: ") + (info->background.originalFill ? L"получилось" : L"всё равно пусто"));
 		}
 
 		if (info->background.control)

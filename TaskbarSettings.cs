@@ -1,4 +1,4 @@
-// DIIIX — менеджер раскладок мониторов для Windows.
+// DIIISPL — менеджер раскладок мониторов для Windows.
 // Copyright (C) 2026 r.strlnkv
 // Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
 
@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace DIIIX
+namespace DIIISPL
 {
     /// <summary>Состояния, при которых панель задач может выглядеть по-разному.</summary>
     internal enum TaskbarState

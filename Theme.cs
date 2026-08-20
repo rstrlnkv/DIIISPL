@@ -1,4 +1,4 @@
-// DIIIX — менеджер раскладок мониторов для Windows.
+// DIIISPL — менеджер раскладок мониторов для Windows.
 // Copyright (C) 2026 r.strlnkv
 // Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
 
@@ -8,7 +8,7 @@ using System.Windows.Markup;
 using System.Windows.Media;
 using Microsoft.Win32;
 
-namespace DIIIX
+namespace DIIISPL
 {
     /// <summary>Оформление в духе Windows 11: акцент и светлая/тёмная тема берутся из системы.</summary>
     internal static class Theme

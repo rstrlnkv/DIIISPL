@@ -1,4 +1,4 @@
-// DIIIX — менеджер раскладок мониторов для Windows.
+// DIIISPL — менеджер раскладок мониторов для Windows.
 // Copyright (C) 2026 r.strlnkv
 // Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
 
@@ -10,7 +10,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 
-namespace DIIIX
+namespace DIIISPL
 {
     internal class Item
     {
@@ -63,7 +63,7 @@ namespace DIIIX
 
         public MainWindow()
         {
-            Title = "DIIIX";
+            Title = "DIIISPL";
             Width = 1180;
             Height = 760;
             MinWidth = 960;

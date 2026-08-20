@@ -1,4 +1,4 @@
-// DIIIX — менеджер раскладок мониторов для Windows.
+// DIIISPL — менеджер раскладок мониторов для Windows.
 // Copyright (C) 2026 r.strlnkv
 // Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
 
@@ -9,7 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace DIIIX
+namespace DIIISPL
 {
     /// <summary>Холст раскладки: мониторы перетаскиваются мышью и прилипают друг к другу.</summary>
     internal class MonitorCanvas : Canvas

@@ -1,4 +1,4 @@
-// DIIIX — менеджер раскладок мониторов для Windows.
+// DIIISPL — менеджер раскладок мониторов для Windows.
 // Copyright (C) 2026 r.strlnkv
 // Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
 
@@ -12,12 +12,12 @@ using System.Windows.Media;
 using Microsoft.Win32;
 using Forms = System.Windows.Forms;
 
-namespace DIIIX
+namespace DIIISPL
 {
     internal class App : Application
     {
-        public const string AppName = "DIIIX";
-        public const string AppTitle = "DIIIX";
+        public const string AppName = "DIIISPL";
+        public const string AppTitle = "DIIISPL";
 
         private Forms.NotifyIcon _tray;
         private MainWindow _window;
@@ -29,13 +29,13 @@ namespace DIIIX
         [STAThread]
         private static int Main(string[] args)
         {
-            _showMessage = Native.RegisterWindowMessage("DIIIXShowManager");
+            _showMessage = Native.RegisterWindowMessage("DIIISPLShowManager");
 
             if (args.Length > 0 && args[0].TrimStart('-', '/').ToLowerInvariant() != "tray")
                 return Cli.Run(args);
 
             bool created;
-            _mutex = new Mutex(true, "Local\\DIIIX.SingleInstance", out created);
+            _mutex = new Mutex(true, "Local\\DIIISPL.SingleInstance", out created);
             if (!created)
             {
                 // уже запущено — просто показываем окно работающей копии
@@ -72,8 +72,10 @@ namespace DIIIX
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
             Resources.MergedDictionaries.Add(Theme.Build());
 
-            _messageWindow = new HwndSource(0, 0, 0, 0, 0, "DIIIXMessages", IntPtr.Zero);
+            _messageWindow = new HwndSource(0, 0, 0, 0, 0, "DIIISPLMessages", IntPtr.Zero);
             _messageWindow.AddHook(WndProc);
+
+            AdoptOldAutoStart();
 
             ExplorerTap.RestoreWhenProcessExits = true;   // трей живёт долго — при выходе вернём панель
             // Значок окну не задаём: без него WPF берёт значок самой программы, а там
@@ -305,6 +307,26 @@ namespace DIIIX
 
         // ---------------------------------------------------------------- автозапуск
         private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+        private const string OldAppName = "DIIIX";      // как программа называлась раньше
+
+        /// <summary>
+        /// Убрать запись автозапуска, оставшуюся от прежнего имени: она указывает на файл,
+        /// которого больше нет. Если автозапуск был включён — переносим его на себя, чтобы
+        /// настройка не пропала молча.
+        /// </summary>
+        private static void AdoptOldAutoStart()
+        {
+            try
+            {
+                using (RegistryKey k = Registry.CurrentUser.OpenSubKey(RunKey, true))
+                {
+                    if (k == null || k.GetValue(OldAppName) == null) return;
+                    k.DeleteValue(OldAppName, false);
+                    if (k.GetValue(AppName) == null) AutoStartEnabled = true;
+                }
+            }
+            catch { }
+        }
 
         public static bool AutoStartEnabled
         {

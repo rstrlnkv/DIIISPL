@@ -9,8 +9,8 @@ if not exist "%NETDIR%\csc.exe" (
 set WPF=%NETDIR%\WPF
 
 "%NETDIR%\csc.exe" /nologo /target:winexe /optimize+ /platform:anycpu /codepage:65001 ^
-  /out:"%~dp0DIIIX.exe" ^
-  /win32icon:"%~dp0DIIIX.ico" ^
+  /out:"%~dp0DIIISPL.exe" ^
+  /win32icon:"%~dp0DIIISPL.ico" ^
   /r:System.dll /r:System.Core.dll /r:System.Xml.dll ^
   /r:System.Drawing.dll /r:System.Windows.Forms.dll ^
   /r:"%NETDIR%\System.Xaml.dll" ^
@@ -21,6 +21,6 @@ set WPF=%NETDIR%\WPF
 
 if errorlevel 1 exit /b 1
 
-call "%~dp0installer\sign.cmd" "%~dp0DIIIX.exe" || exit /b 1
+call "%~dp0installer\sign.cmd" "%~dp0DIIISPL.exe" || exit /b 1
 
-echo Готово: %~dp0DIIIX.exe
+echo Готово: %~dp0DIIISPL.exe

@@ -1,8 +1,8 @@
-// DIIIX — менеджер раскладок мониторов для Windows.
+// DIIISPL — менеджер раскладок мониторов для Windows.
 // Copyright (C) 2026 r.strlnkv
 // Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
 //
-// Рисует значок программы и складывает его в многоразмерный DIIIX.ico.
+// Рисует значок программы и складывает его в многоразмерный DIIISPL.ico.
 // Значок хранится в репозитории собранным, но собирается отсюда — чтобы его можно было
 // поправить, не заводя графический редактор и не гадая, чем именно он был нарисован.
 
@@ -13,7 +13,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 
-namespace DIIIX.Tools
+namespace DIIISPL.Tools
 {
     internal static class MakeIcon
     {
@@ -41,7 +41,7 @@ namespace DIIIX.Tools
 
         private static int Main(string[] args)
         {
-            string outPath = args.Length > 0 ? args[0] : "DIIIX.ico";
+            string outPath = args.Length > 0 ? args[0] : "DIIISPL.ico";
             string preview = args.Length > 1 ? args[1] : null;
 
             var frames = new List<Bitmap>();

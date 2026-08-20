@@ -1,8 +1,8 @@
-// DIIIX — журнал отладки для библиотеки, работающей внутри проводника.
-// Copyright (C) 2026 r.strlnkv, GPLv3 (см. LICENSE в корне DIIIX).
+// DIIISPL — журнал отладки для библиотеки, работающей внутри проводника.
+// Copyright (C) 2026 r.strlnkv, GPLv3 (см. LICENSE в корне DIIISPL).
 //
 // Изнутри explorer.exe ни консоли, ни отладчика под рукой нет, поэтому пишем
-// в %TEMP%\diiix-tap.log. Файл открывается на дозапись при каждой строке —
+// в %TEMP%\diiispl-tap.log. Файл открывается на дозапись при каждой строке —
 // медленно, зато переживает падения и не требует состояния.
 
 #pragma once
@@ -11,28 +11,28 @@
 
 // Журнал по умолчанию молчит: он пишется изнутри проводника на каждое изменение
 // XAML-дерева, а это сотни строк за секунду. Включается созданием файла-маркера
-// %TEMP%\diiix-tap-debug — тогда рядом появится diiix-tap.log.
-inline bool DiiixLogEnabled()
+// %TEMP%\diiispl-tap-debug — тогда рядом появится diiispl-tap.log.
+inline bool DiiisplLogEnabled()
 {
 	static int enabled = -1;
 	if (enabled < 0)
 	{
 		wchar_t dir[MAX_PATH] = {};
 		if (!GetTempPathW(MAX_PATH, dir)) { enabled = 0; return false; }
-		std::wstring marker = std::wstring(dir) + L"diiix-tap-debug";
+		std::wstring marker = std::wstring(dir) + L"diiispl-tap-debug";
 		enabled = GetFileAttributesW(marker.c_str()) != INVALID_FILE_ATTRIBUTES ? 1 : 0;
 	}
 	return enabled == 1;
 }
 
-inline void DiiixLog(const std::wstring& text)
+inline void DiiisplLog(const std::wstring& text)
 {
-	if (!DiiixLogEnabled()) return;
+	if (!DiiisplLogEnabled()) return;
 
 	wchar_t dir[MAX_PATH] = {};
 	if (!GetTempPathW(MAX_PATH, dir)) return;
 
-	std::wstring path = std::wstring(dir) + L"diiix-tap.log";
+	std::wstring path = std::wstring(dir) + L"diiispl-tap.log";
 	HANDLE file = CreateFileW(path.c_str(), FILE_APPEND_DATA,
 		FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
 		nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -56,9 +56,9 @@ inline void DiiixLog(const std::wstring& text)
 	CloseHandle(file);
 }
 
-inline void DiiixLogHr(const wchar_t* what, HRESULT hr)
+inline void DiiisplLogHr(const wchar_t* what, HRESULT hr)
 {
 	wchar_t buf[64] = {};
 	swprintf_s(buf, L" = 0x%08lX", static_cast<unsigned long>(hr));
-	DiiixLog(std::wstring(what) + buf);
+	DiiisplLog(std::wstring(what) + buf);
 }

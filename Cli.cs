@@ -1,11 +1,11 @@
-// DIIIX — менеджер раскладок мониторов для Windows.
+// DIIISPL — менеджер раскладок мониторов для Windows.
 // Copyright (C) 2026 r.strlnkv
 // Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
 
 using System;
 using System.Collections.Generic;
 
-namespace DIIIX
+namespace DIIISPL
 {
     internal static class Cli
     {
@@ -40,17 +40,17 @@ namespace DIIIX
         private static int Help()
         {
             Console.WriteLine();
-            Console.WriteLine("DIIIX — раскладки мониторов");
+            Console.WriteLine("DIIISPL — раскладки мониторов");
             Console.WriteLine();
-            Console.WriteLine("  DIIIX.exe                 открыть окно менеджера");
-            Console.WriteLine("  DIIIX.exe /apply \"Имя\"    применить профиль");
-            Console.WriteLine("  DIIIX.exe /save \"Имя\"     записать текущую раскладку в профиль");
-            Console.WriteLine("  DIIIX.exe /list           список профилей");
-            Console.WriteLine("  DIIIX.exe /delete \"Имя\"   удалить профиль");
-            Console.WriteLine("  DIIIX.exe /monitors       что подключено и как опознано");
-            Console.WriteLine("  DIIIX.exe /hdr            состояние HDR на каждом выходе");
-            Console.WriteLine("  DIIIX.exe /taskbar вид [AARRGGBB] [line]   вид панели задач сейчас");
-            Console.WriteLine("  DIIIX.exe /taskbar-state [\"Имя\"]           что видно на экранах и какой вид из этого следует");
+            Console.WriteLine("  DIIISPL.exe                 открыть окно менеджера");
+            Console.WriteLine("  DIIISPL.exe /apply \"Имя\"    применить профиль");
+            Console.WriteLine("  DIIISPL.exe /save \"Имя\"     записать текущую раскладку в профиль");
+            Console.WriteLine("  DIIISPL.exe /list           список профилей");
+            Console.WriteLine("  DIIISPL.exe /delete \"Имя\"   удалить профиль");
+            Console.WriteLine("  DIIISPL.exe /monitors       что подключено и как опознано");
+            Console.WriteLine("  DIIISPL.exe /hdr            состояние HDR на каждом выходе");
+            Console.WriteLine("  DIIISPL.exe /taskbar вид [AARRGGBB] [line]   вид панели задач сейчас");
+            Console.WriteLine("  DIIISPL.exe /taskbar-state [\"Имя\"]           что видно на экранах и какой вид из этого следует");
             return 0;
         }
 

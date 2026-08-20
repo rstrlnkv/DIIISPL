@@ -1,19 +1,19 @@
 @echo off
-rem Сборка установщика DIIIX.msi. Требуется только сеть при первом запуске:
+rem Сборка установщика DIIISPL.msi. Требуется только сеть при первом запуске:
 rem набор WiX подтягивается пакетом, ничего ставить в систему не нужно.
 setlocal
 set HERE=%~dp0
 set ROOT=%HERE%..
 set VERSION=1.0.0
 
-for %%F in ("%ROOT%\DIIIX.exe" "%ROOT%\DIIIX.ico" "%ROOT%\LICENSE" "%ROOT%\README.md") do (
+for %%F in ("%ROOT%\DIIISPL.exe" "%ROOT%\DIIISPL.ico" "%ROOT%\LICENSE" "%ROOT%\README.md") do (
   if not exist %%F (
     echo Нет файла %%F — сначала соберите программу: build.cmd
     exit /b 1
   )
 )
-if not exist "%ROOT%\DIIIX.ExplorerTAP.dll" (
-  echo Нет DIIIX.ExplorerTAP.dll — соберите её: native\build-native.cmd
+if not exist "%ROOT%\DIIISPL.ExplorerTAP.dll" (
+  echo Нет DIIISPL.ExplorerTAP.dll — соберите её: native\build-native.cmd
   exit /b 1
 )
 
@@ -29,9 +29,9 @@ rem может быть запущена — signtool упрётся в заня
 rem то, что лежит в рабочем каталоге.
 echo === Подпись файлов программы ===
 if not exist "%HERE%obj\stage" mkdir "%HERE%obj\stage"
-copy /y "%ROOT%\DIIIX.exe" "%HERE%obj\stage\" >nul || exit /b 1
-copy /y "%ROOT%\DIIIX.ExplorerTAP.dll" "%HERE%obj\stage\" >nul || exit /b 1
-call "%HERE%sign.cmd" "%HERE%obj\stage\DIIIX.exe" "%HERE%obj\stage\DIIIX.ExplorerTAP.dll" || exit /b 1
+copy /y "%ROOT%\DIIISPL.exe" "%HERE%obj\stage\" >nul || exit /b 1
+copy /y "%ROOT%\DIIISPL.ExplorerTAP.dll" "%HERE%obj\stage\" >nul || exit /b 1
+call "%HERE%sign.cmd" "%HERE%obj\stage\DIIISPL.exe" "%HERE%obj\stage\DIIISPL.ExplorerTAP.dll" || exit /b 1
 
 echo === Картинки окон ===
 set NETDIR=%WINDIR%\Microsoft.NET\Framework64\v4.0.30319
@@ -48,7 +48,7 @@ if not exist "%HERE%obj" mkdir "%HERE%obj"
 "%WIX%\candle.exe" -nologo -arch x64 ^
   -dSourceDir="%ROOT%" -dBinDir="%HERE%obj\stage" -dLicenseRtf="%HERE%LICENSE.rtf" -dArtDir="%HERE%obj" ^
   -ext WixUtilExtension -ext WixUIExtension ^
-  -out "%HERE%obj\\" "%HERE%DIIIX.wxs" "%HERE%DIIIXUI.wxs" || exit /b 1
+  -out "%HERE%obj\\" "%HERE%DIIISPL.wxs" "%HERE%DIIISPLUI.wxs" || exit /b 1
 
 rem Отключённые проверки:
 rem   ICE60 — про шрифты в файлах без версии, к нашим файлам не относится;
@@ -59,10 +59,10 @@ rem     в HKLM для него верный — статические пров
   -ext WixUtilExtension -ext WixUIExtension ^
   -cultures:ru-RU ^
   -sice:ICE60 -sice:ICE38 -sice:ICE43 -sice:ICE57 ^
-  -out "%ROOT%\DIIIX-%VERSION%-x64.msi" "%HERE%obj\DIIIX.wixobj" "%HERE%obj\DIIIXUI.wixobj" || exit /b 1
+  -out "%ROOT%\DIIISPL-%VERSION%-x64.msi" "%HERE%obj\DIIISPL.wixobj" "%HERE%obj\DIIISPLUI.wixobj" || exit /b 1
 
 echo === Подпись пакета ===
-call "%HERE%sign.cmd" "%ROOT%\DIIIX-%VERSION%-x64.msi" || exit /b 1
+call "%HERE%sign.cmd" "%ROOT%\DIIISPL-%VERSION%-x64.msi" || exit /b 1
 
 echo.
-echo Готово: %ROOT%\DIIIX-%VERSION%-x64.msi
+echo Готово: %ROOT%\DIIISPL-%VERSION%-x64.msi

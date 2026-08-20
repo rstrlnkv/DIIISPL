@@ -1,4 +1,4 @@
-// DIIIX — менеджер раскладок мониторов для Windows.
+// DIIISPL — менеджер раскладок мониторов для Windows.
 // Copyright (C) 2026 r.strlnkv
 // Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
 
@@ -6,20 +6,56 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace DIIIX
+namespace DIIISPL
 {
     internal static class Store
     {
-        public const string AppFolder = "DIIIX";
+        public const string AppFolder = "DIIISPL";
+
+        /// <summary>Как программа называлась раньше — оттуда переносятся профили.</summary>
+        private const string OldAppFolder = "DIIIX";
 
         public static string DataDir
         {
             get
             {
-                string d = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppFolder);
-                if (!Directory.Exists(d)) Directory.CreateDirectory(d);
+                string root = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                string d = Path.Combine(root, AppFolder);
+                if (!Directory.Exists(d))
+                {
+                    Directory.CreateDirectory(d);
+                    AdoptOldFolder(Path.Combine(root, OldAppFolder), d);
+                }
                 return d;
             }
+        }
+
+        /// <summary>
+        /// Забрать профили из папки прежнего имени. Копируем, а не переносим: если что-то
+        /// пойдёт не так, прежние файлы останутся на месте, и терять будет нечего.
+        /// Делается один раз — при следующем запуске новая папка уже есть.
+        /// </summary>
+        private static void AdoptOldFolder(string from, string to)
+        {
+            try
+            {
+                if (!Directory.Exists(from)) return;
+
+                foreach (string dir in Directory.GetDirectories(from))
+                {
+                    string target = Path.Combine(to, Path.GetFileName(dir));
+                    if (!Directory.Exists(target)) Directory.CreateDirectory(target);
+                    foreach (string file in Directory.GetFiles(dir))
+                        File.Copy(file, Path.Combine(target, Path.GetFileName(file)), true);
+                }
+                foreach (string file in Directory.GetFiles(from))
+                {
+                    // журнал ошибок прежней версии переносить незачем
+                    if (string.Equals(Path.GetFileName(file), "error.log", StringComparison.OrdinalIgnoreCase)) continue;
+                    File.Copy(file, Path.Combine(to, Path.GetFileName(file)), true);
+                }
+            }
+            catch { /* не смогли — программа просто начнёт с пустого списка профилей */ }
         }
 
         public static string ProfilesDir
