@@ -9,7 +9,7 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
      xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
 
-  <?define Version = "1.0.0" ?>
+  <?define Version = "1.0.1" ?>
 
   <Product Id="*"
            Name="DIIISPL"

@@ -4,7 +4,7 @@ rem набор WiX подтягивается пакетом, ничего ст�
 setlocal
 set HERE=%~dp0
 set ROOT=%HERE%..
-set VERSION=1.0.0
+set VERSION=1.0.1
 
 for %%F in ("%ROOT%\DIIISPL.exe" "%ROOT%\DIIISPL.ico" "%ROOT%\LICENSE" "%ROOT%\README.md") do (
   if not exist %%F (

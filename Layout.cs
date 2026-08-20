@@ -275,7 +275,8 @@ namespace DIIISPL
                 else if (section == "taskbar")
                 {
                     TaskbarState state;
-                    if (TaskbarSettings.TryParseKey(key, out state))
+                    if (key == "version") layout.Taskbar.Versioned = true;
+                    else if (TaskbarSettings.TryParseKey(key, out state))
                         layout.Taskbar.States[state] = TaskbarAppearance.Parse(val);
                 }
                 else if (section == "display" && cur != null)
@@ -299,6 +300,7 @@ namespace DIIISPL
             }
             if (string.IsNullOrEmpty(layout.Name)) layout.Name = Path.GetFileNameWithoutExtension(file);
             layout.DropLoneCloneGroups();
+            if (!layout.Taskbar.Versioned) layout.Taskbar.DropUntouchedSpecialCases();
             return layout;
         }
 

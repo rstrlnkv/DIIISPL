@@ -63,8 +63,14 @@ namespace DIIISPL
     /// </summary>
     internal class TaskbarSettings
     {
+        /// <summary>Номер формата: по нему видно, писал файл нынешний экран настроек или прежний.</summary>
+        public const int Format = 2;
+
         public readonly Dictionary<TaskbarState, TaskbarAppearance> States =
             new Dictionary<TaskbarState, TaskbarAppearance>();
+
+        /// <summary>Файл записан нынешним форматом — чистить особые случаи не нужно.</summary>
+        public bool Versioned;
 
         /// <summary>Приоритет проверки: от самого частного к общему.</summary>
         public static readonly TaskbarState[] Order =
@@ -102,8 +108,29 @@ namespace DIIISPL
         public TaskbarSettings Copy()
         {
             var copy = new TaskbarSettings();
+            copy.Versioned = Versioned;
             foreach (var kv in States) copy.States[kv.Key] = kv.Value.Copy();
             return copy;
+        }
+
+        /// <summary>
+        /// Прежний экран настроек показывал семь равноправных строк, и в каждой по умолчанию
+        /// стояло «Как в системе». Строку, до которой не дошли руки, это превращало в приказ:
+        /// «в этом случае верни панель Windows». Поэтому у профиля с прозрачной панелью она
+        /// становилась обычной, стоило развернуть окно или открыть «Пуск», — вид, который
+        /// никто не выбирал. Нынешний экран для этого держит «Как обычно», так что все
+        /// нетронутые случаи переводим в него — по одному разу, у файлов без номера формата.
+        /// Осознанный выбор «Как в системе» так тоже пропадёт, но задать его снова —
+        /// одна строка в настройках, а разбираться, почему панель живёт своей жизнью, дольше.
+        /// </summary>
+        public void DropUntouchedSpecialCases()
+        {
+            foreach (TaskbarState s in Order)
+            {
+                if (s == TaskbarState.Desktop) continue;   // обычный вид, он и есть запасной
+                var a = States[s];
+                if (a.Enabled && a.Accent == "default" && a.Color == 0) a.Enabled = false;
+            }
         }
 
         public static string Describe(TaskbarState state)
@@ -150,6 +177,7 @@ namespace DIIISPL
         public List<string> Serialize()
         {
             var lines = new List<string>();
+            lines.Add("version = " + Format);
             foreach (TaskbarState s in Order)
                 lines.Add(Key(s) + " = " + States[s].Serialize());
             return lines;
