@@ -35,6 +35,21 @@ namespace DIIISPL
 
         private Mutex _mutex;
         private bool _held;
+        private bool _forceFullPause;
+
+        /// <summary>
+        /// Пропустили ли нас. Ложь означает «не пропустили» — трогать дисплеи нельзя.
+        ///
+        /// Раньше `Enter` возвращал затвор в любом случае, а `_held` не читал никто.
+        /// По истечении ожидания защиты не оставалось вовсе — ни очереди, ни паузы:
+        /// отметка ставится по окончании работы, значит пока сосед перестраивает
+        /// дисплеи, в файле лежит конец прошлого применения, и пауза пропускала
+        /// без задержки. Это ровно та нагрузка, ради которой затвор и писался.
+        /// </summary>
+        public bool Held
+        {
+            get { return _mutex == null || _held; }
+        }
 
         /// <summary>Встать в очередь. Возвращает затвор, который надо закрыть.</summary>
         public static ApplyGate Enter()
@@ -45,7 +60,15 @@ namespace DIIISPL
                 bool created;
                 gate._mutex = new Mutex(false, MutexName, out created);
                 try { gate._held = gate._mutex.WaitOne(MaxWaitMs); }
-                catch (AbandonedMutexException) { gate._held = true; }   // сосед умер, не отпустив — теперь наш
+                catch (AbandonedMutexException)
+                {
+                    // Сосед умер, не отпустив: владение перешло к нам, и отпустить его
+                    // обязаны мы. Но умер он посреди перестроения, а значит отметку
+                    // времени поставить не успел — верить ей нельзя, и паузу надо
+                    // выдержать целиком. Это тот момент, когда она нужнее всего.
+                    gate._held = true;
+                    gate._forceFullPause = true;
+                }
             }
             catch
             {
@@ -58,7 +81,25 @@ namespace DIIISPL
         /// <summary>Выдержать паузу с прошлого перестроения. Звать перед тем, как трогать дисплеи.</summary>
         public void Wait()
         {
-            double since = (DateTime.UtcNow - Read()).TotalMilliseconds;
+            if (_forceFullPause)
+            {
+                _forceFullPause = false;
+                Thread.Sleep(MinIntervalMs);
+                return;
+            }
+
+            DateTime last = Read();
+            if (last == Unknown)
+            {
+                // Отметку не удалось прочитать — например, сосед как раз её дописывал.
+                // Не знать, когда было прошлое перестроение, значит ждать полностью:
+                // прежде здесь получался ноль паузы ровно в тот миг, когда сосед
+                // заканчивал работу, то есть когда следующий как раз просыпался.
+                Thread.Sleep(MinIntervalMs);
+                return;
+            }
+
+            double since = (DateTime.UtcNow - last).TotalMilliseconds;
             if (since >= 0 && since < MinIntervalMs)
                 Thread.Sleep((int)(MinIntervalMs - since));
         }
@@ -87,6 +128,9 @@ namespace DIIISPL
         // ------------------------------------------------------------------ отметка
         private static DateTime _fallback = DateTime.MinValue;
 
+        /// <summary>«Когда было прошлое перестроение — неизвестно». Значит ждать полностью.</summary>
+        private static readonly DateTime Unknown = DateTime.MinValue;
+
         private static string StampPath
         {
             get { return Path.Combine(Store.DataDir, "last-apply"); }
@@ -96,22 +140,30 @@ namespace DIIISPL
         {
             try
             {
-                if (File.Exists(StampPath))
-                {
-                    long ticks;
-                    if (long.TryParse(File.ReadAllText(StampPath).Trim(),
-                                      NumberStyles.Integer, CultureInfo.InvariantCulture, out ticks))
-                    {
-                        var stamped = new DateTime(ticks, DateTimeKind.Utc);
-                        // Часы могли перевести назад: отметка из будущего означает,
-                        // что верить ей нельзя, — тогда просто ждём полную паузу.
-                        if (stamped > DateTime.UtcNow) return DateTime.UtcNow;
-                        return stamped > _fallback ? stamped : _fallback;
-                    }
-                }
+                if (!File.Exists(StampPath)) return _fallback;
+
+                // Читаем, разрешая соседу писать в тот же миг. Прежде файл
+                // открывался так, что чужая запись делала чтение невозможным —
+                // и происходило это ровно в конце чужого применения, то есть
+                // когда следующий как раз просыпался и пауза была нужнее всего.
+                string text;
+                using (var stream = new FileStream(StampPath, FileMode.Open, FileAccess.Read,
+                                                   FileShare.ReadWrite | FileShare.Delete))
+                using (var reader = new StreamReader(stream))
+                    text = reader.ReadToEnd();
+
+                long ticks;
+                if (!long.TryParse(text.Trim(), NumberStyles.Integer,
+                                   CultureInfo.InvariantCulture, out ticks))
+                    return Unknown;      // мусор или обрывок недописанного — не знаем
+
+                var stamped = new DateTime(ticks, DateTimeKind.Utc);
+                // Часы могли перевести назад: отметка из будущего означает,
+                // что верить ей нельзя, — тогда просто ждём полную паузу.
+                if (stamped > DateTime.UtcNow) return Unknown;
+                return stamped > _fallback ? stamped : _fallback;
             }
-            catch { }
-            return _fallback;
+            catch { return Unknown; }
         }
     }
 }

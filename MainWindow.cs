@@ -29,7 +29,9 @@ namespace DIIISPL
         private readonly TextBlock _nameHint = new TextBlock();
         private readonly TextBox _nameBox = new TextBox();
         private readonly Button _hotkeyButton = new Button();
-        private readonly Button _taskbarButton = new Button();
+#if DEV
+        private readonly Button _taskbarButton = new Button();   // только в сборках Dev
+#endif
         private readonly Button _applyButton = new Button();
         private readonly Button _saveButton = new Button();
         private readonly MonitorCanvas _canvas = new MonitorCanvas();
@@ -79,8 +81,8 @@ namespace DIIISPL
             PreviewKeyDown += OnPreviewKeyDown;
             Closing += delegate(object s, System.ComponentModel.CancelEventArgs e)
             {
-                if (_dirty) AskToSave();
-                e.Cancel = true;
+                e.Cancel = true;                  // окно не закрывается, а прячется в трей
+                if (_dirty && !AskToSave()) return;
                 Hide();
             };
 
@@ -632,7 +634,12 @@ namespace DIIISPL
         {
             // Раньше правки сохранялись молча при любом переключении — так профиль можно было
             // перезаписать, сам того не заметив. Теперь решение всегда за пользователем.
-            if (_dirty && _current != null && !ReferenceEquals(layout, _current)) AskToSave();
+            if (_dirty && _current != null && !ReferenceEquals(layout, _current))
+            {
+                // Передумали — возвращаем выделение на прежний профиль, иначе
+                // список показывал бы один, а на холсте остался бы другой.
+                if (!AskToSave()) { SelectListItemFor(_current); return; }
+            }
             _current = layout;
             _currentOriginalName = layout.Name;
             _dirty = false;
@@ -719,10 +726,14 @@ namespace DIIISPL
             Raise(ProfilesChanged);
         }
 
-        /// <summary>Спросить про несохранённые правки — молча перезаписывать профиль нельзя.</summary>
-        private void AskToSave()
+        /// <summary>
+        /// Спросить про несохранённые правки — молча перезаписывать профиль нельзя.
+        /// Возвращает, можно ли продолжать начатое: Esc означает «я передумал»,
+        /// и тогда ни переключаться на другой профиль, ни прятать окно не надо.
+        /// </summary>
+        private bool AskToSave()
         {
-            if (_current == null || !_dirty) return;
+            if (_current == null || !_dirty) return true;
             // Вторая кнопка называется «Не сохранять», а не «Отмена». Диалог
             // появляется при закрытии окна и при переходе на другой профиль — там
             // «Отмена» читается как «остаться и ничего не менять», а делала она
@@ -730,8 +741,35 @@ namespace DIIISPL
             var dialog = new ConfirmDialog("Сохранить правки в «" + _current.Name + "»?",
                 "Иначе они пропадут.", "Сохранить", "Не сохранять");
             dialog.Owner = IsVisible ? this : null;
-            if (dialog.ShowDialog() == true) SaveCurrent(false);
-            else _dirty = false;
+
+            bool? answer = dialog.ShowDialog();
+            if (answer == null) return false;            // Esc — остаёмся как были
+            if (answer == true) SaveCurrent(false);
+            else DiscardEdits();
+            return true;
+        }
+
+        /// <summary>
+        /// Вернуть профиль к тому, что лежит на диске.
+        ///
+        /// Гасить один флаг было мало: правка оставалась в объекте, и программа
+        /// считала, что сохранять нечего, показывая при этом изменённое. А кнопка
+        /// «Применить» начинается с `SaveCurrent`, то есть **записала бы выброшенную
+        /// правку на диск и повернула настоящий монитор**. Выбросить — значит
+        /// перечитать, а не забыть.
+        /// </summary>
+        private void DiscardEdits()
+        {
+            _dirty = false;
+            if (_current == null) return;
+
+            Layout fresh = Store.LoadByName(_currentOriginalName);
+            if (fresh == null) return;   // на диске его ещё нет — возвращать не к чему
+
+            _current.RestoreFrom(fresh);
+            _canvas.Rebuild();
+            UpdateHeader();
+            UpdateProperties();
         }
 
         private void SaveCurrent(bool report)
@@ -799,6 +837,16 @@ namespace DIIISPL
                 string name = _nameBox.Text.Trim();
                 if (name.Length > 0 && name != _current.Name)
                 {
+                    // Имя, уже занятое другим профилем, не берём. Прежде брали:
+                    // Store.Rename удалял свой файл и писал поверх чужого — тёзка
+                    // исчезал молча, вместе со всей раскладкой.
+                    string clash = Store.NameInUse(name, _currentOriginalName);
+                    if (clash != null)
+                    {
+                        UpdateStatus("Профиль «" + clash + "» уже есть — придумайте другое имя.");
+                        UpdateHeader();
+                        return;
+                    }
                     _current.Name = name;
                     SaveCurrent(false);
                     RefreshProfileList();
@@ -807,11 +855,6 @@ namespace DIIISPL
             }
             UpdateHeader();
         }
-
-#if DEV
-        /// <summary>Открыть экран настроек панели задач для текущего профиля.</summary>
-        public void ShowTaskbarSettings() { OpenTaskbarSettings(); }
-#endif
 
         /// <summary>Окно «О программе». Открывается и отсюда, и из меню значка в трее.</summary>
         public void ShowAbout()
@@ -1273,16 +1316,23 @@ namespace DIIISPL
             string combo = Hotkey.Describe(Keyboard.Modifiers, key);
             if (combo == null) { UpdateStatus("Такую клавишу назначить нельзя — выберите другую."); return; }
 
+            // Проверяем **до** записи. Прежде сочетание сохранялось сразу, а
+            // разбор шёл после и молча: одиночная буква уезжала в профиль, и
+            // программа забирала её у всей системы, ничего об этом не сказав.
+            uint mods, vk; string err;
+            if (!Hotkey.TryParse(combo, out mods, out vk, out err))
+            {
+                UpdateStatus(combo + " — " + err + ". Нажмите другое сочетание или Esc.");
+                return;
+            }
+
             _capturingHotkey = false;
             _current.Hotkey = combo;
             MarkDirty();
             SaveCurrent(false);
             UpdateHeader();
             RefreshProfileList();
-
-            uint mods, vk; string err;
-            if (Hotkey.TryParse(combo, out mods, out vk, out err))
-                UpdateStatus("Сочетание " + combo + " назначено профилю «" + _current.Name + "».");
+            UpdateStatus("Сочетание " + combo + " назначено профилю «" + _current.Name + "».");
         }
     }
 }

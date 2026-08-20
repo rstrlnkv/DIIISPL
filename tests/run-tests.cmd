@@ -53,4 +53,11 @@ echo.
 echo Прогон займёт около пяти минут, экраны будут переключаться.
 echo Отчёт также пишется в tests\selftest-log.txt
 echo.
-"%~dp0selftest.exe" %*
+"%~dp0selftest.exe" --agreed %*
+set CODE=%ERRORLEVEL%
+
+rem Убираем за собой: собранный selftest.exe — это сорок настоящих переключений
+rem мониторов в одном файле. Оставленный лежать, он ждёт двойного щелчка, и
+rem спрашивать согласия будет уже некому. Он же откажется работать без --agreed.
+del "%~dp0selftest.exe" >nul 2>&1
+exit /b %CODE%

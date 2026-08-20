@@ -75,7 +75,6 @@ namespace DIIISPL
             cancel.Content = cancelText;
             cancel.MinWidth = 110;
             cancel.Margin = new Thickness(0, 0, 8, 0);
-            cancel.IsCancel = true;
             cancel.Click += delegate { DialogResult = false; };
             buttons.Children.Add(cancel);
 
@@ -90,6 +89,18 @@ namespace DIIISPL
             stack.Children.Add(buttons);
             card.Child = stack;
             Content = card;
+
+            // Esc — это не вторая кнопка, а «я передумал спрашивать». Раньше он был
+            // на ней (IsCancel), и в диалоге сохранения нажатие Esc выбрасывало
+            // правки — то есть делало ровно то, чего им хотели избежать. Теперь
+            // окно закрывается, не назвав ответа: ShowDialog возвращает null, и
+            // тот, кто спрашивал, решает сам. Для «Удалить?» это по-прежнему отказ.
+            PreviewKeyDown += delegate(object s, KeyEventArgs e)
+            {
+                if (e.Key != Key.Escape) return;
+                e.Handled = true;
+                Close();
+            };
 
             MouseLeftButtonDown += delegate(object s, MouseButtonEventArgs e)
             {

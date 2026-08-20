@@ -490,6 +490,8 @@ namespace DIIISPL
         /// <summary>Подпись цела, но корень сертификата в системе не установлен.</summary>
         public const int CERT_E_UNTRUSTEDROOT = unchecked((int)0x800B0109);
         public const int CERT_E_CHAINING = unchecked((int)0x800B010A);
+        /// <summary>Срок сертификата вышел. Подпись цела — просто календарь ушёл вперёд.</summary>
+        public const int CERT_E_EXPIRED = unchecked((int)0x800B0101);
         /// <summary>Содержимое файла не совпадает с подписью — файл изменён после подписания.</summary>
         public const int TRUST_E_BAD_DIGEST = unchecked((int)0x80096010);
         public const int TRUST_E_NOSIGNATURE = unchecked((int)0x800B0100);

@@ -77,7 +77,55 @@ namespace DIIISPL
             foreach (char bad in Path.GetInvalidFileNameChars())
                 for (int i = 0; i < chars.Length; i++) if (chars[i] == bad) chars[i] = '_';
             string s = new string(chars).Trim();
-            return s.Length == 0 ? "profile" : s;
+            if (s.Length == 0) return "profile";
+
+            // Имена устройств DOS заняты навсегда и на любом расширении: файла
+            // «CON.layout» не бывает — попытка создать его кончается ошибкой прямо
+            // в момент сохранения. Профиль с таким именем создать никто не мешает,
+            // поэтому уводим имя файла в сторону, а имя профиля внутри файла
+            // остаётся тем, которое выбрал человек.
+            if (IsReservedName(s)) return "_" + s;
+            return s;
+        }
+
+        private static readonly string[] ReservedNames =
+        {
+            "CON", "PRN", "AUX", "NUL",
+            "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+            "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+        };
+
+        private static bool IsReservedName(string s)
+        {
+            foreach (string bad in ReservedNames)
+                if (string.Equals(s, bad, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Занято ли имя другим профилем. Возвращает его имя или null.
+        ///
+        /// Сравниваем не только имена, но и файлы, в которые они лягут: «Дом/Работа»
+        /// и «Дом_Работа» — разные имена и один и тот же «Дом_Работа.layout».
+        /// Сохранение второго молча затирало первый.
+        /// </summary>
+        public static string NameInUse(string name, string exceptName)
+        {
+            return NameInUse(LoadAll(), name, exceptName);
+        }
+
+        private static string NameInUse(List<Layout> all, string name, string exceptName)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            string file = Sanitize(name);
+            foreach (var l in all)
+            {
+                if (exceptName != null &&
+                    string.Equals(l.Name, exceptName, StringComparison.CurrentCultureIgnoreCase)) continue;
+                if (string.Equals(l.Name, name, StringComparison.CurrentCultureIgnoreCase)) return l.Name;
+                if (string.Equals(Sanitize(l.Name), file, StringComparison.OrdinalIgnoreCase)) return l.Name;
+            }
+            return null;
         }
 
         public static List<Layout> LoadAll()
@@ -132,13 +180,14 @@ namespace DIIISPL
 
         public static string UniqueName(string baseName)
         {
-            var taken = new List<string>();
-            foreach (var l in LoadAll()) taken.Add(l.Name.ToLowerInvariant());
-            if (!taken.Contains(baseName.ToLowerInvariant())) return baseName;
+            // Список читаем один раз: перебор ста имён со чтением всех файлов на
+            // каждом шаге — это сотня обходов папки ради одного нового профиля.
+            var all = LoadAll();
+            if (NameInUse(all, baseName, null) == null) return baseName;
             for (int i = 2; i < 100; i++)
             {
                 string candidate = baseName + " " + i;
-                if (!taken.Contains(candidate.ToLowerInvariant())) return candidate;
+                if (NameInUse(all, candidate, null) == null) return candidate;
             }
             return baseName + " " + Guid.NewGuid().ToString("N").Substring(0, 4);
         }

@@ -19,9 +19,15 @@ if not defined CHANNEL set CHANNEL=%DIIISPL_CHANNEL%
 if /i "%CHANNEL%"=="dev" (set CHANNEL=dev) else (set CHANNEL=stable)
 echo === Пакет канала %CHANNEL% ===
 
-for %%F in ("%ROOT%\DIIISPL.exe" "%ROOT%\DIIISPL.ico" "%ROOT%\LICENSE" "%ROOT%\README.md") do (
+if not exist "%ROOT%\DIIISPL.exe" (
+  echo Нет DIIISPL.exe — сначала соберите программу: build.cmd %CHANNEL%
+  exit /b 1
+)
+rem Эти три собирать нечем — они просто лежат в репозитории. Прежний совет
+rem «соберите программу» отправлял человека делать то, что не помогает.
+for %%F in ("%ROOT%\DIIISPL.ico" "%ROOT%\LICENSE" "%ROOT%\README.md") do (
   if not exist %%F (
-    echo Нет файла %%F — сначала соберите программу: build.cmd
+    echo Нет файла %%F — он должен лежать в корне репозитория.
     exit /b 1
   )
 )
@@ -79,10 +85,10 @@ rem     в HKLM для него верный — статические пров
   -ext WixUtilExtension -ext WixUIExtension ^
   -cultures:ru-RU ^
   -sice:ICE60 -sice:ICE38 -sice:ICE43 -sice:ICE57 ^
-  -out "%ROOT%\DIIISPL-%VERSION%-x64.msi" "%HERE%obj\DIIISPL.wixobj" "%HERE%obj\DIIISPLUI.wixobj" || exit /b 1
+  -out "%ROOT%\DIIISPL-%VERSION%-%CHANNEL%-x64.msi" "%HERE%obj\DIIISPL.wixobj" "%HERE%obj\DIIISPLUI.wixobj" || exit /b 1
 
 echo === Подпись пакета ===
-call "%HERE%sign.cmd" "%ROOT%\DIIISPL-%VERSION%-x64.msi" || exit /b 1
+call "%HERE%sign.cmd" "%ROOT%\DIIISPL-%VERSION%-%CHANNEL%-x64.msi" || exit /b 1
 
 echo.
-echo Готово: %ROOT%\DIIISPL-%VERSION%-x64.msi
+echo Готово: %ROOT%\DIIISPL-%VERSION%-%CHANNEL%-x64.msi

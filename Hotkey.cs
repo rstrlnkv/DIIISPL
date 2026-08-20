@@ -148,8 +148,32 @@ namespace DIIISPL
             if (keyPart == "+") keyPart = "Plus";
             if (!Keys.TryGetValue(keyPart, out vk)) { error = "неизвестная клавиша «" + keyPart + "»"; return false; }
 
+            // Клавиша без приставки — это клавиша, отобранная у всей системы.
+            // Назначив профилю «A», пользователь перестал бы набирать эту букву
+            // где угодно, пока программа работает: RegisterHotKey забирает нажатие
+            // до того, как оно дойдёт до окна, в котором печатают. «Shift+A» так же
+            // уносит заглавную. Приставкой считаем только Ctrl, Alt и Win; Shift
+            // сам по себе ничего не спасает.
+            if ((modifiers & (MOD_CONTROL | MOD_ALT | MOD_WIN)) == 0 && !StandaloneSafe(vk))
+            {
+                error = "добавьте Ctrl, Alt или Win — иначе клавиша перестанет работать в других программах";
+                return false;
+            }
+
             modifiers |= MOD_NOREPEAT;
             return true;
+        }
+
+        /// <summary>
+        /// Клавиши, которые можно занять целиком: ими ничего не набирают и в
+        /// обычной работе их не нажимают. F13…F24 на большинстве клавиатур вообще
+        /// нет физически — их шлют макросы и дополнительные ряды.
+        /// </summary>
+        private static bool StandaloneSafe(uint vk)
+        {
+            if (vk >= 0x7C && vk <= 0x87) return true;   // F13…F24
+            return vk == 0x13                            // Pause
+                || vk == 0x91;                           // ScrollLock
         }
     }
 }

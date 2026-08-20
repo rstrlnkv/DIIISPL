@@ -228,11 +228,11 @@ namespace DIIISPL
             _window.Topmost = false;
         }
 
+#if DEV
         /// <summary>
         /// При запуске подхватываем вид панели того профиля, который сейчас применён:
         /// иначе после перезагрузки панель осталась бы системной до первого переключения.
         /// </summary>
-#if DEV
         private void StartTaskbarForActiveProfile()
         {
             if (!ExplorerTap.Available) return;

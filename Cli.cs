@@ -94,8 +94,8 @@ namespace DIIISPL
             return 0;
         }
 
-        /// <summary>Что программа видит на экранах и какой вид панели из этого следует.</summary>
 #if DEV
+        /// <summary>Что программа видит на экранах и какой вид панели из этого следует.</summary>
         private static int DumpTaskbarState(string[] args)
         {
             Console.WriteLine();
@@ -239,8 +239,16 @@ namespace DIIISPL
         {
             if (args.Length < 2) { Console.WriteLine("Укажите имя профиля."); return 2; }
             var layout = Layout.FromCurrent(args[1]);
+
+            // Сохранение поверх существующего профиля переснимает **раскладку**, а не
+            // весь профиль. Прежде FromCurrent строил чистый объект и Store.Save писал
+            // им поверх файла: одна команда молча уносила и назначенное сочетание
+            // клавиш, и место в списке, и секцию вида панели задач.
+            var existing = Store.LoadByName(args[1]);
+            if (existing != null) layout.AdoptSettingsFrom(existing);
+
             Store.Save(layout);
-            Console.WriteLine("Сохранено: " + layout.Name);
+            Console.WriteLine((existing != null ? "Переснято: " : "Сохранено: ") + layout.Name);
             return 0;
         }
 

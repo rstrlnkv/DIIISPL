@@ -69,7 +69,8 @@ namespace DIIISPL
                 {
                     string v = FileVersionInfo.GetVersionInfo(
                         Assembly.GetExecutingAssembly().Location).FileVersion;
-                    return ParseVersion(v);
+                    Version parsed = ParseVersion(v);
+                    return parsed != null ? parsed : new Version(0, 0, 0, 0);
                 }
                 catch { return new Version(0, 0, 0, 0); }
             }
@@ -112,8 +113,12 @@ namespace DIIISPL
                     if (best == null || r.Version > best.Version) best = r;
                 }
 
-                if (best == null) { error = "выпусков пока нет"; return null; }
+                // Отметку ставим и тогда, когда подходящего выпуска не нашлось:
+                // связь была, ответ получен — проверка состоялась. Прежде она
+                // ставилась только при находке, и на пустом канале строка «когда
+                // проверяли» не менялась никогда.
                 Settings.LastCheck = DateTime.UtcNow;
+                if (best == null) { error = "выпусков пока нет"; return null; }
                 return best.Version > Current ? best : null;
             }
             catch (WebException ex)
@@ -193,11 +198,22 @@ namespace DIIISPL
                 // и запись идёт до проверки подписи.
                 path = Path.Combine(dir, Path.GetFileName(release.FileName));
 
+                // Адрес приходит из ответа GitHub, и схему в нём никто не обещал.
+                // Подпись всё равно не пропустит чужое, но качать по file:// с сетевой
+                // шары или открытым текстом по http — не то, чего мы просили.
+                Uri url;
+                if (!Uri.TryCreate(release.FileUrl, UriKind.Absolute, out url) ||
+                    url.Scheme != Uri.UriSchemeHttps)
+                {
+                    error = "ссылка на установщик ведёт не туда, куда должна";
+                    return null;
+                }
+
                 Prepare();
                 using (var client = new WebClient())
                 {
                     client.Headers.Add("User-Agent", Repo);
-                    client.DownloadFile(release.FileUrl, path);
+                    client.DownloadFile(url, path);
                 }
 
                 string wrong = SignatureProblem(path);
@@ -215,10 +231,13 @@ namespace DIIISPL
                 error = "не удалось скачать установщик";
                 return null;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
+                // Системное сообщение здесь не помогает: его читают в окне
+                // «О программе», и сделать с ним нечего. Говорим о деле —
+                // что не получилось и куда смотреть.
                 Forget(path);
-                error = ex.Message;
+                error = "не удалось сохранить установщик — проверьте место на диске";
                 return null;
             }
         }
@@ -241,12 +260,19 @@ namespace DIIISPL
             // честно об этом говорит. Для нас это не отказ: доверие мы берём не из
             // цепочки, а из отпечатка ниже. Отвергаем всё остальное — и в первую
             // очередь несовпадение содержимого с подписью.
+            //
+            // Истёкший срок сертификата тоже не отказ. Подпись ставится с меткой
+            // времени, поэтому старый выпуск остаётся действительным и после
+            // истечения; но если метку когда-нибудь не поставят, все прошлые
+            // сборки в один день перестанут ставиться — а календарь не улика.
+            // Подмену содержимого ловит не срок, а отдельный вердикт TRUST_E_BAD_DIGEST.
             if (verdict != 0 &&
                 verdict != Native.CERT_E_UNTRUSTEDROOT &&
-                verdict != Native.CERT_E_CHAINING)
+                verdict != Native.CERT_E_CHAINING &&
+                verdict != Native.CERT_E_EXPIRED)
             {
                 if (verdict == Native.TRUST_E_BAD_DIGEST)
-                    return "установщик изменён после подписания — ставить его нельзя";
+                    return "файл изменён после подписания — скачайте выпуск заново";
 
                 // Замерено на испорченных файлах: и у пакета, и у программы система
                 // отвечает не «содержимое не совпадает», а «подписи нет» — при том что
@@ -254,18 +280,18 @@ namespace DIIISPL
                 // хеша. Различить «не подписан» и «испорчен» этим вызовом нельзя,
                 // поэтому текст покрывает оба случая, а не выбирает наугад.
                 if (verdict == Native.TRUST_E_NOSIGNATURE)
-                    return "у установщика нет действительной подписи — он не подписан или повреждён";
+                    return "у установщика нет подписи — скачайте выпуск заново";
 
-                return "подпись установщика не прошла проверку — ставить его нельзя";
+                return "подпись установщика не прошла проверку — скачайте выпуск заново";
             }
 
             // Потом личность: тот ли это ключ.
             X509Certificate2 cert;
             try { cert = new X509Certificate2(X509Certificate.CreateFromSignedFile(path)); }
-            catch { return "установщик не подписан — ставить его так нельзя"; }
+            catch { return "у установщика нет подписи — скачайте выпуск заново"; }
 
             if (!string.Equals(cert.Thumbprint, SignerThumbprint, StringComparison.OrdinalIgnoreCase))
-                return "установщик подписан чужим сертификатом — ставить его нельзя";
+                return "установщик подписан чужим ключом. Берите пакет только со страницы выпусков DIIISPL";
 
             return null;
         }
@@ -279,9 +305,11 @@ namespace DIIISPL
 
             IntPtr filePtr = Marshal.AllocHGlobal((int)file.cbStruct);
             IntPtr dataPtr = IntPtr.Zero;
+            bool fileWritten = false, dataWritten = false;
             try
             {
                 Marshal.StructureToPtr(file, filePtr, false);
+                fileWritten = true;
 
                 var data = new Native.WINTRUST_DATA();
                 data.cbStruct = (uint)Marshal.SizeOf(typeof(Native.WINTRUST_DATA));
@@ -294,6 +322,7 @@ namespace DIIISPL
 
                 dataPtr = Marshal.AllocHGlobal((int)data.cbStruct);
                 Marshal.StructureToPtr(data, dataPtr, false);
+                dataWritten = true;
 
                 Guid action = Native.WINTRUST_ACTION_GENERIC_VERIFY_V2;
                 int result = Native.WinVerifyTrust(IntPtr.Zero, ref action, dataPtr);
@@ -301,7 +330,7 @@ namespace DIIISPL
                 // Закрыть состояние обязательно, иначе течёт память провайдера.
                 data = (Native.WINTRUST_DATA)Marshal.PtrToStructure(dataPtr, typeof(Native.WINTRUST_DATA));
                 data.dwStateAction = Native.WTD_STATEACTION_CLOSE;
-                Marshal.StructureToPtr(data, dataPtr, false);
+                Marshal.StructureToPtr(data, dataPtr, true);
                 Native.WinVerifyTrust(IntPtr.Zero, ref action, dataPtr);
 
                 return result;
@@ -309,7 +338,16 @@ namespace DIIISPL
             catch { return Native.TRUST_E_NOSIGNATURE; }   // не смогли проверить — считаем, что не прошло
             finally
             {
-                if (dataPtr != IntPtr.Zero) Marshal.FreeHGlobal(dataPtr);
+                // Освободить память под структурой мало. Путь к файлу в ней —
+                // строка, и StructureToPtr отводит под неё отдельный кусок;
+                // FreeHGlobal о нём не знает и оставляет его висеть. Утечка
+                // маленькая, но при каждой проверке обновлений.
+                if (dataPtr != IntPtr.Zero)
+                {
+                    if (dataWritten) Marshal.DestroyStructure(dataPtr, typeof(Native.WINTRUST_DATA));
+                    Marshal.FreeHGlobal(dataPtr);
+                }
+                if (fileWritten) Marshal.DestroyStructure(filePtr, typeof(Native.WINTRUST_FILE_INFO));
                 Marshal.FreeHGlobal(filePtr);
             }
         }
@@ -330,15 +368,21 @@ namespace DIIISPL
             error = null;
             try
             {
-                var start = new ProcessStartInfo("msiexec.exe");
+                // Полный путь обязателен. По голому имени ShellExecute ищет и в текущем
+                // каталоге тоже, а он у программы бывает чужим — из «Загрузок», из
+                // консоли, из автозапуска. Подставленный туда msiexec.exe получил бы
+                // уже скачанный и проверенный пакет в аргументах и полное доверие
+                // человека к происходящему.
+                var start = new ProcessStartInfo(
+                    Path.Combine(Environment.SystemDirectory, "msiexec.exe"));
                 start.Arguments = "/i \"" + msiPath + "\" /qb /norestart";
                 start.UseShellExecute = true;
                 Process.Start(start);
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                error = ex.Message;
+                error = "не удалось запустить установщик — откройте скачанный пакет вручную";
                 return false;
             }
         }
@@ -389,8 +433,12 @@ namespace DIIISPL
                 if (!int.TryParse(p, NumberStyles.Integer, CultureInfo.InvariantCulture, out n)) break;
                 numbers.Add(n);
             }
-            while (numbers.Count < 4) numbers.Add(0);
+            // Спрашивать, есть ли числа, надо до заполнения нулями, а не после:
+            // прежде строка сначала добавляла четыре нуля, и ответ был всегда
+            // «есть». Метка вроде «latest» становилась версией 0.0.0.0 — то есть
+            // выпуском, который дальше сравнивают с нашим, а не мусором.
             if (numbers.Count == 0) return null;
+            while (numbers.Count < 4) numbers.Add(0);
             return new Version(numbers[0], numbers[1], numbers[2], numbers[3]);
         }
 

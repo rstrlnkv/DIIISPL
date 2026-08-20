@@ -69,6 +69,14 @@ namespace DIIISPL
         private readonly List<string> _taskbarRaw = new List<string>();
 
         /// <summary>
+        /// Прежний формат: одно поле `taskbar` прямо в секции [profile]. Сборка Dev
+        /// разбирает его и переписывает по-новому, а стабильная не знает и про него —
+        /// значит, обязана вернуть в файл как было. Иначе профиль, записанный старой
+        /// версией, теряет вид панели при первом же сохранении в Stable.
+        /// </summary>
+        private string _taskbarLegacy;
+
+        /// <summary>
         /// Совпадает ли профиль с тем, что включено прямо сейчас. HDR не учитываем:
         /// его можно переключить мимо программы, и раскладкой он не является.
         /// </summary>
@@ -151,6 +159,45 @@ namespace DIIISPL
             return true;
         }
 
+        /// <summary>
+        /// Перенять из старого профиля всё, что не является раскладкой: сочетание
+        /// клавиш, место в списке и вид панели задач. Нужно при пересъёмке раскладки
+        /// поверх существующего профиля — раскладка новая, остальное чужим не бывает.
+        /// </summary>
+        public void AdoptSettingsFrom(Layout old)
+        {
+            Hotkey = old.Hotkey;
+            Order = old.Order;
+#if DEV
+            Taskbar = old.Taskbar.Copy();
+#endif
+            _taskbarRaw.Clear();
+            _taskbarRaw.AddRange(old._taskbarRaw);
+            _taskbarLegacy = old._taskbarLegacy;
+        }
+
+        /// <summary>
+        /// Вернуть содержимое к тому, что лежит в другом профиле. Сам объект при этом
+        /// остаётся тем же: на него ссылается список профилей, и подмена ссылки
+        /// заставила бы список перестраиваться посреди переключения.
+        /// </summary>
+        public void RestoreFrom(Layout src)
+        {
+            Name = src.Name;
+            Hotkey = src.Hotkey;
+            Order = src.Order;
+
+            Displays.Clear();
+            foreach (var d in src.Displays) Displays.Add(d.Clone());
+
+#if DEV
+            Taskbar = src.Taskbar.Copy();
+#endif
+            _taskbarRaw.Clear();
+            _taskbarRaw.AddRange(src._taskbarRaw);
+            _taskbarLegacy = src._taskbarLegacy;
+        }
+
         public LayoutDisplay Find(string identity)
         {
             foreach (var d in Displays) if (d.Identity == identity) return d;
@@ -167,6 +214,7 @@ namespace DIIISPL
             copy.Taskbar = Taskbar.Copy();
 #endif
             copy._taskbarRaw.AddRange(_taskbarRaw);
+            copy._taskbarLegacy = _taskbarLegacy;
             foreach (var d in Displays) copy.Displays.Add(d.Clone());
             return copy;
         }
@@ -256,6 +304,11 @@ namespace DIIISPL
             sb.AppendLine("name = " + Name);
             sb.AppendLine("hotkey = " + (Hotkey ?? ""));
             sb.AppendLine("order = " + Order.ToString(CultureInfo.InvariantCulture));
+#if !DEV
+            // Поле прежнего формата возвращаем на место как было: разобрать его
+            // стабильная сборка не умеет, а выбрасывать чужое — не её дело.
+            if (!string.IsNullOrEmpty(_taskbarLegacy)) sb.AppendLine("taskbar = " + _taskbarLegacy);
+#endif
             sb.AppendLine();
 #if DEV
             sb.AppendLine("[taskbar]");
@@ -286,7 +339,48 @@ namespace DIIISPL
                 sb.AppendLine("clone = " + d.CloneGroup.ToString(CultureInfo.InvariantCulture));
                 sb.AppendLine("hdr = " + d.Hdr.ToString(CultureInfo.InvariantCulture));
             }
-            File.WriteAllText(file, sb.ToString(), new UTF8Encoding(true));
+            WriteWhole(file, sb.ToString());
+        }
+
+        /// <summary>
+        /// Записать файл целиком или не тронуть его вовсе.
+        ///
+        /// `File.WriteAllText` сначала обрезает файл, потом пишет. Если посреди
+        /// записи пропадёт питание или программу снимут, на диске останется
+        /// половина профиля — а `Layout.Load` на обрывке не падает, он просто
+        /// вернёт раскладку без части мониторов, и `Store.LoadAll` покажет её как
+        /// исправную. Пишем рядом и подменяем одним движением: Replace на NTFS
+        /// либо проходит целиком, либо не проходит.
+        /// </summary>
+        private static void WriteWhole(string file, string text)
+        {
+            var encoding = new UTF8Encoding(true);
+            if (!File.Exists(file)) { File.WriteAllText(file, text, encoding); return; }
+
+            string temp = file + ".new";
+            try
+            {
+                File.WriteAllText(temp, text, encoding);
+                // Без запасной копии: она осталась бы лежать рядом с профилями
+                // и попала бы в список как второй файл. Replace без неё — обычная
+                // подмена записи в каталоге.
+                File.Replace(temp, file, null);
+            }
+            catch (IOException)
+            {
+                // Replace не работает через границу тома и на сетевых дисках, где
+                // папка профилей вполне может оказаться. Тогда пишем как раньше:
+                // хуже, но лучше, чем не сохранить.
+                File.WriteAllText(file, text, encoding);
+                try { if (File.Exists(temp)) File.Delete(temp); }
+                catch { }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                File.WriteAllText(file, text, encoding);
+                try { if (File.Exists(temp)) File.Delete(temp); }
+                catch { }
+            }
         }
 
         public static Layout Load(string file)
@@ -305,6 +399,13 @@ namespace DIIISPL
                     if (section == "display") { cur = new LayoutDisplay(); layout.Displays.Add(cur); }
                     continue;
                 }
+
+                // Секция панели задач запоминается целиком и **до** разбора: сборка,
+                // которая её не понимает, обязана вернуть в файл всё, а не только
+                // строки, похожие на знакомое «ключ = значение». Прежде запись без
+                // равенства не доживала до этого списка и пропадала при сохранении.
+                if (section == "taskbar") layout._taskbarRaw.Add(line);
+
                 int eq = line.IndexOf('=');
                 if (eq <= 0) continue;
                 string key = line.Substring(0, eq).Trim().ToLowerInvariant();
@@ -318,11 +419,12 @@ namespace DIIISPL
                     // прежний формат: одно поле на весь профиль
 #if DEV
                     else if (key == "taskbar") layout.Taskbar.AdoptLegacy(val);
+#else
+                    else if (key == "taskbar") layout._taskbarLegacy = val;
 #endif
                 }
                 else if (section == "taskbar")
                 {
-                    layout._taskbarRaw.Add(line);
 #if DEV
                     TaskbarState state;
                     if (key == "version") layout.Taskbar.Versioned = true;

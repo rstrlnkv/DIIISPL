@@ -42,6 +42,17 @@ namespace DIIISPL
             // одновременно, оба увидят «раскладка уже такая» и оба пойдут дальше.
             using (ApplyGate gate = ApplyGate.Enter())
             {
+                // Не пропустили — значит соседняя копия всё ещё перестраивает дисплеи.
+                // Идти дальше нельзя: два одновременных SetDisplayConfig это ровно та
+                // нагрузка, ради которой затвор и стоит. Раньше по истечении ожидания
+                // шли как ни в чём не бывало.
+                if (!gate.Held)
+                {
+                    var busy = new ApplyResult();
+                    busy.Error = "другая копия сейчас перестраивает экраны — попробуйте ещё раз";
+                    return busy;
+                }
+
                 try { return Apply(layout, gate); }
                 finally { gate.Stamp(); }
             }
@@ -64,7 +75,7 @@ namespace DIIISPL
             if (layout.MatchesCurrent(Monitors.Enumerate()))
             {
                 res.Success = true;
-                ApplyHdr(layout, res);
+                ApplyHdr(layout, res, gate);
                 ApplyTaskbar(layout, res);
                 return res;
             }
@@ -129,7 +140,7 @@ namespace DIIISPL
             }
 
             Verify(layout, res);
-            ApplyHdr(layout, res);
+            ApplyHdr(layout, res, gate);
             ApplyTaskbar(layout, res);
             return res;
         }
@@ -302,10 +313,17 @@ namespace DIIISPL
             }
 
             // --- основной монитор обязан стоять в (0,0) ---
+            // `break` из внутреннего цикла выходит только из него: перебор групп
+            // продолжался, и найденной оказывалась последняя группа с основным
+            // монитором, а не первая. Сегодня основной ровно один, так что вреда
+            // не было, — но написано было не то, что имелось в виду.
             Group primary = null;
             foreach (var g in groups)
+            {
                 foreach (var d in g.Members)
                     if (d.Primary) { primary = g; break; }
+                if (primary != null) break;
+            }
             if (primary == null) primary = groups[0];
 
             int dx = -modes[primary.ModeIndex].modeInfo.sourceMode.position.x;
@@ -413,11 +431,11 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Сверяем полученное с заказанным: SetDisplayConfig умеет вернуть успех,
-        /// применив не то, о чём просили (особенно если монитор физически погашен).
-        /// </summary>
-        /// <summary>
-        /// Кто из заказанных мониторов так и не включился. Монитор, пропавший из перечисления,
+        /// Кто из заказанных мониторов так и не включился. Сверяем полученное с
+        /// заказанным: SetDisplayConfig умеет вернуть успех, применив не то, о чём
+        /// просили, — особенно если монитор физически погашен.
+        ///
+        /// Монитор, пропавший из перечисления,
         /// тоже считается недостающим: после неудачной попытки Windows гасит выход, и он
         /// временно исчезает из списка — раньше это принималось за «всё в порядке».
         /// </summary>
@@ -494,7 +512,7 @@ namespace DIIISPL
         /// В группе дублирования состояние HDR должно быть одинаковым на всех выходах, иначе
         /// Windows принудительно переводит всю группу в SDR — поэтому группу выставляем целиком.
         /// </summary>
-        public static void ApplyHdr(Layout layout, ApplyResult res)
+        public static void ApplyHdr(Layout layout, ApplyResult res, ApplyGate gate)
         {
             var wanted = new Dictionary<string, bool>();     // identity -> нужное состояние
             foreach (var d in layout.Displays)
@@ -547,7 +565,16 @@ namespace DIIISPL
                     else res.Warnings.Add("«" + names[kv.Key] + "»: этот выход сейчас не отдаёт HDR — включить нечего.");
                     continue;
                 }
-                if (mon.HdrEnabled == kv.Value) { touched.Add(mon); continue; }
+                // Уже как надо — трогать нечего. Прежде такой монитор всё равно
+                // попадал в touched, из-за чего дальше всегда набегала лишняя
+                // пауза в 700 мс, а имя списка переставало быть правдой.
+                if (mon.HdrEnabled == kv.Value) continue;
+
+                // Переключение расширенного цвета пересогласовывает линк — операция
+                // того же класса, что и смена раскладки. Быстрый путь «раскладка уже
+                // такая» доходит сюда, минуя паузу, поэтому выдерживаем её здесь и
+                // только перед настоящим первым изменением.
+                if (gate != null) { gate.Wait(); gate = null; }
 
                 int err = Monitors.SetHdr(mon.Adapter, mon.TargetId, kv.Value);
                 if (err != 0)

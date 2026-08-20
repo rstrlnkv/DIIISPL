@@ -244,6 +244,20 @@ namespace DIIISPL
 
         private static int Main(string[] args)
         {
+            // Согласие спрашивает run-tests.cmd, он же передаёт сюда --agreed.
+            // Сам по себе selftest.exe не должен делать ничего: файл остаётся
+            // лежать в папке после прогона, и двойной щелчок по нему запускал бы
+            // сорок настоящих переключений мониторов, ни о чём не спросив.
+            bool agreed = false;
+            foreach (string a in args) if (a == "--agreed") agreed = true;
+            if (!agreed)
+            {
+                WL("");
+                WL("  Напрямую этот файл не запускают: прогон переключает мониторы");
+                WL("  около сорока раз подряд. Запускайте run-tests.cmd — он спросит.");
+                return 2;
+            }
+
             var live = Monitors.Enumerate();
             MonitorInfo L = Find(live, "LG"), M = Find(live, "Mi"), T = Find(live, "Q80A");
             if (L == null || M == null || T == null)
@@ -260,7 +274,11 @@ namespace DIIISPL
             WL("Проверок: " + cases.Count);
             WL("");
 
-            _log = new System.IO.StreamWriter("selftest-log.txt", false, new System.Text.UTF8Encoding(true));
+            // Рядом с собой, а не в текущем каталоге: запуск из другой папки уносил
+            // отчёт туда, а run-tests.cmd при этом обещал tests\selftest-log.txt.
+            string logPath = System.IO.Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory, "selftest-log.txt");
+            _log = new System.IO.StreamWriter(logPath, false, new System.Text.UTF8Encoding(true));
             _log.AutoFlush = true;
             var only = new List<int>();
             foreach (string a in args) { int n; if (int.TryParse(a, out n)) only.Add(n); }

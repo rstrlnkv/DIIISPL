@@ -22,6 +22,14 @@ namespace DIIISPL
 
         private static Dictionary<string, string> _values;
 
+        /// <summary>
+        /// Настройки читает и пишет не один поток: проверка обновлений уходит в
+        /// пул и оттуда ставит время последней проверки, пока окно рядом читает
+        /// канал. Dictionary такого не выдерживает — чтение во время дописывания
+        /// может не найти существующий ключ, а может и зациклиться внутри.
+        /// </summary>
+        private static readonly object Lock = new object();
+
         private static string FilePath
         {
             get { return Path.Combine(Store.DataDir, "settings.ini"); }
@@ -63,36 +71,44 @@ namespace DIIISPL
         // ------------------------------------------------------------------ чтение и запись
         private static string Get(string key)
         {
-            Load();
-            string v;
-            return _values.TryGetValue(key, out v) ? v : "";
+            lock (Lock)
+            {
+                Load();
+                string v;
+                return _values.TryGetValue(key, out v) ? v : "";
+            }
         }
 
         private static void Set(string key, string value)
         {
-            Load();
-            if (string.IsNullOrEmpty(value)) _values.Remove(key);
-            else _values[key] = value;
-            Save();
+            lock (Lock)
+            {
+                Load();
+                if (string.IsNullOrEmpty(value)) _values.Remove(key);
+                else _values[key] = value;
+                Save();
+            }
         }
 
         private static void Load()
         {
+            // Звать только под замком.
             if (_values != null) return;
-            _values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             try
             {
-                if (!File.Exists(FilePath)) return;
-                foreach (string raw in File.ReadAllLines(FilePath))
-                {
-                    string line = raw.Trim();
-                    if (line.Length == 0 || line.StartsWith("#") || line.StartsWith("[")) continue;
-                    int eq = line.IndexOf('=');
-                    if (eq <= 0) continue;
-                    _values[line.Substring(0, eq).Trim()] = line.Substring(eq + 1).Trim();
-                }
+                if (File.Exists(FilePath))
+                    foreach (string raw in File.ReadAllLines(FilePath))
+                    {
+                        string line = raw.Trim();
+                        if (line.Length == 0 || line.StartsWith("#") || line.StartsWith("[")) continue;
+                        int eq = line.IndexOf('=');
+                        if (eq <= 0) continue;
+                        values[line.Substring(0, eq).Trim()] = line.Substring(eq + 1).Trim();
+                    }
             }
             catch { /* нечитаемый файл — начинаем с пустых настроек */ }
+            _values = values;
         }
 
         private static void Save()

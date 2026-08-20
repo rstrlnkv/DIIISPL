@@ -22,11 +22,16 @@ jobs:
   release:
     runs-on: windows-2022
 
-    # Секреты вынесены на уровень задачи: внутри шага их не видно из условия,
-    # а решать «подписывать или нет» надо до того, как шаг начнётся.
+    # На уровне задачи — только признак «ключ есть», строка «true» или «false»,
+    # но не сам ключ. Переменная задачи видна каждому шагу, а среди шагов есть
+    # такой, который качает nuget.exe по ссылке «latest» без сверки хеша и
+    # запускает сборочные скрипты чужих портов. Ключ подписи там делать нечего:
+    # им подписывается всё, что программа готова поставить себе с правами.
+    #
+    # Сам секрет объявлен ниже, в единственном шаге, которому он нужен. Условие
+    # шага секретов не видит — отсюда и признак.
     env:
-      SIGN_PFX: ${{ secrets.SIGN_PFX }}
-      SIGN_PFX_PASSWORD: ${{ secrets.SIGN_PFX_PASSWORD }}
+      HAS_SIGNING_KEY: ${{ secrets.SIGN_PFX != '' }}
 
     steps:
       # Вся история, а не последний коммит: номер сборки — это их число, и при
@@ -80,7 +85,10 @@ jobs:
       # подписываем; нет — собираем без подписи, но такой выпуск программа
       # у себя не поставит: она сверяет подпись с известным отпечатком.
       - name: Сертификат подписи
-        if: ${{ env.SIGN_PFX != '' }}
+        if: ${{ env.HAS_SIGNING_KEY == 'true' }}
+        env:
+          SIGN_PFX: ${{ secrets.SIGN_PFX }}
+          SIGN_PFX_PASSWORD: ${{ secrets.SIGN_PFX_PASSWORD }}
         shell: pwsh
         run: |
           $bytes = [Convert]::FromBase64String($env:SIGN_PFX)
@@ -101,10 +109,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.DIIISPL_TAG }}
-          name: ${{ env.DIIISPL_TAG }}
+          # Заголовок называет канал: на эту страницу ведёт кнопка «Что нового»
+          # из окна программы, а суффикс «-dev.1» в теге прочитают не все.
+          name: ${{ env.DIIISPL_CHANNEL == 'dev' && format('{0} · Dev — с панелью задач', env.DIIISPL_TAG) || env.DIIISPL_TAG }}
           prerelease: ${{ env.DIIISPL_EARLY }}
           generate_release_notes: true
-          files: DIIISPL-${{ env.DIIISPL_VERSION }}-x64.msi
+          files: DIIISPL-${{ env.DIIISPL_VERSION }}-${{ env.DIIISPL_CHANNEL }}-x64.msi
           # Без этого выпуск без пакета создаётся молча и шаг зеленеет. А выпуск
           # без пакета программа не поставит: она ищет вложение с «.msi».
           fail_on_unmatched_files: true
