@@ -108,8 +108,7 @@ namespace DIIISPL
                     if (a.CloneGroup >= 0 && a.CloneGroup == b.CloneGroup) continue;   // дубль лежит поверх намеренно
                     if (a.X < b.X + b.DesktopWidth && b.X < a.X + a.DesktopWidth &&
                         a.Y < b.Y + b.DesktopHeight && b.Y < a.Y + a.DesktopHeight)
-                        return "«" + a.Name + "» и «" + b.Name + "» налезают друг на друга — разведите их: " +
-                               "рабочие столы наложенными быть не могут.";
+                        return Text.Overlap(a.Name, b.Name);
                 }
             return null;
         }
@@ -412,7 +411,10 @@ namespace DIIISPL
         public void Save(string file)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("# Профиль раскладки мониторов");
+            // Служебные файлы программа пишет только по-английски: ключи, секции и
+            // заголовок не зависят от языка окна, и профиль, унесённый на машину
+            // с другим языком, читается там так же.
+            sb.AppendLine("# DIIISPL monitor layout profile");
             sb.AppendLine("[profile]");
             sb.AppendLine("name = " + Name);
             sb.AppendLine("hotkey = " + (Hotkey ?? ""));

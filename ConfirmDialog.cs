@@ -15,7 +15,7 @@ namespace DIIISPL
     internal class ConfirmDialog : Window
     {
         public ConfirmDialog(string title, string message, string okText)
-            : this(title, message, okText, "Отмена")
+            : this(title, message, okText, Text.Cancel)
         {
         }
 

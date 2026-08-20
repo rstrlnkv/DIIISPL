@@ -53,9 +53,9 @@ namespace DIIISPL
         {
             get
             {
-                if (!Active) return "не используется";
+                if (!Active) return Text.NotInUse;
                 string s = Width + "×" + Height;
-                if (Hz > 0) s += " · " + Hz.ToString("0.##") + " Гц";
+                if (Hz > 0) s += " · " + Hz.ToString("0.##") + " " + Text.Hz;
                 if (HdrEnabled) s += " · HDR";
                 return s;
             }
@@ -106,7 +106,7 @@ namespace DIIISPL
                         mon.PreferredHeight = mon.Edid.PreferredHeight;
                     }
                     if (string.IsNullOrEmpty(mon.Name))
-                        mon.Name = string.IsNullOrEmpty(tn.monitorFriendlyDeviceName) ? ("Дисплей " + path.targetInfo.id) : tn.monitorFriendlyDeviceName;
+                        mon.Name = string.IsNullOrEmpty(tn.monitorFriendlyDeviceName) ? Text.DisplayNumbered(path.targetInfo.id) : tn.monitorFriendlyDeviceName;
                     if (string.IsNullOrEmpty(mon.Identity))
                         mon.Identity = "PATH:" + (string.IsNullOrEmpty(tn.monitorDevicePath) ? key : tn.monitorDevicePath);
 
@@ -381,8 +381,8 @@ namespace DIIISPL
                 case 5: return "HDMI";
                 case 10: return "DisplayPort";
                 case 11: return "DisplayPort";
-                case 0x80000000: return "встроенный";
-                default: return "цифровой";
+                case 0x80000000: return Text.ConnBuiltIn;
+                default: return Text.ConnDigital;
             }
         }
     }

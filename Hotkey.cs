@@ -124,7 +124,7 @@ namespace DIIISPL
         public static bool TryParse(string text, out uint modifiers, out uint vk, out string error)
         {
             modifiers = 0; vk = 0; error = null;
-            if (string.IsNullOrEmpty(text)) { error = "пустое сочетание"; return false; }
+            if (string.IsNullOrEmpty(text)) { error = Text.ComboEmpty; return false; }
 
             string[] parts = text.Split('+');
             string keyPart = null;
@@ -153,9 +153,9 @@ namespace DIIISPL
                 else keyPart = p;
             }
 
-            if (keyPart == null) { error = "не указана клавиша в «" + text + "»"; return false; }
+            if (keyPart == null) { error = Text.ComboNoKey(text); return false; }
             if (keyPart == "+") keyPart = "Plus";
-            if (!Keys.TryGetValue(keyPart, out vk)) { error = "неизвестная клавиша «" + keyPart + "»"; return false; }
+            if (!Keys.TryGetValue(keyPart, out vk)) { error = Text.ComboUnknownKey(keyPart); return false; }
 
             // Клавиша без приставки — это клавиша, отобранная у всей системы.
             // Назначив профилю «A», пользователь перестал бы набирать эту букву
@@ -165,7 +165,7 @@ namespace DIIISPL
             // сам по себе ничего не спасает.
             if ((modifiers & (MOD_CONTROL | MOD_ALT | MOD_WIN)) == 0 && !StandaloneSafe(vk))
             {
-                error = "добавьте Ctrl, Alt или Win — иначе клавиша перестанет работать в других программах";
+                error = Text.ComboNeedsModifier;
                 return false;
             }
 

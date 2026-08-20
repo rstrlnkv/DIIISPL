@@ -86,7 +86,7 @@ namespace DIIISPL
                 Children.Add(line);
             }
 
-            _dockLabel.Text = "НЕ В ПРОФИЛЕ · ПЕРЕТАЩИТЕ НАВЕРХ";
+            _dockLabel.Text = Text.NotInProfile;
             _dockLabel.Style = (Style)Application.Current.Resources["SectionHeader"];
             Children.Add(_dockLabel);
 
@@ -158,13 +158,13 @@ namespace DIIISPL
             title.Foreground = (Brush)FindResource(d.Enabled ? "Text" : "TextSec");
 
             string res = d.Width + " × " + d.Height;
-            if (d.Hz > 0) res += "  ·  " + d.Hz.ToString("0.##") + " Гц";
-            if (!live) res = "не подключён";
+            if (d.Hz > 0) res += "  ·  " + d.Hz.ToString("0.##") + " " + Text.Hz;
+            if (!live) res = Text.NotConnected;
             info.Text = res;
 
             badges.Children.Clear();
-            if (d.Enabled && d.Primary) badges.Children.Add(Badge("Основной", true));
-            if (d.Enabled && d.CloneGroup >= 0) badges.Children.Add(Badge("Дубль", false));
+            if (d.Enabled && d.Primary) badges.Children.Add(Badge(Text.BadgePrimary, true));
+            if (d.Enabled && d.CloneGroup >= 0) badges.Children.Add(Badge(Text.BadgeClone, false));
             if (d.Enabled && d.Hdr == 1 && d.CloneGroup < 0) badges.Children.Add(Badge("HDR", false));
             // Метки «нет сигнала» здесь нет: строкой выше уже написано «не подключён»,
             // и повторять то же самое другими словами в одной карточке незачем.
@@ -475,7 +475,7 @@ namespace DIIISPL
         {
             var enabled = new List<LayoutDisplay>();
             foreach (var d in Layout.Displays) if (d.Enabled) enabled.Add(d);
-            if (enabled.Count == 0) return "Не выбран ни один монитор.";
+            if (enabled.Count == 0) return Text.NoMonitorPicked;
             if (enabled.Count == 1) return null;
 
             string overlap = OverlapProblem();
@@ -498,7 +498,7 @@ namespace DIIISPL
                 }
             }
             if (reached.Count < enabled.Count)
-                return "Между мониторами есть разрыв — придвиньте их вплотную, иначе Windows сдвинет их сама.";
+                return Text.GapBetween;
             return null;
         }
 

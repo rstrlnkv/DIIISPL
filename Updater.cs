@@ -100,7 +100,7 @@ namespace DIIISPL
                 string json = Fetch("https://api.github.com/repos/" + Owner + "/" + Repo +
                                     "/releases?per_page=20");
                 var releases = new JavaScriptSerializer().Deserialize<List<Dictionary<string, object>>>(json);
-                if (releases == null) { error = "GitHub ответил непонятным"; return null; }
+                if (releases == null) { error = Text.GitHubGibberish; return null; }
 
                 Release best = null;
                 bool skippedEarly = false;
@@ -125,8 +125,8 @@ namespace DIIISPL
                     // вещи, и вторая иначе предлагает жать «Ещё раз» на том, что
                     // не изменится.
                     error = skippedEarly
-                        ? "готовых выпусков пока нет — то, что вышло, помечено предварительным. Такие приходят на канале Dev"
-                        : "выпусков пока нет";
+                        ? Text.OnlyPrereleases
+                        : Text.NoReleasesYet;
                     return null;
                 }
                 return best.Version > Current ? best : null;
@@ -137,29 +137,29 @@ namespace DIIISPL
                 // это не поломка связи, и говорить о ней так не надо.
                 var http = ex.Response as HttpWebResponse;
                 error = http != null && http.StatusCode == HttpStatusCode.NotFound
-                    ? "выпусков пока нет"
-                    : "не удалось связаться с GitHub";
+                    ? Text.NoReleasesYet
+                    : Text.GitHubUnreachable;
                 return null;
             }
             catch
             {
-                error = "не удалось прочитать список выпусков";
+                error = Text.ReleaseListUnreadable;
                 return null;
             }
         }
 
         private static Release Read(Dictionary<string, object> item)
         {
-            string tag = Text(item, "tag_name");
+            string tag = Field(item, "tag_name");
             Version v = ParseVersion(tag);
             if (v == null) return null;
 
             var r = new Release();
             r.Tag = tag;
             r.Version = v;
-            r.Title = Text(item, "name");
-            r.Notes = Text(item, "body");
-            r.Page = Text(item, "html_url");
+            r.Title = Field(item, "name");
+            r.Notes = Field(item, "body");
+            r.Page = Field(item, "html_url");
             r.Early = Truthy(item, "prerelease");
 
             object assets;
@@ -172,10 +172,10 @@ namespace DIIISPL
                     {
                         var asset = a as Dictionary<string, object>;
                         if (asset == null) continue;
-                        string name = Text(asset, "name");
+                        string name = Field(asset, "name");
                         if (name == null || !name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase)) continue;
                         r.FileName = name;
-                        r.FileUrl = Text(asset, "browser_download_url");
+                        r.FileUrl = Field(asset, "browser_download_url");
                         break;
                     }
                 }
@@ -193,7 +193,7 @@ namespace DIIISPL
             error = null;
             if (release == null || string.IsNullOrEmpty(release.FileUrl))
             {
-                error = "к этому выпуску не приложен установщик";
+                error = Text.NoInstallerAttached;
                 return null;
             }
 
@@ -226,7 +226,7 @@ namespace DIIISPL
                 if (!Uri.TryCreate(release.FileUrl, UriKind.Absolute, out url) ||
                     url.Scheme != Uri.UriSchemeHttps)
                 {
-                    error = "ссылка на установщик ведёт не туда, куда должна";
+                    error = Text.BadDownloadLink;
                     return null;
                 }
 
@@ -249,7 +249,7 @@ namespace DIIISPL
             catch (WebException)
             {
                 Forget(path);
-                error = "не удалось скачать установщик";
+                error = Text.DownloadFailed;
                 return null;
             }
             catch (Exception)
@@ -258,7 +258,7 @@ namespace DIIISPL
                 // «О программе», и сделать с ним нечего. Говорим о деле —
                 // что не получилось и куда смотреть.
                 Forget(path);
-                error = "не удалось сохранить установщик — проверьте место на диске";
+                error = Text.SaveFailed;
                 return null;
             }
         }
@@ -293,7 +293,7 @@ namespace DIIISPL
                 verdict != Native.CERT_E_EXPIRED)
             {
                 if (verdict == Native.TRUST_E_BAD_DIGEST)
-                    return "файл изменён после подписания — скачайте выпуск заново";
+                    return Text.TamperedFile;
 
                 // Замерено на испорченных файлах: и на дописанных байтах, и на
                 // перевёрнутом байте в середине, и на затёртой полезной нагрузке
@@ -304,18 +304,18 @@ namespace DIIISPL
                 // «испорчен» этим вызовом нельзя — значит и текст не должен
                 // выбирать за человека один из двух случаев.
                 if (verdict == Native.TRUST_E_NOSIGNATURE)
-                    return "подпись установщика не подтверждается: он повреждён или не подписан. Скачайте выпуск заново";
+                    return Text.SignatureUnconfirmed;
 
-                return "подпись установщика не прошла проверку — скачайте выпуск заново";
+                return Text.SignatureRejected;
             }
 
             // Потом личность: тот ли это ключ.
             X509Certificate2 cert;
             try { cert = new X509Certificate2(X509Certificate.CreateFromSignedFile(path)); }
-            catch { return "подпись установщика не подтверждается: он повреждён или не подписан. Скачайте выпуск заново"; }
+            catch { return Text.SignatureUnconfirmed; }
 
             if (!string.Equals(cert.Thumbprint, SignerThumbprint, StringComparison.OrdinalIgnoreCase))
-                return "установщик подписан чужим ключом. Берите пакет только со страницы выпусков DIIISPL";
+                return Text.ForeignKey;
 
             return null;
         }
@@ -410,7 +410,7 @@ namespace DIIISPL
             }
             catch (Exception)
             {
-                error = "не удалось запустить установщик — откройте скачанный пакет вручную";
+                error = Text.InstallerStartFailed;
                 return false;
             }
         }
@@ -470,7 +470,9 @@ namespace DIIISPL
             return new Version(numbers[0], numbers[1], numbers[2], numbers[3]);
         }
 
-        private static string Text(Dictionary<string, object> map, string key)
+        /// <summary>Строковое поле из ответа GitHub. Названо Field, а не Text: класс
+        /// с текстами программы зовётся Text, и одноимённый метод его перекрывал.</summary>
+        private static string Field(Dictionary<string, object> map, string key)
         {
             object v;
             return map.TryGetValue(key, out v) && v != null ? v.ToString() : null;
@@ -485,26 +487,13 @@ namespace DIIISPL
         /// <summary>«сегодня», «вчера», «3 дня назад» — для строки о последней проверке.</summary>
         public static string Ago(DateTime? moment)
         {
-            if (!moment.HasValue) return "ещё не проверялось";
+            if (!moment.HasValue) return Text.NeverChecked;
             TimeSpan passed = DateTime.UtcNow - moment.Value;
-            if (passed.TotalMinutes < 2) return "проверялось только что";
-            if (passed.TotalHours < 1) return "проверялось " + (int)passed.TotalMinutes + " мин назад";
-            if (passed.TotalHours < 24) return "проверялось " + Plural((int)passed.TotalHours, "час", "часа", "часов") + " назад";
-            return "проверялось " + Plural((int)passed.TotalDays, "день", "дня", "дней") + " назад";
+            if (passed.TotalMinutes < 2) return Text.CheckedJustNow;
+            if (passed.TotalHours < 1) return Text.CheckedMinutes((int)passed.TotalMinutes);
+            if (passed.TotalHours < 24) return Text.CheckedHours((int)passed.TotalHours);
+            return Text.CheckedDays((int)passed.TotalDays);
         }
 
-        private static string Plural(int n, string one, string few, string many)
-        {
-            int t = n % 100;
-            if (t >= 11 && t <= 14) return n + " " + many;
-            switch (n % 10)
-            {
-                case 1: return n + " " + one;
-                case 2:
-                case 3:
-                case 4: return n + " " + few;
-                default: return n + " " + many;
-            }
-        }
     }
 }

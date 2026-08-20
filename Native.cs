@@ -437,12 +437,12 @@ namespace DIIISPL
         {
             switch (code)
             {
-                case 5:    return "система не дала прав на смену раскладки";
-                case 31:   return "видеодрайвер не смог её применить";
-                case 50:   return "оборудование такого не умеет";
-                case 87:   return "видеокарта не принимает такое сочетание режимов";
-                case 1610: return "на этом оборудовании такая раскладка невозможна";
-                default:   return "система не объяснила причину";
+                case 5:    return Text.ErrNoRights;
+                case 31:   return Text.ErrDriver;
+                case 50:   return Text.ErrHardware;
+                case 87:   return Text.ErrCombination;
+                case 1610: return Text.ErrImpossible;
+                default:   return Text.ErrUnexplained;
             }
         }
 

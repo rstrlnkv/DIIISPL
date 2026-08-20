@@ -55,13 +55,11 @@ namespace DIIISPL
                 try
                 {
                     System.IO.File.WriteAllText(System.IO.Path.Combine(Store.DataDir, "error.log"),
-                        DateTime.Now + Environment.NewLine + ex);
+                        DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss") + " UTC" +
+                        Environment.NewLine + ex);
                 }
                 catch { }
-                Forms.MessageBox.Show("Не удалось запустить " + AppTitle + ":" + Environment.NewLine +
-                    Environment.NewLine + ex.Message + Environment.NewLine +
-                    Environment.NewLine + "Подробности: %AppData%\\" + Store.AppFolder + "\\error.log",
-                    AppTitle);
+                Forms.MessageBox.Show(Text.StartFailed(AppTitle, ex.Message, Store.AppFolder), AppTitle);
                 return 1;
             }
             return 0;
@@ -94,8 +92,7 @@ namespace DIIISPL
             {
                 if (Settings.TrayHintShown) return;
                 Settings.TrayHintShown = true;
-                Balloon("DIIISPL продолжает работать здесь: горячие клавиши переключают раскладки. " +
-                        "Совсем выйти — пункт «Выход» в этом меню.", Forms.ToolTipIcon.Info);
+                Balloon(Text.TrayHint, Forms.ToolTipIcon.Info);
             };
 
             BuildTray();
@@ -132,8 +129,7 @@ namespace DIIISPL
 
                 Dispatcher.BeginInvoke(new Action(delegate
                 {
-                    Balloon("Вышла версия " + version + ". Открыть «О программе», чтобы обновиться.",
-                            Forms.ToolTipIcon.Info);
+                    Balloon(Text.NewVersionBalloon(version), Forms.ToolTipIcon.Info);
                 }));
             });
         }
@@ -164,7 +160,7 @@ namespace DIIISPL
             {
                 var empty = new MenuItem();
                 empty.Style = (Style)Resources["FlyoutMenuItem"];
-                empty.Header = "Профилей пока нет";
+                empty.Header = Text.NoProfilesYet;
                 empty.IsEnabled = false;
                 menu.Items.Add(empty);
             }
@@ -188,20 +184,20 @@ namespace DIIISPL
 
             var manager = new MenuItem();
             manager.Style = (Style)Resources["FlyoutMenuItem"];
-            manager.Header = "Менеджер раскладок…";
+            manager.Header = Text.OpenManager;
             manager.Click += delegate { ShowManager(); };
             menu.Items.Add(manager);
 
             var auto = new MenuItem();
             auto.Style = (Style)Resources["FlyoutMenuItem"];
-            auto.Header = "Запускать при входе в Windows";
+            auto.Header = Text.RunAtLogon;
             auto.IsChecked = AutoStartEnabled;
             auto.Click += delegate { AutoStartEnabled = !AutoStartEnabled; };
             menu.Items.Add(auto);
 
             var about = new MenuItem();
             about.Style = (Style)Resources["FlyoutMenuItem"];
-            about.Header = "О программе…";
+            about.Header = Text.AboutMenu;
             about.Click += delegate { _window.ShowAbout(); };
             menu.Items.Add(about);
 
@@ -209,7 +205,7 @@ namespace DIIISPL
 
             var exit = new MenuItem();
             exit.Style = (Style)Resources["FlyoutMenuItem"];
-            exit.Header = "Выход";
+            exit.Header = Text.Exit;
             exit.Click += delegate { Quit(); };
             menu.Items.Add(exit);
 
@@ -269,7 +265,7 @@ namespace DIIISPL
             // поставить отметку затвора.
             if (ApplyBusy.Active)
             {
-                Balloon("Идёт перестроение экранов — подождите несколько секунд.", Forms.ToolTipIcon.Info);
+                Balloon(Text.BusyWait, Forms.ToolTipIcon.Info);
                 return;
             }
 
@@ -300,7 +296,7 @@ namespace DIIISPL
             {
                 if (string.IsNullOrEmpty(layout.Hotkey)) continue;
                 uint mods, vk; string err;
-                if (!Hotkey.TryParse(layout.Hotkey, out mods, out vk, out err)) { problems.Add(layout.Hotkey + " — " + err); continue; }
+                if (!Hotkey.TryParse(layout.Hotkey, out mods, out vk, out err)) { problems.Add(Text.HotkeyProblem(layout.Hotkey, err)); continue; }
                 // Тёзку среди своих же профилей ищем ДО попытки регистрации: она
                 // на втором профиле заведомо не пройдёт — сочетание уже занял
                 // первый, из этого же окна, — и в подсказку уехали бы обе строки,
@@ -309,7 +305,7 @@ namespace DIIISPL
                 string already;
                 if (taken.TryGetValue(layout.Hotkey, out already))
                 {
-                    problems.Add(layout.Hotkey + " — одно сочетание у «" + already + "» и «" + layout.Name + "»");
+                    problems.Add(Text.HotkeyShared(layout.Hotkey, already, layout.Name));
                     continue;
                 }
                 taken[layout.Hotkey] = layout.Name;
@@ -319,11 +315,11 @@ namespace DIIISPL
                     _hotkeyProfiles[id] = layout.Name;
                     id++;
                 }
-                else problems.Add(layout.Hotkey + " — занято другой программой");
+                else problems.Add(Text.HotkeyTakenElsewhere(layout.Hotkey));
             }
 
             if (problems.Count > 0)
-                Balloon("Не удалось назначить: " + string.Join("; ", problems.ToArray()), Forms.ToolTipIcon.Warning);
+                Balloon(Text.HotkeysNotSet(string.Join("; ", problems.ToArray())), Forms.ToolTipIcon.Warning);
         }
 
         private void UnregisterHotkeys()
@@ -355,7 +351,7 @@ namespace DIIISPL
             // выглядит как «ничего не произошло».
             if (!ApplyBusy.Begin())
             {
-                Balloon("Идёт перестроение экранов — подождите несколько секунд.", Forms.ToolTipIcon.Info);
+                Balloon(Text.BusyWait, Forms.ToolTipIcon.Info);
                 return;
             }
             ThreadPool.QueueUserWorkItem(delegate
@@ -381,10 +377,9 @@ namespace DIIISPL
                     if (_window != null) _window.ShowApplyResult(layout.Name, result);
 
                     if (!result.Success)
-                        Balloon("«" + layout.Name + "» не удалось: " + result.Error, Forms.ToolTipIcon.Error);
+                        Balloon(Text.ApplyFailedShort(layout.Name, result.Error), Forms.ToolTipIcon.Error);
                     else if (result.Warnings.Count > 0)
-                        Balloon("Раскладка «" + layout.Name + "» применена. Ещё замечаний: " +
-                                result.Warnings.Count + " — откройте окно.", Forms.ToolTipIcon.Warning);
+                        Balloon(Text.ApplyDoneShort(layout.Name, result.Warnings.Count), Forms.ToolTipIcon.Warning);
 
                     if (_window != null && _window.IsVisible)
                     {

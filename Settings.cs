@@ -73,6 +73,17 @@ namespace DIIISPL
             set { Set("trayhint", value ? "1" : ""); }
         }
 
+        /// <summary>
+        /// Язык окна: «auto», «ru» или «en». По умолчанию auto — язык Windows.
+        /// Хранится здесь, а не выводится каждый раз из системы, потому что выбор
+        /// человека надо помнить: английская Windows не повод отбирать русский.
+        /// </summary>
+        public static string Language
+        {
+            get { string v = Get("language"); return v == Text.Russian || v == Text.English ? v : Text.Auto; }
+            set { Set("language", value == Text.Russian || value == Text.English ? value : ""); }
+        }
+
         /// <summary>Версия, от которой отказались: про неё больше не напоминаем.</summary>
         public static string SkippedVersion
         {
@@ -128,7 +139,7 @@ namespace DIIISPL
             try
             {
                 var lines = new List<string>();
-                lines.Add("# Настройки DIIISPL");
+                lines.Add("# DIIISPL settings");   // служебный файл — только по-английски
                 foreach (var kv in _values) lines.Add(kv.Key + " = " + kv.Value);
                 File.WriteAllLines(FilePath, lines.ToArray(), System.Text.Encoding.UTF8);
             }

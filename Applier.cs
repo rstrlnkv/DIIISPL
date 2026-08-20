@@ -49,7 +49,7 @@ namespace DIIISPL
                 if (!gate.Held)
                 {
                     var busy = new ApplyResult();
-                    busy.Error = "экраны уже перестраиваются — подождите и повторите";
+                    busy.Error = Text.AlreadyApplying;
                     return busy;
                 }
 
@@ -127,7 +127,7 @@ namespace DIIISPL
             }
             if (err != 0)
             {
-                res.Error = "Windows отклонила раскладку: " + Native.ErrorText(err);
+                res.Error = Text.WindowsRefused(Native.ErrorText(err));
                 return res;
             }
             res.Success = true;
@@ -173,8 +173,7 @@ namespace DIIISPL
         {
             if (res.Error != null) { res.Warnings.Add(res.Error); res.Error = null; }
             if (err == 0) return;
-            res.Warnings.Add("Windows приняла раскладку не целиком: " + Native.ErrorText(err) +
-                             ". На экране может стоять не то, что в профиле, — проверьте и примените заново.");
+            res.Warnings.Add(Text.WindowsPartly(Native.ErrorText(err)));
         }
 
         /// <summary>
@@ -193,13 +192,13 @@ namespace DIIISPL
             if (layout.Taskbar == null || !layout.Taskbar.AnyEnabled) { TaskbarWatcher.Use(null); return; }
             if (!ExplorerTap.Available)
             {
-                res.Warnings.Add("Профиль задаёт вид панели задач, но в программе не хватает файла для этого.");
+                res.Warnings.Add(Text.NoTaskbarLibrary);
                 return;
             }
 
             TaskbarWatcher.Use(layout.Taskbar);
             if (ExplorerTap.LastError != null)
-                res.Warnings.Add("Панель задач: " + ExplorerTap.LastError);
+                res.Warnings.Add(Text.TaskbarPrefix(ExplorerTap.LastError));
 #endif
         }
 
@@ -260,7 +259,7 @@ namespace DIIISPL
                 MonitorInfo mon;
                 if (!byId.TryGetValue(d.Identity, out mon))
                 {
-                    res.Warnings.Add("«" + (d.Name ?? d.Identity) + "» сейчас не подключён — пропущен.");
+                    res.Warnings.Add(Text.SkippedNotConnected(d.Name ?? d.Identity));
                     continue;
                 }
                 string key = d.CloneGroup >= 0 ? "g" + d.CloneGroup : "s" + d.Identity;
@@ -280,7 +279,7 @@ namespace DIIISPL
 
             if (groups.Count == 0)
             {
-                res.Error = "Ни один монитор из профиля сейчас не подключён.";
+                res.Error = Text.NoneConnected;
                 return -1;
             }
 
@@ -288,7 +287,7 @@ namespace DIIISPL
             Native.DISPLAYCONFIG_MODE_INFO[] allModes;
             if (!Monitors.QueryAllPaths(out allPaths, out allModes))
             {
-                res.Error = "Windows не отдала список подключений мониторов.";
+                res.Error = Text.NoPathList;
                 return -1;
             }
 
@@ -334,7 +333,7 @@ namespace DIIISPL
                 }
                 if (!assigned)
                 {
-                    res.Error = "Не удалось разместить «" + g.Rep.Name + "»: видеокарта не даёт столько независимых рабочих столов.";
+                    res.Error = Text.NoFreeDesktop(g.Rep.Name);
                     return -1;
                 }
             }
@@ -397,7 +396,7 @@ namespace DIIISPL
                     Native.DISPLAYCONFIG_PATH_INFO path;
                     if (!FindTemplate(allPaths, mon, g.SourceId, out path))
                     {
-                        res.Warnings.Add("«" + d.Name + "» нельзя подключить к выбранному рабочему столу — пропущен.");
+                        res.Warnings.Add(Text.CannotAttach(d.Name));
                         continue;
                     }
 
@@ -423,7 +422,7 @@ namespace DIIISPL
 
             if (paths.Count == 0)
             {
-                res.Error = "Не получилось составить раскладку: ни один монитор не удалось задействовать.";
+                res.Error = Text.NothingUsable;
                 return -1;
             }
 
@@ -471,7 +470,7 @@ namespace DIIISPL
                 }
                 err = Native.SetDisplayConfig((uint)relaxed.Length, relaxed, (uint)modeArr.Length, modeArr,
                         baseFlags | Native.SDC_ALLOW_CHANGES | Native.SDC_FORCE_MODE_ENUMERATION);
-                if (err == 0) res.Warnings.Add("Частоту выбрал драйвер — заданную Windows не приняла.");
+                if (err == 0) res.Warnings.Add(Text.DriverPickedRate);
             }
             return err;
         }
@@ -525,11 +524,9 @@ namespace DIIISPL
                 if (!mon.Active) { notTurnedOn.Add(d.Name); continue; }
 
                 if (mon.Width != d.Width || mon.Height != d.Height)
-                    res.Warnings.Add("«" + d.Name + "»: получилось " + mon.Width + "×" + mon.Height +
-                                     " вместо " + d.Width + "×" + d.Height + ".");
+                    res.Warnings.Add(Text.GotModeInstead(d.Name, mon.Width, mon.Height, d.Width, d.Height));
                 else if (d.Hz > 0 && Math.Abs(mon.Hz - d.Hz) > 1.5)
-                    res.Warnings.Add("«" + d.Name + "»: частота " + mon.Hz.ToString("0.##") +
-                                     " Гц вместо " + d.Hz.ToString("0.##") + " Гц.");
+                    res.Warnings.Add(Text.GotRateInstead(d.Name, mon.Hz.ToString("0.##"), d.Hz.ToString("0.##")));
 
                 // Поворот сверяем наравне с режимом. Прежде это была единственная
                 // величина, которую программа заказывает и не проверяет, — и молчание
@@ -540,7 +537,7 @@ namespace DIIISPL
                 // раз, потому что точка не загоралась. Это и есть та повторяемая
                 // нагрузка, которой 19.08.2026 машину увело в синий экран.
                 if (mon.Rotation != d.Rotation)
-                    res.Warnings.Add("«" + d.Name + "»: поворот экрана Windows не применила.");
+                    res.Warnings.Add(Text.RotationNotApplied(d.Name));
             }
 
             // дублирование проверяем по source id: одна группа обязана сидеть на одном источнике
@@ -553,7 +550,7 @@ namespace DIIISPL
                 uint src;
                 if (!groupSource.TryGetValue(d.CloneGroup, out src)) groupSource[d.CloneGroup] = mon.SourceId;
                 else if (src != mon.SourceId)
-                    res.Warnings.Add("«" + d.Name + "» не встал в дублирование — Windows развела экраны.");
+                    res.Warnings.Add(Text.NotCloned(d.Name));
             }
 
             // Позиции и основной экран — то единственное, что расходится, когда
@@ -566,10 +563,9 @@ namespace DIIISPL
             // был выход «сверять нечего» — и профиль, у которого не зажёгся ни один
             // монитор, уходил вообще без предупреждений: «Раскладка применена» и всё.
             if (notTurnedOn.Count > 0)
-                res.Warnings.Add("Не включились: " + string.Join(", ", notTurnedOn.ToArray()) +
-                                 ". Чаще всего монитор обесточен или спит так, что видеокарта его не видит.");
+                res.Warnings.Add(Text.DidNotTurnOn(string.Join(", ", notTurnedOn.ToArray())));
             if (notTurnedOff.Count > 0)
-                res.Warnings.Add("Остались включёнными вопреки профилю: " + string.Join(", ", notTurnedOff.ToArray()) + ".");
+                res.Warnings.Add(Text.StayedOn(string.Join(", ", notTurnedOff.ToArray())));
 
             // Начало координат выбираем тем же правилом, каким его выбирает Submit:
             // основной, если он подключён и горит, иначе первый горящий. Иначе
@@ -599,7 +595,7 @@ namespace DIIISPL
             // Про основной говорим только тогда, когда заказанный основной на месте
             // и горит, а Windows всё равно поставила началом координат другой.
             if (origin.Primary && (originMon.X != 0 || originMon.Y != 0))
-                res.Warnings.Add("«" + origin.Name + "» не стал основным — Windows выбрала другой экран.");
+                res.Warnings.Add(Text.NotPrimary(origin.Name));
 
             var movedNames = new List<string>();
             foreach (var d in layout.Displays)
@@ -610,8 +606,7 @@ namespace DIIISPL
                 if (mon.X - d.X != shiftX || mon.Y - d.Y != shiftY) movedNames.Add(d.Name);
             }
             if (movedNames.Count > 0)
-                res.Warnings.Add("Windows расставила по-своему: " + string.Join(", ", movedNames.ToArray()) +
-                                 ". На экране теперь не то, что записано в профиле, — поправьте раскладку и примените заново.");
+                res.Warnings.Add(Text.WindowsMoved(string.Join(", ", movedNames.ToArray())));
 
         }
 
@@ -668,10 +663,10 @@ namespace DIIISPL
                         if (!cloneWarned.ContainsKey(self.CloneGroup))
                         {
                             cloneWarned[self.CloneGroup] = true;
-                            res.Warnings.Add("При дублировании HDR не работает. Разведите экраны — тогда его можно включить на каждом.");
+                            res.Warnings.Add(Text.HdrNotInClone);
                         }
                     }
-                    else res.Warnings.Add("«" + names[kv.Key] + "»: этот выход сейчас не отдаёт HDR — включить нечего.");
+                    else res.Warnings.Add(Text.HdrUnavailable(names[kv.Key]));
                     continue;
                 }
                 // Уже как надо — трогать нечего. Прежде такой монитор всё равно
@@ -688,8 +683,7 @@ namespace DIIISPL
                 int err = Monitors.SetHdr(mon.Adapter, mon.TargetId, kv.Value);
                 if (err != 0)
                 {
-                    res.Warnings.Add("«" + names[kv.Key] + "»: не удалось " + (kv.Value ? "включить" : "выключить") +
-                                     " HDR — " + Native.ErrorText(err));
+                    res.Warnings.Add(Text.HdrFailed(names[kv.Key], kv.Value, Native.ErrorText(err)));
                     continue;
                 }
                 touched.Add(mon);
@@ -718,7 +712,7 @@ namespace DIIISPL
                 }
 
                 if (!want && check.HdrEnabled)
-                    res.Warnings.Add("«" + names[mon.Identity] + "»: не удалось выключить HDR — система включает его обратно.");
+                    res.Warnings.Add(Text.HdrComesBack(names[mon.Identity]));
 
                 if (want && !check.HdrEnabled)
                 {
@@ -727,11 +721,7 @@ namespace DIIISPL
                     // расширенный цвет не отдаёт вовсе — проверено и на 60 Гц, и на
                     // 120. Об этом же говорит и окно, и автотест; одна эта строка
                     // отправляла человека подбирать режим, который не поможет.
-                    bool cloned = IsCloned(layout, mon.Identity);
-                    res.Warnings.Add("«" + names[mon.Identity] + "»: HDR не включился." +
-                        (cloned
-                            ? " Выходам в дублировании Windows расширенный цвет не даёт: чтобы включить HDR, разведите экраны врастяжку."
-                            : " Обычно это нехватка пропускной способности кабеля на выбранном режиме."));
+                    res.Warnings.Add(Text.HdrDidNotTurnOn(names[mon.Identity], IsCloned(layout, mon.Identity)));
                 }
             }
         }
