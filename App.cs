@@ -88,8 +88,38 @@ namespace DIIISPL
             ReloadHotkeys();
             StartTaskbarForActiveProfile();
 
+            CheckForUpdateQuietly();
+
             if (!startHidden) ShowManager();
             Run();
+        }
+
+        /// <summary>
+        /// Раз в сутки спросить GitHub, не вышло ли новое, и если вышло — сказать
+        /// всплывающей подсказкой. Молча: неудачную проверку показывать незачем,
+        /// а страницу «О программе» человек откроет сам, когда захочет.
+        /// </summary>
+        private void CheckForUpdateQuietly()
+        {
+            DateTime? last = Settings.LastCheck;
+            if (last.HasValue && (DateTime.UtcNow - last.Value).TotalHours < 24) return;
+
+            string channel = Settings.Channel;
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                string error;
+                Updater.Release release = Updater.Check(channel, out error);
+                if (release == null || error != null) return;
+
+                string version = release.Version.Major + "." + release.Version.Minor + "." + release.Version.Build;
+                if (Settings.SkippedVersion == version) return;
+
+                Dispatcher.BeginInvoke(new Action(delegate
+                {
+                    Balloon("Вышла версия " + version + ". Открыть «О программе», чтобы обновиться.",
+                            Forms.ToolTipIcon.Info);
+                }));
+            });
         }
 
         // ---------------------------------------------------------------- трей

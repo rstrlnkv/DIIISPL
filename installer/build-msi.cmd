@@ -5,6 +5,8 @@ setlocal
 set HERE=%~dp0
 set ROOT=%HERE%..
 set VERSION=1.0.1
+rem На сборщике версию задаёт тег — он и есть источник правды для релиза.
+if defined DIIISPL_VERSION set VERSION=%DIIISPL_VERSION%
 
 for %%F in ("%ROOT%\DIIISPL.exe" "%ROOT%\DIIISPL.ico" "%ROOT%\LICENSE" "%ROOT%\README.md") do (
   if not exist %%F (

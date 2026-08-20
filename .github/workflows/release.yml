@@ -1,0 +1,90 @@
+# Сборка выпуска. Запускается тегом вида v1.0.2 — он же задаёт версию:
+# держать её ещё и в файлах значит однажды выпустить 1.0.2 с надписью 1.0.1.
+#
+# Ранние сборки помечаются тегом с суффиксом (v1.0.2-early.1) и уезжают
+# предварительным выпуском — программа берёт их только на раннем канале.
+name: Выпуск
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Версия без «v», например 1.0.2
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-2022
+
+    # Секреты вынесены на уровень задачи: внутри шага их не видно из условия,
+    # а решать «подписывать или нет» надо до того, как шаг начнётся.
+    env:
+      SIGN_PFX: ${{ secrets.SIGN_PFX }}
+      SIGN_PFX_PASSWORD: ${{ secrets.SIGN_PFX_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Версия
+        shell: pwsh
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $version = if ('${{ github.event_name }}' -eq 'workflow_dispatch') { '${{ inputs.version }}' }
+                     else { $tag -replace '^v','' }
+          $number = ($version -split '-')[0]          # 1.0.2-early.1 → 1.0.2
+          if ($number -notmatch '^\d+\.\d+\.\d+$') { throw "Непонятная версия: $version" }
+          $early = $version -match '-'
+
+          "DIIISPL_VERSION=$number"      | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "DIIISPL_TAG=$version"         | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "DIIISPL_EARLY=$early"         | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+
+          # версия внутри программы — та же, что в теге
+          $file = 'AssemblyInfo.cs'
+          $text = Get-Content $file -Raw
+          $text = $text -replace 'AssemblyVersion\("[^"]*"\)',     "AssemblyVersion(`"$number.0`")"
+          $text = $text -replace 'AssemblyFileVersion\("[^"]*"\)', "AssemblyFileVersion(`"$number.0`")"
+          Set-Content $file $text -Encoding utf8
+          Write-Host "Собираю $version"
+
+      # Собирается из исходников: detours и wil тянет vcpkg, поэтому шаг долгий,
+      # несколько минут. Кэш сюда не поставлен намеренно — build-native.cmd
+      # раскладывает промежуточные файлы во временную папку, путь к которой
+      # у сборщика свой, и ключ кэша указывал бы мимо.
+      - name: Библиотека оформления панели задач
+        run: native\build-native.cmd
+
+      # Сертификат самодельный и в репозиторий не попадает. Есть в секретах —
+      # подписываем; нет — собираем без подписи, но такой выпуск программа
+      # у себя не поставит: она сверяет подпись с известным отпечатком.
+      - name: Сертификат подписи
+        if: ${{ env.SIGN_PFX != '' }}
+        shell: pwsh
+        run: |
+          $bytes = [Convert]::FromBase64String($env:SIGN_PFX)
+          $path  = Join-Path $env:RUNNER_TEMP 'sign.pfx'
+          [IO.File]::WriteAllBytes($path, $bytes)
+          $password = ConvertTo-SecureString $env:SIGN_PFX_PASSWORD -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath $path -CertStoreLocation Cert:\CurrentUser\My -Password $password
+          Remove-Item $path -Force
+          "DIIISPL_SIGN_THUMBPRINT=$($cert.Thumbprint)" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Программа
+        run: build.cmd
+
+      - name: Установщик
+        run: installer\build-msi.cmd
+
+      - name: Выпуск
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.DIIISPL_TAG }}
+          name: ${{ env.DIIISPL_TAG }}
+          prerelease: ${{ env.DIIISPL_EARLY }}
+          generate_release_notes: true
+          files: DIIISPL-${{ env.DIIISPL_VERSION }}-x64.msi
