@@ -478,22 +478,8 @@ namespace DIIISPL
             if (enabled.Count == 0) return "Не выбран ни один монитор.";
             if (enabled.Count == 1) return null;
 
-            // Наложение — единственное, что Windows точно не примет. Проверялось
-            // оно только при включении монитора переключателем, а перетаскивание
-            // мышью проходило мимо: карточки лежали внахлёст, внизу было тихо, и
-            // «Применить» записывало на диск невозможную раскладку. Windows потом
-            // расставляла экраны по-своему, а окно продолжало показывать своё.
-            for (int i = 0; i < enabled.Count; i++)
-                for (int j = i + 1; j < enabled.Count; j++)
-                {
-                    var a = enabled[i];
-                    var b = enabled[j];
-                    if (a.CloneGroup >= 0 && a.CloneGroup == b.CloneGroup) continue;   // дубль лежит поверх намеренно
-                    if (a.X < b.X + b.DesktopWidth && b.X < a.X + a.DesktopWidth &&
-                        a.Y < b.Y + b.DesktopHeight && b.Y < a.Y + a.DesktopHeight)
-                        return "«" + a.Name + "» и «" + b.Name + "» налезают друг на друга — разведите их: " +
-                               "рабочие столы наложенными быть не могут.";
-                }
+            string overlap = OverlapProblem();
+            if (overlap != null) return overlap;
 
             var reached = new List<LayoutDisplay>();
             reached.Add(enabled[0]);
@@ -513,6 +499,37 @@ namespace DIIISPL
             }
             if (reached.Count < enabled.Count)
                 return "Между мониторами есть разрыв — придвиньте их вплотную, иначе Windows сдвинет их сама.";
+            return null;
+        }
+
+        /// <summary>
+        /// Налезают ли мониторы друг на друга. Единственное, чего Windows точно
+        /// не примет: она расставит экраны по-своему, а профиль останется с
+        /// невозможными координатами — и точка «применён сейчас» у него не
+        /// загорится никогда.
+        ///
+        /// Проверялось это только при включении монитора переключателем, а
+        /// перетаскивание мышью проходило мимо. Отдельно от Validate — потому
+        /// что применение на этом надо останавливать, а на разрыве между
+        /// мониторами не надо: разрыв Windows закрывает сама.
+        /// </summary>
+        public string OverlapProblem()
+        {
+            if (Layout == null) return null;
+            var enabled = new List<LayoutDisplay>();
+            foreach (var d in Layout.Displays) if (d.Enabled) enabled.Add(d);
+
+            for (int i = 0; i < enabled.Count; i++)
+                for (int j = i + 1; j < enabled.Count; j++)
+                {
+                    var a = enabled[i];
+                    var b = enabled[j];
+                    if (a.CloneGroup >= 0 && a.CloneGroup == b.CloneGroup) continue;   // дубль лежит поверх намеренно
+                    if (a.X < b.X + b.DesktopWidth && b.X < a.X + a.DesktopWidth &&
+                        a.Y < b.Y + b.DesktopHeight && b.Y < a.Y + a.DesktopHeight)
+                        return "«" + a.Name + "» и «" + b.Name + "» налезают друг на друга — разведите их: " +
+                               "рабочие столы наложенными быть не могут.";
+                }
             return null;
         }
 

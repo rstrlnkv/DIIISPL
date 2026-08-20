@@ -86,6 +86,10 @@ namespace DIIISPL
             // и в Alt+Tab окно получает подходящий, а не растянутый из одного.
             _window = new MainWindow();
             _window.ProfilesChanged += ReloadHotkeys;
+            _window.ApplyReported += delegate(string text, bool alarming)
+            {
+                Balloon(text, alarming ? Forms.ToolTipIcon.Error : Forms.ToolTipIcon.Info);
+            };
 
             BuildTray();
             ReloadHotkeys();
@@ -253,6 +257,15 @@ namespace DIIISPL
 
         private void Quit()
         {
+            // Посреди перестроения не выходим: работа идёт в фоновом потоке, и
+            // Shutdown оборвал бы её на середине вызовов в драйвер, не дав
+            // поставить отметку затвора.
+            if (_applying)
+            {
+                Balloon("Идёт перестроение экранов — подождите несколько секунд.", Forms.ToolTipIcon.Info);
+                return;
+            }
+
             // Спрашиваем до выхода, а не через Closing окна: Shutdown закрывает окна,
             // не глядя на отмену, — вопрос показывался, ответ «я передумал» ничего
             // не менял, и правки пропадали вместе с программой.
@@ -274,6 +287,7 @@ namespace DIIISPL
             UnregisterHotkeys();
             int id = 1;
             var problems = new List<string>();
+            var taken = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var layout in Store.LoadAll())
             {
@@ -286,6 +300,13 @@ namespace DIIISPL
                     id++;
                 }
                 else problems.Add(layout.Hotkey + " — занято другой программой");
+
+                // Тёзка среди своих же профилей. Прежде про него говорилось
+                // «занято другой программой» — а другой программы нет.
+                string already;
+                if (taken.TryGetValue(layout.Hotkey, out already))
+                    problems.Add(layout.Hotkey + " — одно сочетание у «" + already + "» и «" + layout.Name + "»");
+                else taken[layout.Hotkey] = layout.Name;
             }
 
             if (problems.Count > 0)
@@ -298,22 +319,54 @@ namespace DIIISPL
             _hotkeyProfiles.Clear();
         }
 
+        /// <summary>
+        /// Применить профиль по имени — горячей клавишей или из меню значка.
+        ///
+        /// Работа идёт в стороннем потоке. Это главный, ежедневный путь: кнопку в
+        /// окне от заморозки уже избавили, а здесь `Applier.Apply` по-прежнему
+        /// вызывался в потоке окна — с паузами на секунды и ожиданием затвора до
+        /// тридцати. Программа замирала целиком, нажатия горячей клавиши копились
+        /// в очереди сообщений и после разморозки перестраивали дисплеи подряд —
+        /// ровно та нагрузка, из-за которой 19.08.2026 машина ушла в синий экран.
+        ///
+        /// Пока перестроение идёт, второе не начинаем: затвор его всё равно не
+        /// пустит, а очередь из ждущих потоков не нужна никому.
+        /// </summary>
+        private bool _applying;
+
         private void ApplyByName(string name)
         {
+            if (_applying) return;
             var layout = Store.LoadByName(name);
             if (layout == null) return;
-            var result = Applier.Apply(layout);
 
-            if (!result.Success)
-                Balloon(layout.Name + ": " + result.Error, Forms.ToolTipIcon.Error);
-            else if (result.Warnings.Count > 0)
-                Balloon(layout.Name + ": " + string.Join(" ", result.Warnings.ToArray()), Forms.ToolTipIcon.Warning);
-
-            if (_window != null && _window.IsVisible)
+            _applying = true;
+            ThreadPool.QueueUserWorkItem(delegate
             {
-                _window.ReloadLive();
-                _window.ReloadProfiles(name);
-            }
+                ApplyResult result;
+                try { result = Applier.Apply(layout); }
+                catch (Exception ex)
+                {
+                    result = new ApplyResult();
+                    result.Error = ex.Message;
+                }
+
+                Dispatcher.BeginInvoke(new Action(delegate
+                {
+                    _applying = false;
+
+                    if (!result.Success)
+                        Balloon(layout.Name + ": " + result.Error, Forms.ToolTipIcon.Error);
+                    else if (result.Warnings.Count > 0)
+                        Balloon(layout.Name + ": " + string.Join(" ", result.Warnings.ToArray()), Forms.ToolTipIcon.Warning);
+
+                    if (_window != null && _window.IsVisible)
+                    {
+                        _window.ReloadLive();
+                        _window.RefreshProfiles();
+                    }
+                }));
+            });
         }
 
         private void Balloon(string text, Forms.ToolTipIcon icon)

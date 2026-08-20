@@ -24,6 +24,9 @@ namespace DIIISPL
     {
         public event Action ProfilesChanged;
 
+        /// <summary>Сказать то, что не поместилось бы в спрятанное окно. Слушает трей.</summary>
+        public event Action<string, bool> ApplyReported;
+
         private readonly ListBox _profileList = new ListBox();
         private readonly TextBlock _nameText = new TextBlock();
         private readonly TextBlock _nameHint = new TextBlock();
@@ -79,6 +82,16 @@ namespace DIIISPL
 
             SourceInitialized += delegate { Fluent.ApplyWindowStyling(this); };
             PreviewKeyDown += OnPreviewKeyDown;
+
+            // Ушли из окна — вышли и из захвата сочетания: иначе окно остаётся
+            // глухим к клавиатуре, а вернувшись, человек об этом не знает.
+            Deactivated += delegate
+            {
+                if (!_capturingHotkey) return;
+                _capturingHotkey = false;
+                UpdateHeader();
+                UpdateStatus(null);
+            };
             Closing += delegate(object s, System.ComponentModel.CancelEventArgs e)
             {
                 e.Cancel = true;                  // окно не закрывается, а прячется в трей
@@ -125,6 +138,8 @@ namespace DIIISPL
             // видел «Раскладка применена» и обрезанное начало того, что пошло не
             // так. Читать их негде: подсказки и прокрутки у полосы нет.
             _status.TextWrapping = TextWrapping.Wrap;
+            // Выше четырёх строк полоса не растёт, а всё, что не поместилось,
+            // лежит в подсказке: обрезать молча — то же многоточие, только хуже.
             _status.MaxHeight = 72;
             _statusBar.Child = _status;
             Grid.SetRow(_statusBar, 1);
@@ -310,7 +325,7 @@ namespace DIIISPL
                 if (e.Key == Key.Enter) { CommitRename(true); e.Handled = true; }
                 else if (e.Key == Key.Escape) { CommitRename(false); e.Handled = true; }
             };
-            _nameBox.LostFocus += delegate { if (_renaming) CommitRename(true); };
+            _nameBox.LostFocus += delegate { if (_renaming) CommitRename(true, true); };
             nameStack.Children.Add(_nameBox);
 
             // Под названием — строка о том, что в профиле: сколько мониторов и какая
@@ -510,6 +525,11 @@ namespace DIIISPL
         /// </summary>
         public void RefreshProfiles()
         {
+            // Пока идёт перестроение, список не трогаем вовсе: смену картинки
+            // экранов вызывает само перестроение, а перечитывание списка гасит
+            // и надпись «Перестраиваю экраны…», и признак занятости кнопки.
+            if (_applying) return;
+
             if (_dirty)
             {
                 // Несохранённое чужими руками не трогаем: список строк освежим,
@@ -679,9 +699,20 @@ namespace DIIISPL
         /// </summary>
         private bool SelectProfile(Layout layout)
         {
+            // Переходить некуда — значит и делать нечего.
+            //
+            // Прежде эта ветка проваливалась дальше и сбрасывала `_dirty` вместе
+            // с `_currentOriginalName`. Пока имя уходило на диск сразу, вреда не
+            // было; теперь имя — правка в памяти, и сброс отрывал её от файла.
+            // Пункты меню открытого профиля зовут именно `SelectProfile(_current)`:
+            // после «Переименовать» окно показывало новое имя и утверждало, что
+            // сохранять нечего, а профиль на диске оставался прежним — правка
+            // пропадала молча или, наоборот, плодила второй файл.
+            if (ReferenceEquals(layout, _current)) return true;
+
             // Раньше правки сохранялись молча при любом переключении — так профиль можно было
             // перезаписать, сам того не заметив. Теперь решение всегда за пользователем.
-            if (_dirty && _current != null && !ReferenceEquals(layout, _current))
+            if (_dirty && _current != null)
             {
                 // Передумали — возвращаем выделение на прежний профиль, иначе
                 // список показывал бы один, а на холсте остался бы другой.
@@ -749,7 +780,7 @@ namespace DIIISPL
             Store.Save(layout);
             ReloadProfiles(layout.Name);
             Raise(ProfilesChanged);
-            UpdateStatus("Создан профиль из текущей раскладки. Назовите его и назначьте сочетание клавиш.");
+            UpdateStatus("Создан профиль из текущей раскладки. Назовите его и нажмите «Сохранить».");
             // Просить переименовать и не открыть поле — значит просить впустую:
             // прежде фокус отдавали спрятанному _nameBox, курсор не появлялся
             // нигде, и набранное уходило в никуда.
@@ -795,7 +826,7 @@ namespace DIIISPL
             // «Отмена» читается как «остаться и ничего не менять», а делала она
             // ровно обратное: молча выбрасывала правки.
             var dialog = new ConfirmDialog("Сохранить правки в «" + _current.Name + "»?",
-                "Иначе они пропадут.", "Сохранить", "Не сохранять");
+                "Иначе они пропадут. Esc — вернуться и ничего не менять.", "Сохранить", "Не сохранять");
             dialog.Owner = IsVisible ? this : null;
 
             bool? answer = dialog.ShowDialog();
@@ -824,6 +855,10 @@ namespace DIIISPL
 
             _current.RestoreFrom(fresh);
             _canvas.Rebuild();
+            // Список тоже: имя он держит простым текстом, набранным при последней
+            // перестройке, — без этого в строке оставалось бы выброшенное имя.
+            RefreshProfileList();
+            SelectListItemFor(_current);
             UpdateHeader();
             UpdateProperties();
         }
@@ -855,9 +890,23 @@ namespace DIIISPL
         private void ApplyCurrent()
         {
             if (_current == null || _applying) return;
+
+            // Наложенную раскладку Windows не примет — она расставит экраны
+            // по-своему, а профиль останется с невозможными координатами. Прежде
+            // про наложение только писали внизу, а применяли всё равно.
+            string overlap = _canvas.OverlapProblem();
+            if (overlap != null) { UpdateStatus(overlap); return; }
+
             SaveCurrent(false);
 
-            Layout layout = _current;
+            // В поток уходит копия, а не живой профиль. Окно больше не заперто:
+            // пока перестроение идёт, человек может двигать мониторы, а
+            // «Не сохранять» вызывает Displays.Clear() — прямо под руками у
+            // Applier, который этот же список перебирает. В лучшем случае на
+            // экраны уехала бы раскладка, которой нет ни на диске, ни на холсте;
+            // в худшем — исключение в потоке пула, где его никто не ловит, то
+            // есть тихая смерть процесса посреди перестроения дисплеев.
+            Layout layout = _current.DeepCopy();
             _applying = true;
             _applyButton.IsEnabled = false;
             UpdateStatus("Перестраиваю экраны…");
@@ -874,16 +923,29 @@ namespace DIIISPL
                     _canvas.Refresh();
                     RefreshProfileList();
 
+                    // Спрятанное окно результат не покажет: полоса внизу останется
+                    // в невидимом окне, а следующее открытие начнётся с чистой.
+                    // Поэтому там, где сказать некому, зовём того, у кого есть трей.
                     var parts = new List<string>();
-                    if (result.Success) parts.Add("Раскладка применена.");
-                    else parts.Add("Не удалось: " + result.Error);
+                    // Имя профиля в строке обязательно: пока шло перестроение, человек
+                    // мог перейти на другой профиль, и «Раскладка применена» относилась
+                    // бы к тому, которого на экране уже нет.
+                    if (result.Success) parts.Add("Раскладка «" + layout.Name + "» применена.");
+                    else parts.Add("«" + layout.Name + "» не удалось: " + result.Error);
                     foreach (string w in result.Warnings) parts.Add(w);
-                    UpdateStatus(string.Join("  ", parts.ToArray()));
+                    string text = string.Join("  ", parts.ToArray());
+                    UpdateStatus(text);
+                    if (!IsVisible) Raise(ApplyReported, text, !result.Success);
                 }));
             });
         }
 
         private static void Raise(Action a) { if (a != null) a(); }
+
+        private static void Raise(Action<string, bool> a, string text, bool alarming)
+        {
+            if (a != null) a(text, alarming);
+        }
 
         // ---------------------------------------------------------------- свойства
         // ---------------------------------------------------------------- переименование
@@ -900,7 +962,9 @@ namespace DIIISPL
             _nameBox.SelectAll();
         }
 
-        private void CommitRename(bool keep)
+        private void CommitRename(bool keep) { CommitRename(keep, false); }
+
+        private void CommitRename(bool keep, bool fromFocusLoss)
         {
             if (!_renaming) return;
 
@@ -919,21 +983,26 @@ namespace DIIISPL
                     string clash = Store.NameInUse(name, _currentOriginalName);
                     if (clash != null)
                     {
-                        UpdateStatus("Профиль «" + clash + "» уже есть — придумайте другое имя.");
-                        _nameBox.Focus();
-                        _nameBox.SelectAll();
-                        return;
-                    }
+                        UpdateStatus("Профиль «" + clash + "» уже есть — придумайте другое имя. Esc — оставить прежнее.");
 
-                    // Имя — такая же правка профиля, как всё остальное, и на диск
-                    // уходит вместе со всем остальным. Прежде здесь стоял
-                    // SaveCurrent: переименование молча записывало заодно и
-                    // несохранённую раскладку — без вопроса, который программа
-                    // обязательно задаёт в других местах.
-                    _current.Name = name;
-                    MarkDirty();
-                    RefreshProfileList();
-                    SelectListItemFor(_current);
+                        // Фокус возвращаем только если правку подтвердили сами —
+                        // Enter. По уходу мышью не держим: тянуть фокус обратно
+                        // из обработчика его потери значит не выпускать человека
+                        // из поля, пока он не угадает имя.
+                        if (!fromFocusLoss) { _nameBox.Focus(); _nameBox.SelectAll(); return; }
+                    }
+                    else
+                    {
+                        // Имя — такая же правка профиля, как всё остальное, и на
+                        // диск уходит вместе со всем остальным. Прежде здесь стоял
+                        // SaveCurrent: переименование молча записывало заодно и
+                        // несохранённую раскладку — без вопроса, который программа
+                        // обязательно задаёт в других местах.
+                        _current.Name = name;
+                        MarkDirty();
+                        RefreshProfileList();
+                        SelectListItemFor(_current);
+                    }
                 }
             }
 
@@ -1013,7 +1082,7 @@ namespace DIIISPL
             _updating = true;
             _nameText.Text = _current != null ? _current.Name : "";
             _nameHint.Text = DescribeCurrent();
-            _applyButton.IsEnabled = _current != null;
+            _applyButton.IsEnabled = _current != null && !_applying;
 #if DEV
             UpdateTaskbarButton();
 #endif
@@ -1385,6 +1454,7 @@ namespace DIIISPL
             if (text == null && _current != null) text = _canvas.Validate();
 
             _status.Text = text ?? "";
+            _status.ToolTip = string.IsNullOrEmpty(_status.Text) ? null : _status.Text;
             _statusBar.Visibility = string.IsNullOrEmpty(_status.Text)
                 ? Visibility.Collapsed : Visibility.Visible;
         }
@@ -1449,7 +1519,8 @@ namespace DIIISPL
                 if (ReferenceEquals(other, _current)) continue;
                 if (!string.Equals(other.Hotkey, combo, StringComparison.OrdinalIgnoreCase)) continue;
                 UpdateStatus(combo + " уже назначено профилю «" + other.Name +
-                             "». Сначала снимите его там — Delete в режиме выбора сочетания.");
+                             "». Сначала снимите его там: откройте «" + other.Name +
+                             "», нажмите «Сочетание клавиш» и Delete.");
                 return;
             }
 

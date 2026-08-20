@@ -149,7 +149,7 @@ namespace DIIISPL
             uint color = 0x00000000;
             if (args.Length > 2 && !ExplorerTap.TryParseColor(args[2], out color))
             {
-                Console.WriteLine("  цвет должен быть в виде AARRGGBB");
+                Console.WriteLine("  цвет пишется как AARRGGBB или короче — RRGGBB");
                 return 2;
             }
             bool showLine = args.Length > 3 && args[3].Trim().ToLowerInvariant() == "line";
@@ -263,7 +263,7 @@ namespace DIIISPL
                 string clash = Store.NameInUse(args[1], null);
                 if (clash != null)
                 {
-                    Console.WriteLine("Имя «" + args[1] + "» ложится в тот же файл, что и профиль «" + clash + "».");
+                    Console.WriteLine("«" + args[1] + "» и «" + clash + "» — для программы одно и то же имя.");
                     Console.WriteLine("Возьмите другое имя или переснимите существующий: /save \"" + clash + "\"");
                     return 2;
                 }

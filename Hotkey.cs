@@ -138,7 +138,8 @@ namespace DIIISPL
                     // пустой хвост, и прежде он молча превращался в рабочее
                     // сочетание Ctrl+«=». Человек не дописал имя клавиши, а сочетание
                     // ему всё равно назначили.
-                    if (i == parts.Length - 1 && keyPart == null && text.EndsWith("++"))
+                    if (i == parts.Length - 1 && keyPart == null &&
+                        text.Length - text.TrimEnd('+').Length == 2)
                     {
                         keyPart = "+";
                         continue;

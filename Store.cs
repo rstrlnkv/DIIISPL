@@ -182,11 +182,22 @@ namespace DIIISPL
             return null;
         }
 
-        public static void Save(Layout layout) { layout.Save(PathFor(layout.Name)); }
+        public static void Save(Layout layout)
+        {
+            string path = PathFor(layout.Name);
+            layout.Save(path);
+            layout.SourcePath = path;
+        }
 
+        /// <summary>
+        /// Убрать профиль. Путь берём тот, из которого он прочитан, а не тот, что
+        /// следует из имени: имя внутри файла и имя самого файла могут разойтись,
+        /// и тогда удаление по имени било мимо — сносило чужого тёзку, а выбранный
+        /// оставляло на месте. Мимо корзины, вернуть нечего.
+        /// </summary>
         public static void Delete(Layout layout)
         {
-            string p = PathFor(layout.Name);
+            string p = !string.IsNullOrEmpty(layout.SourcePath) ? layout.SourcePath : PathFor(layout.Name);
             if (File.Exists(p)) File.Delete(p);
         }
 
@@ -202,7 +213,8 @@ namespace DIIISPL
         /// </summary>
         public static void Rename(string oldName, Layout layout)
         {
-            string oldPath = PathFor(oldName);
+            // Тот же довод, что и в Delete: откуда прочитали, оттуда и убираем.
+            string oldPath = !string.IsNullOrEmpty(layout.SourcePath) ? layout.SourcePath : PathFor(oldName);
             Save(layout);
 
             if (string.Equals(oldName, layout.Name, StringComparison.Ordinal)) return;

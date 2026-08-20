@@ -81,7 +81,7 @@
     </Property>
 
     <SetProperty Id="INSTALLSHORTCUT" Value="0" After="AppSearch" Sequence="both">
-      WIX_UPGRADE_DETECTED AND NOT PREVSHORTCUT
+      (WIX_UPGRADE_DETECTED OR Installed) AND NOT PREVSHORTCUT
     </SetProperty>
 
     <Directory Id="TARGETDIR" Name="SourceDir">
@@ -212,7 +212,15 @@
                   Execute="immediate" Return="ignore" />
 
     <InstallExecuteSequence>
-      <Custom Action="CleanAutoStart" Before="RemoveFiles">REMOVE="ALL"</Custom>
+      <!--
+        NOT UPGRADINGPRODUCTCODE обязательно. Обновление устроено так, что новый
+        пакет прогоняет удаление старого — с REMOVE="ALL" в его собственной
+        последовательности. Без этой оговорки каждое обновление стирало бы
+        запись автозапуска: программа возвращалась бы в трей, но при следующем
+        входе в Windows уже не запускалась, и галочка стояла бы снятой. То есть
+        обновление само выключало бы ровно ту настройку, которую мы тут чиним.
+      -->
+      <Custom Action="CleanAutoStart" Before="RemoveFiles">REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE</Custom>
       <Custom Action="RelaunchInTray" After="InstallFinalize">DIIISPLRELAUNCH="1" AND NOT REMOVE="ALL"</Custom>
     </InstallExecuteSequence>
 

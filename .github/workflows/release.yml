@@ -118,8 +118,20 @@ jobs:
         run: |
           $msi = "DIIISPL-$env:DIIISPL_VERSION-$env:DIIISPL_CHANNEL-x64.msi"
           $sig = Get-AuthenticodeSignature $msi
+
+          # Смотрим на сертификат, а не на Status: корень самоподписанный, и
+          # Get-AuthenticodeSignature на правильно подписанном пакете отвечает
+          # UnknownError. Проверка по Status валила бы каждый выпуск.
           if ($sig.SignerCertificate -eq $null) {
             throw "Пакет $msi собран без подписи — такой выпуск программа не поставит."
+          }
+
+          # И отпечаток тот самый. Программа сверяет установщик именно с ним
+          # (Updater.cs), поэтому подписанный чужим ключом выпуск она отвергнет —
+          # а сборка без этой проверки позеленела бы и опубликовала его.
+          $want = '103850469089DEECC19D0DD6CE1D4DD3307601FA'
+          if ($sig.SignerCertificate.Thumbprint -ne $want) {
+            throw "Пакет подписан ключом $($sig.SignerCertificate.Thumbprint), а программа ждёт $want."
           }
           Write-Host "Подписан: $($sig.SignerCertificate.Thumbprint)"
 

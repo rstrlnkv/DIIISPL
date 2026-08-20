@@ -35,12 +35,6 @@ rem не разъезжается с версией: версия говорит
 rem Файл создаётся при каждой сборке и в репозиторий не попадает; без git номер 0.
 set BUILD=0
 for /f "delims=" %%I in ('git -C "%~dp0." rev-list --count HEAD 2^>nul') do set BUILD=%%I
-rem Канал записываем рядом с программой: пакет собирается из готового exe и
-rem раньше принимал на веру, что канал у них общий. Собрал build.cmd dev, потом
-rem по привычке build-msi.cmd без аргумента — и получался «стабильный» пакет с
-rem Dev-программой: раздел панели задач на месте, а библиотеки в пакете нет.
-> "%~dp0.channel" echo %CHANNEL%
-
 > "%~dp0BuildInfo.g.cs" echo // Создаётся build.cmd при каждой сборке. Править незачем.
 >> "%~dp0BuildInfo.g.cs" echo namespace DIIISPL { internal static class BuildInfo { public const string Number = "%BUILD%"; } }
 
@@ -57,6 +51,14 @@ rem Dev-программой: раздел панели задач на мест
   "%~dp0MonitorCanvas.cs" "%~dp0ConfirmDialog.cs" "%~dp0Ui.cs" "%~dp0AboutWindow.cs" "%~dp0MainWindow.cs" "%~dp0App.cs"
 
 if errorlevel 1 exit /b 1
+
+rem Канал записываем рядом с программой — и только после удачной компиляции.
+rem Пакет собирается из готового exe и раньше принимал на веру, что канал у них
+rem общий: собрал build.cmd dev, потом по привычке build-msi.cmd без аргумента —
+rem и выходил «стабильный» пакет с Dev-программой. Записать метку до компиляции
+rem тоже нельзя: упавшая сборка оставила бы «dev» рядом со стабильным exe, и
+rem сверка пропустила бы неверную пару.
+> "%~dp0.channel" echo %CHANNEL%
 
 call "%~dp0installer\sign.cmd" "%~dp0DIIISPL.exe" || exit /b 1
 

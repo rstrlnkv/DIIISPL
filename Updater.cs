@@ -302,7 +302,7 @@ namespace DIIISPL
             // Потом личность: тот ли это ключ.
             X509Certificate2 cert;
             try { cert = new X509Certificate2(X509Certificate.CreateFromSignedFile(path)); }
-            catch { return "у установщика нет подписи — скачайте выпуск заново"; }
+            catch { return "подпись установщика не подтверждается: он повреждён или не подписан. Скачайте выпуск заново"; }
 
             if (!string.Equals(cert.Thumbprint, SignerThumbprint, StringComparison.OrdinalIgnoreCase))
                 return "установщик подписан чужим ключом. Берите пакет только со страницы выпусков DIIISPL";

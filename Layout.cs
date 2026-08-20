@@ -77,6 +77,16 @@ namespace DIIISPL
         private string _taskbarLegacy;
 
         /// <summary>
+        /// Файл, из которого профиль прочитан. Пусто — профиль ещё нигде не лежит.
+        ///
+        /// Имя профиля и имя его файла — разные вещи: файл могли скопировать
+        /// руками, и тогда «Copy.layout» содержит «Дом». Удаление и переименование,
+        /// считавшие путь из имени, в этом случае били мимо — и удаляли чужой
+        /// профиль-тёзку, оставляя выбранный на месте. Мимо корзины, без возврата.
+        /// </summary>
+        public string SourcePath;
+
+        /// <summary>
         /// Описывает ли профиль то, что стоит на экранах прямо сейчас. Этим
         /// отмечается действующая раскладка — точкой в списке и в меню значка.
         ///
@@ -114,13 +124,33 @@ namespace DIIISPL
             var active = new Dictionary<string, MonitorInfo>();
             foreach (var m in live) if (m.Active) active[m.Identity] = m;
 
+            var known = new Dictionary<string, MonitorInfo>();
+            foreach (var m in live) known[m.Identity] = m;
+
             var present = new List<LayoutDisplay>();
             int wanted = 0;
             foreach (var d in Displays)
             {
                 if (!d.Enabled) continue;
                 wanted++;
-                if (active.ContainsKey(d.Identity)) present.Add(d);
+
+                MonitorInfo mon;
+
+                // Выдернутый монитор из сверки выпадает: включить его нельзя, и
+                // применение его пропустит.
+                if (!known.TryGetValue(d.Identity, out mon)) continue;
+
+                // А подключённый, но погашенный — не выпадает ни в коем случае.
+                // Это разные вещи, и путать их дорого: телевизор в спящем режиме,
+                // монитор с выключенным питанием, выход, который Windows погасила
+                // после неудачной попытки, — profile обязан их зажечь. Пока оба
+                // случая отсеивались вместе, нажатие горячей клавиши тихо
+                // рапортовало «готово» и не делало ничего: до лестницы попыток,
+                // которая как раз и умеет будить погашенные выходы, дело не
+                // доходило вовсе.
+                if (!mon.Active) return false;
+
+                present.Add(d);
             }
 
             // Строгий вопрос — «это ли стоит на экранах» — требует, чтобы все
@@ -254,6 +284,7 @@ namespace DIIISPL
 #endif
             copy._taskbarRaw.AddRange(_taskbarRaw);
             copy._taskbarLegacy = _taskbarLegacy;
+            copy.SourcePath = SourcePath;
             foreach (var d in Displays) copy.Displays.Add(d.Clone());
             return copy;
         }
@@ -505,6 +536,18 @@ namespace DIIISPL
                 }
             }
             if (string.IsNullOrEmpty(layout.Name)) layout.Name = Path.GetFileNameWithoutExtension(file);
+            layout.SourcePath = file;
+
+            // Хвостовые пустые строки секции срезаем. Пустая строка перед следующей
+            // секцией принадлежит не секции, а разметке файла: Save ставит свою
+            // перед каждым [display], и запомненная нарастала поверх неё. Измерено:
+            // файл прибавлял по строке за каждое сохранение — а сохраняет он и по
+            // кнопке, и внутри «Применить», и при перестановке в списке. Внутренние
+            // пустые строки оставляем: ими человек разделяет свои пометки.
+            while (layout._taskbarRaw.Count > 0 &&
+                   layout._taskbarRaw[layout._taskbarRaw.Count - 1].Length == 0)
+                layout._taskbarRaw.RemoveAt(layout._taskbarRaw.Count - 1);
+
             layout.DropLoneCloneGroups();
 #if DEV
             if (!layout.Taskbar.Versioned) layout.Taskbar.DropUntouchedSpecialCases();
