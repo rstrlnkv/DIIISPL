@@ -722,8 +722,12 @@ namespace DIIISPL
         private void AskToSave()
         {
             if (_current == null || !_dirty) return;
-            var dialog = new ConfirmDialog("Сохранить изменения?",
-                "В профиле «" + _current.Name + "» есть несохранённые правки.", "Сохранить");
+            // Вторая кнопка называется «Не сохранять», а не «Отмена». Диалог
+            // появляется при закрытии окна и при переходе на другой профиль — там
+            // «Отмена» читается как «остаться и ничего не менять», а делала она
+            // ровно обратное: молча выбрасывала правки.
+            var dialog = new ConfirmDialog("Сохранить правки в «" + _current.Name + "»?",
+                "Иначе они пропадут.", "Сохранить", "Не сохранять");
             dialog.Owner = IsVisible ? this : null;
             if (dialog.ShowDialog() == true) SaveCurrent(false);
             else _dirty = false;

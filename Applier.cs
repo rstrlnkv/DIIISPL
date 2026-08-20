@@ -32,10 +32,22 @@ namespace DIIISPL
             public int ModeIndex;
         }
 
-        private static DateTime _lastApply = DateTime.MinValue;
-        private const int MinIntervalMs = 1200;
+        /// <summary>Пауза между ступенями лестницы попыток внутри одного применения.</summary>
+        private const int RungPauseMs = 600;
 
         public static ApplyResult Apply(Layout layout)
+        {
+            // Очередь и пауза — общие на все процессы сеанса, см. ApplyGate.
+            // Затвор берётся до первого взгляда на дисплеи: иначе двое, начавших
+            // одновременно, оба увидят «раскладка уже такая» и оба пойдут дальше.
+            using (ApplyGate gate = ApplyGate.Enter())
+            {
+                try { return Apply(layout, gate); }
+                finally { gate.Stamp(); }
+            }
+        }
+
+        private static ApplyResult Apply(Layout layout, ApplyGate gate)
         {
             var res = new ApplyResult();
 
@@ -60,9 +72,7 @@ namespace DIIISPL
             // Перестройка конфигурации дисплеев — тяжёлая операция в ядре графического стека.
             // Частые подряд идущие смены (зажатая горячая клавиша, скрипт в цикле) способны
             // подвесить или уронить видеодрайвер, поэтому выдерживаем паузу между применениями.
-            double since = (DateTime.UtcNow - _lastApply).TotalMilliseconds;
-            if (since < MinIntervalMs) System.Threading.Thread.Sleep((int)(MinIntervalMs - since));
-            _lastApply = DateTime.UtcNow;
+            gate.Wait();
 
             // Выход, входящий в дублирование, получает от драйвера другой target id: у телевизора
             // это 16781568 вместо 4352. Пары «обычных» id не существует, поэтому собранная вручную
@@ -359,21 +369,31 @@ namespace DIIISPL
             // к погашенным выходам и вернуть успех, чего мы как раз не хотим.
             // SDC_FORCE_MODE_ENUMERATION заставляет драйвер заново перечислить все режимы —
             // операция тяжёлая, поэтому она не в первой попытке, а в запасной.
+            // Между ступенями — пауза. Отказ приходит быстро, поэтому без неё четыре
+            // заявки подряд уходят в драйвер почти вплотную: пауза в 1,2 секунды стоит
+            // перед всем применением и внутри лестницы не действует. А тяжелее всего
+            // как раз ступени с SDC_FORCE_MODE_ENUMERATION — драйвер перечисляет режимы
+            // заново, и именно такой поток запросов ронял машину.
             int err = Native.SetDisplayConfig((uint)pathArr.Length, pathArr, (uint)modeArr.Length, modeArr, baseFlags);
             if (err != 0)
+            {
+                System.Threading.Thread.Sleep(RungPauseMs);
                 err = Native.SetDisplayConfig((uint)pathArr.Length, pathArr, (uint)modeArr.Length, modeArr,
                         baseFlags | Native.SDC_FORCE_MODE_ENUMERATION);
+            }
 
             if (err != 0)
             {
                 // разрешаем системе подобрать режимы самой
                 // расхождения, если они есть, покажет сверка ниже — internals пользователю не нужны
+                System.Threading.Thread.Sleep(RungPauseMs);
                 err = Native.SetDisplayConfig((uint)pathArr.Length, pathArr, (uint)modeArr.Length, modeArr,
                         baseFlags | Native.SDC_ALLOW_CHANGES | Native.SDC_FORCE_MODE_ENUMERATION);
             }
             if (err != 0)
             {
                 // последняя попытка: без явной частоты
+                System.Threading.Thread.Sleep(RungPauseMs);
                 var relaxed = (Native.DISPLAYCONFIG_PATH_INFO[])pathArr.Clone();
                 for (int i = 0; i < relaxed.Length; i++)
                 {

@@ -95,10 +95,29 @@ namespace DIIISPL
             // Основной экран обязан совпадать: без этой проверки раскладка из двух
             // одинаковых мониторов считалась бы совпавшей и с переставленным основным —
             // позиции-то сверяются относительно него самого.
-            foreach (var d in Displays)
+            //
+            // Но сверять надо по группе, а не по каждому выходу. «Основной» здесь
+            // означает «начало координат», а Windows помечает им **каждый** выход,
+            // стоящий в (0,0), — в дубле это сразу оба. Профиль же хранит ровно один:
+            // FromCurrent нормализует, да и переключатель «Основной» в окне ставит один.
+            // Пока сверка шла по каждому выходу, профиль с дублем в начале координат
+            // не совпадал с живой картиной никогда — а значит не работал быстрый выход
+            // выше, и повторное нажатие горячей клавиши каждый раз перестраивало
+            // дисплеи заново, моргая экраном и дёргая HDR.
+            LayoutDisplay primary = null;
+            foreach (var d in Displays) if (d.Enabled && d.Primary) { primary = d; break; }
+
+            if (primary != null)
             {
-                if (!d.Enabled) continue;
-                if (active[d.Identity].Primary != d.Primary) return false;
+                if (!active[primary.Identity].Primary) return false;
+
+                // Лишние «основные» допустимы только как спутники той же группы дубля.
+                foreach (var d in Displays)
+                {
+                    if (!d.Enabled || ReferenceEquals(d, primary)) continue;
+                    if (!active[d.Identity].Primary) continue;
+                    if (d.CloneGroup < 0 || d.CloneGroup != primary.CloneGroup) return false;
+                }
             }
 
             // позиции сверяем относительно основного экрана — сам сдвиг значения не имеет

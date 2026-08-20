@@ -9,6 +9,7 @@ using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Web.Script.Serialization;
 
@@ -186,7 +187,11 @@ namespace DIIISPL
             {
                 string dir = Path.Combine(Path.GetTempPath(), "DIIISPL-update");
                 Directory.CreateDirectory(dir);
-                path = Path.Combine(dir, release.FileName);
+                // Только имя файла и ничего больше. Имя приходит с сервера, а Path.Combine
+                // при корневом втором аргументе выбрасывает первый целиком: «C:\…\что.msi»
+                // или «..\..\что.msi» увели бы запись из временной папки куда угодно —
+                // и запись идёт до проверки подписи.
+                path = Path.Combine(dir, Path.GetFileName(release.FileName));
 
                 Prepare();
                 using (var client = new WebClient())
@@ -225,6 +230,36 @@ namespace DIIISPL
         /// </summary>
         private static string SignatureProblem(string path)
         {
+            // Сначала целостность: цела ли подпись для этого содержимого.
+            //
+            // Одного отпечатка мало, и это не мелочь. Сертификат читается прямо из
+            // файла, поэтому в файл, к которому дописали чужое, он придёт всё тот же:
+            // проверка отвечала бы «подписан тем самым» про пакет, собранный кем угодно.
+            int verdict = Verify(path);
+
+            // Самоподписанный корень на чужой машине не установлен, и WinVerifyTrust
+            // честно об этом говорит. Для нас это не отказ: доверие мы берём не из
+            // цепочки, а из отпечатка ниже. Отвергаем всё остальное — и в первую
+            // очередь несовпадение содержимого с подписью.
+            if (verdict != 0 &&
+                verdict != Native.CERT_E_UNTRUSTEDROOT &&
+                verdict != Native.CERT_E_CHAINING)
+            {
+                if (verdict == Native.TRUST_E_BAD_DIGEST)
+                    return "установщик изменён после подписания — ставить его нельзя";
+
+                // Замерено на испорченных файлах: и у пакета, и у программы система
+                // отвечает не «содержимое не совпадает», а «подписи нет» — при том что
+                // Get-AuthenticodeSignature на тех же файлах говорит про несовпадение
+                // хеша. Различить «не подписан» и «испорчен» этим вызовом нельзя,
+                // поэтому текст покрывает оба случая, а не выбирает наугад.
+                if (verdict == Native.TRUST_E_NOSIGNATURE)
+                    return "у установщика нет действительной подписи — он не подписан или повреждён";
+
+                return "подпись установщика не прошла проверку — ставить его нельзя";
+            }
+
+            // Потом личность: тот ли это ключ.
             X509Certificate2 cert;
             try { cert = new X509Certificate2(X509Certificate.CreateFromSignedFile(path)); }
             catch { return "установщик не подписан — ставить его так нельзя"; }
@@ -233,6 +268,50 @@ namespace DIIISPL
                 return "установщик подписан чужим сертификатом — ставить его нельзя";
 
             return null;
+        }
+
+        /// <summary>Что скажет система о подписи файла. 0 — всё в порядке.</summary>
+        private static int Verify(string path)
+        {
+            var file = new Native.WINTRUST_FILE_INFO();
+            file.cbStruct = (uint)Marshal.SizeOf(typeof(Native.WINTRUST_FILE_INFO));
+            file.pcwszFilePath = path;
+
+            IntPtr filePtr = Marshal.AllocHGlobal((int)file.cbStruct);
+            IntPtr dataPtr = IntPtr.Zero;
+            try
+            {
+                Marshal.StructureToPtr(file, filePtr, false);
+
+                var data = new Native.WINTRUST_DATA();
+                data.cbStruct = (uint)Marshal.SizeOf(typeof(Native.WINTRUST_DATA));
+                data.dwUIChoice = Native.WTD_UI_NONE;
+                data.fdwRevocationChecks = Native.WTD_REVOKE_NONE;   // сеть уже могла отвалиться
+                data.dwUnionChoice = Native.WTD_CHOICE_FILE;
+                data.pFile = filePtr;
+                data.dwStateAction = Native.WTD_STATEACTION_VERIFY;
+                data.dwProvFlags = Native.WTD_SAFER_FLAG;
+
+                dataPtr = Marshal.AllocHGlobal((int)data.cbStruct);
+                Marshal.StructureToPtr(data, dataPtr, false);
+
+                Guid action = Native.WINTRUST_ACTION_GENERIC_VERIFY_V2;
+                int result = Native.WinVerifyTrust(IntPtr.Zero, ref action, dataPtr);
+
+                // Закрыть состояние обязательно, иначе течёт память провайдера.
+                data = (Native.WINTRUST_DATA)Marshal.PtrToStructure(dataPtr, typeof(Native.WINTRUST_DATA));
+                data.dwStateAction = Native.WTD_STATEACTION_CLOSE;
+                Marshal.StructureToPtr(data, dataPtr, false);
+                Native.WinVerifyTrust(IntPtr.Zero, ref action, dataPtr);
+
+                return result;
+            }
+            catch { return Native.TRUST_E_NOSIGNATURE; }   // не смогли проверить — считаем, что не прошло
+            finally
+            {
+                if (dataPtr != IntPtr.Zero) Marshal.FreeHGlobal(dataPtr);
+                Marshal.FreeHGlobal(filePtr);
+            }
         }
 
         private static void Forget(string path)

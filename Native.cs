@@ -445,5 +445,56 @@ namespace DIIISPL
                 default:   return "система не объяснила причину";
             }
         }
+
+        // ------------------------------------------------------------------ подпись файла
+        // Проверка целостности подписи. Отпечаток сертификата сам по себе
+        // не доказывает ничего: его можно прочитать и из файла, в который дописали
+        // что угодно, — сертификат в нём останется прежним, а содержимое уже чужое.
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct WINTRUST_FILE_INFO
+        {
+            public uint cbStruct;
+            [MarshalAs(UnmanagedType.LPWStr)] public string pcwszFilePath;
+            public IntPtr hFile;
+            public IntPtr pgKnownSubject;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct WINTRUST_DATA
+        {
+            public uint cbStruct;
+            public IntPtr pPolicyCallbackData;
+            public IntPtr pSIPClientData;
+            public uint dwUIChoice;
+            public uint fdwRevocationChecks;
+            public uint dwUnionChoice;
+            public IntPtr pFile;
+            public uint dwStateAction;
+            public IntPtr hWVTStateData;
+            public IntPtr pwszURLReference;
+            public uint dwProvFlags;
+            public uint dwUIContext;
+        }
+
+        public const uint WTD_UI_NONE = 2;
+        public const uint WTD_REVOKE_NONE = 0;
+        public const uint WTD_CHOICE_FILE = 1;
+        public const uint WTD_STATEACTION_VERIFY = 1;
+        public const uint WTD_STATEACTION_CLOSE = 2;
+        public const uint WTD_SAFER_FLAG = 0x100;
+
+        public static readonly Guid WINTRUST_ACTION_GENERIC_VERIFY_V2 =
+            new Guid("00AAC56B-CD44-11d0-8CC2-00C04FC295EE");
+
+        /// <summary>Подпись цела, но корень сертификата в системе не установлен.</summary>
+        public const int CERT_E_UNTRUSTEDROOT = unchecked((int)0x800B0109);
+        public const int CERT_E_CHAINING = unchecked((int)0x800B010A);
+        /// <summary>Содержимое файла не совпадает с подписью — файл изменён после подписания.</summary>
+        public const int TRUST_E_BAD_DIGEST = unchecked((int)0x80096010);
+        public const int TRUST_E_NOSIGNATURE = unchecked((int)0x800B0100);
+
+        [DllImport("wintrust.dll", ExactSpelling = true, SetLastError = false)]
+        public static extern int WinVerifyTrust(IntPtr hwnd, [In] ref Guid pgActionID, IntPtr pWVTData);
     }
 }

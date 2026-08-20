@@ -15,6 +15,17 @@ namespace DIIISPL
     internal class ConfirmDialog : Window
     {
         public ConfirmDialog(string title, string message, string okText)
+            : this(title, message, okText, "Отмена")
+        {
+        }
+
+        /// <summary>
+        /// Второй кнопке имя задаётся отдельно там, где «Отмена» лжёт. В диалоге
+        /// сохранения она не отменяла закрытие окна, как читается, а молча
+        /// выбрасывала правки: человек нажимал «Отмена», чтобы ничего не случилось,
+        /// и терял работу.
+        /// </summary>
+        public ConfirmDialog(string title, string message, string okText, string cancelText)
         {
             WindowStyle = WindowStyle.None;
             AllowsTransparency = true;
@@ -61,7 +72,7 @@ namespace DIIISPL
 
             var cancel = new Button();
             cancel.Style = (Style)Application.Current.Resources["Btn"];
-            cancel.Content = "Отмена";
+            cancel.Content = cancelText;
             cancel.MinWidth = 110;
             cancel.Margin = new Thickness(0, 0, 8, 0);
             cancel.IsCancel = true;
