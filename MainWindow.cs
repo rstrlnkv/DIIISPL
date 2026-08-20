@@ -166,23 +166,42 @@ namespace DIIIX
 
             var newButton = new Button();
             newButton.Style = (Style)Application.Current.Resources["Btn"];
-            newButton.Content = Glyph("", "Новый из текущей раскладки");
+            newButton.Content = Glyph("", "Новый профиль");
             newButton.HorizontalContentAlignment = HorizontalAlignment.Left;
-            newButton.Margin = new Thickness(0, 0, 0, 6);
+            newButton.ToolTip = "Создать профиль из текущей раскладки мониторов";
             newButton.Click += delegate { NewFromCurrent(); };
-            buttons.Children.Add(newButton);
 
-            var deleteButton = new Button();
-            deleteButton.Style = (Style)Application.Current.Resources["BtnSubtle"];
-            deleteButton.Content = Glyph("", "Удалить профиль");
-            deleteButton.HorizontalContentAlignment = HorizontalAlignment.Left;
-            deleteButton.Click += delegate { DeleteCurrent(); };
-            buttons.Children.Add(deleteButton);
+            // Действия над самим профилем — переименовать, переставить, удалить — собраны
+            // в одном меню. Раньше «Удалить» стояло отдельной кнопкой в общем ряду: самое
+            // опасное действие оказывалось самым доступным, да ещё рядом со справкой.
+            var moreButton = new Button();
+            moreButton.Style = (Style)Application.Current.Resources["Btn"];
+            moreButton.Content = "···";
+            moreButton.Width = 38;
+            moreButton.Margin = new Thickness(6, 0, 0, 0);
+            moreButton.ToolTip = "Переименовать, переставить, удалить";
+            moreButton.Click += delegate
+            {
+                if (_current == null) return;
+                var menu = BuildProfileMenu(_current);
+                menu.PlacementTarget = moreButton;
+                menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Top;
+                menu.IsOpen = true;
+            };
+
+            var newRow = new Grid();
+            newRow.ColumnDefinitions.Add(new ColumnDefinition());
+            newRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            Grid.SetColumn(moreButton, 1);
+            newRow.Children.Add(newButton);
+            newRow.Children.Add(moreButton);
+            buttons.Children.Add(newRow);
 
             var aboutButton = new Button();
             aboutButton.Style = (Style)Application.Current.Resources["BtnSubtle"];
             aboutButton.Content = Glyph("", "О программе");
             aboutButton.HorizontalContentAlignment = HorizontalAlignment.Left;
+            aboutButton.Margin = new Thickness(0, 4, 0, 0);
             aboutButton.Click += delegate { ShowAbout(); };
             buttons.Children.Add(aboutButton);
 
@@ -476,16 +495,9 @@ namespace DIIIX
                     : (l.Hotkey + "   ·   мониторов: " + on);
                 sp.Children.Add(sub);
 
-                // отдельной строкой: вместе с частотой и числом мониторов в колонку не влезает
-                if (isActive)
-                {
-                    var now = new TextBlock();
-                    now.Style = (Style)Application.Current.Resources["Caption"];
-                    now.Text = "применена сейчас";
-                    now.Margin = new Thickness(0, 2, 0, 0);
-                    now.Foreground = (Brush)Application.Current.Resources["Accent"];
-                    sp.Children.Add(now);
-                }
+                // Строки «применена сейчас» здесь нет намеренно: точка у названия
+                // говорит то же самое, а от неё строки списка перестают быть одной
+                // высоты и список начинает прыгать при переключении.
 
                 item.Content = sp;
                 item.ContextMenu = BuildProfileMenu(l);

@@ -40,49 +40,38 @@ namespace DIIIX
             root.RowDefinitions.Add(new RowDefinition());
             root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-            var head = new StackPanel();
-            head.Margin = new Thickness(28, 18, 28, 10);
-            var title = new TextBlock();
-            title.Text = App.AppTitle;
-            title.Style = (Style)Application.Current.Resources["Subtitle"];
-            head.Children.Add(title);
-            var hint = new TextBlock();
-            hint.Text = "Раскладки мониторов · версия " + Version();
-            hint.Style = (Style)Application.Current.Resources["Caption"];
-            hint.Margin = new Thickness(0, 4, 0, 0);
-            head.Children.Add(hint);
-            root.Children.Add(head);
+            root.Children.Add(Ui.Head(App.AppTitle, "Раскладки мониторов · версия " + Version()));
 
             var stack = new StackPanel();
-            stack.Children.Add(Card("Что она делает", null,
-                Bullet("Держит раскладки мониторов профилями и переключает их горячей клавишей " +
+            stack.Children.Add(Ui.Card("Что она делает", null,
+                Ui.Bullet("Держит раскладки мониторов профилями и переключает их горячей клавишей " +
                        "или из меню значка в трее."),
-                Bullet("Опознаёт мониторы по EDID — по производителю, модели и серийному номеру, — " +
+                Ui.Bullet("Опознаёт мониторы по EDID — по производителю, модели и серийному номеру, — " +
                        "поэтому смена порта HDMI или DisplayPort профиль не ломает."),
-                Bullet("Собирает конфигурацию сама, а не просит Windows вспомнить сохранённую: " +
+                Ui.Bullet("Собирает конфигурацию сама, а не просит Windows вспомнить сохранённую: " +
                        "позиции, разрешения, частоты, повороты, дублирование."),
-                Bullet("Выставляет HDR после смены раскладки — одинаково на всех выходах группы " +
+                Ui.Bullet("Выставляет HDR после смены раскладки — одинаково на всех выходах группы " +
                        "дублирования, иначе Windows уводит группу в SDR."),
-                Bullet("Задаёт вид панели задач, свой на каждое состояние экрана, и меняет его " +
+                Ui.Bullet("Задаёт вид панели задач, свой на каждое состояние экрана, и меняет его " +
                        "вместе с профилем.")));
 
-            stack.Children.Add(Card("Чего она не делает", null,
-                Bullet("Не включает HDR при дублировании, если общий режим не проходит по " +
+            stack.Children.Add(Ui.Card("Чего она не делает", null,
+                Ui.Bullet("Не включает HDR при дублировании, если общий режим не проходит по " +
                        "пропускной способности: это ограничение линка, а не программы."),
-                Bullet("Не хранит ничего в системе, кроме своей записи автозапуска: профили " +
+                Ui.Bullet("Не хранит ничего в системе, кроме своей записи автозапуска: профили " +
                        "лежат обычным текстом в %AppData%\\DIIIX."),
-                Bullet("Не переключает раскладки чаще раза в секунду — плотная очередь таких " +
+                Ui.Bullet("Не переключает раскладки чаще раза в секунду — плотная очередь таких " +
                        "перестроек способна уронить видеодрайвер.")));
 
-            stack.Children.Add(Card("На чём стоит", null,
-                Note("Вид панели задач задаёт библиотека DIIIX.ExplorerTAP.dll, работающая внутри " +
+            stack.Children.Add(Ui.Card("На чём стоит", null,
+                Ui.Note("Вид панели задач задаёт библиотека DIIIX.ExplorerTAP.dll, работающая внутри " +
                      "проводника. Она основана на компоненте ExplorerTAP из программы TranslucentTB, " +
                      "© Charles Milette и участники, распространяемой под GNU GPL v3. Снаружи панель " +
                      "задач Windows 11 не поддаётся: её фон рисует собственное дерево XAML."),
                 Link("Исходники TranslucentTB", "https://github.com/TranslucentTB/TranslucentTB")));
 
-            stack.Children.Add(Card("Лицензия", "GNU General Public License v3 или новее",
-                Note("Свободная программа: её можно использовать, изучать, изменять и передавать " +
+            stack.Children.Add(Ui.Card("Лицензия", "GNU General Public License v3 или новее",
+                Ui.Note("Свободная программа: её можно использовать, изучать, изменять и передавать " +
                      "дальше на условиях GNU General Public License версии 3 или любой более поздней. " +
                      "Программа распространяется без всяких гарантий. Полный текст лицензии — в файле " +
                      "LICENSE.txt рядом с программой."),
@@ -141,74 +130,6 @@ namespace DIIIX
             catch { return "LICENSE"; }
         }
 
-        // ---------------------------------------------------------------- блоки
-        private static Border Card(string title, string subtitle, params UIElement[] children)
-        {
-            var card = new Border();
-            card.Style = (Style)Application.Current.Resources["Card"];
-            card.Padding = new Thickness(18, 15, 18, 16);
-            card.Margin = new Thickness(0, 0, 0, 12);
-
-            var stack = new StackPanel();
-            if (!string.IsNullOrEmpty(title))
-            {
-                var t = new TextBlock();
-                t.Text = title;
-                t.FontWeight = FontWeights.SemiBold;
-                t.FontSize = 14;
-                stack.Children.Add(t);
-            }
-            if (!string.IsNullOrEmpty(subtitle))
-            {
-                var s = new TextBlock();
-                s.Text = subtitle;
-                s.Margin = new Thickness(0, 2, 0, 0);
-                s.TextWrapping = TextWrapping.Wrap;
-                s.Style = (Style)Application.Current.Resources["Caption"];
-                stack.Children.Add(s);
-            }
-            foreach (UIElement child in children)
-            {
-                var fe = child as FrameworkElement;
-                if (fe != null)
-                    fe.Margin = new Thickness(fe.Margin.Left, fe.Margin.Top + 12,
-                                              fe.Margin.Right, fe.Margin.Bottom);
-                stack.Children.Add(child);
-            }
-            card.Child = stack;
-            return card;
-        }
-
-        private static TextBlock Note(string text)
-        {
-            var t = new TextBlock();
-            t.Text = text;
-            t.TextWrapping = TextWrapping.Wrap;
-            t.LineHeight = 19;
-            t.Style = (Style)Application.Current.Resources["Caption"];
-            return t;
-        }
-
-        private static UIElement Bullet(string text)
-        {
-            var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-            var dot = new TextBlock();
-            dot.Text = "—";
-            dot.VerticalAlignment = VerticalAlignment.Top;
-            dot.Style = (Style)Application.Current.Resources["Caption"];
-
-            TextBlock body = Note(text);
-            body.Margin = new Thickness(0);
-
-            Grid.SetColumn(dot, 0);
-            Grid.SetColumn(body, 1);
-            grid.Children.Add(dot);
-            grid.Children.Add(body);
-            return grid;
-        }
 
         /// <summary>Ссылка, открываемая тем, чем её открывает система.</summary>
         private static UIElement Link(string text, string target)
