@@ -15,15 +15,24 @@ namespace DIIISPL
         /// <summary>Как программа называлась раньше — оттуда переносятся профили.</summary>
         private const string OldAppFolder = "DIIIX";
 
+        private static bool _adoptTried;
+
         public static string DataDir
         {
             get
             {
                 string root = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
                 string d = Path.Combine(root, AppFolder);
-                if (!Directory.Exists(d))
+                if (!Directory.Exists(d)) Directory.CreateDirectory(d);
+
+                // Перенос пробуем раз за запуск, а не «один раз в жизни». Прежде
+                // признаком служило отсутствие новой папки — а её создавали строкой
+                // выше, до переноса: одна занятая копия обрывала цикл, и повторить
+                // было уже нечем. Измерено: из четырёх профилей переносился один,
+                // и второй запуск ничего не добавлял.
+                if (!_adoptTried)
                 {
-                    Directory.CreateDirectory(d);
+                    _adoptTried = true;
                     AdoptOldFolder(Path.Combine(root, OldAppFolder), d);
                 }
                 return d;
@@ -41,21 +50,31 @@ namespace DIIISPL
             {
                 if (!Directory.Exists(from)) return;
 
+                // Уже перенесли — второй раз незачем.
+                string here = Path.Combine(to, "profiles");
+                if (Directory.Exists(here) && Directory.GetFiles(here, "*.layout").Length > 0) return;
+
                 foreach (string dir in Directory.GetDirectories(from))
                 {
                     string target = Path.Combine(to, Path.GetFileName(dir));
                     if (!Directory.Exists(target)) Directory.CreateDirectory(target);
                     foreach (string file in Directory.GetFiles(dir))
-                        File.Copy(file, Path.Combine(target, Path.GetFileName(file)), true);
+                    {
+                        // Перехват вокруг каждого файла, а не вокруг всего переноса:
+                        // один занятый файл не должен уносить с собой остальные.
+                        try { File.Copy(file, Path.Combine(target, Path.GetFileName(file)), true); }
+                        catch { }
+                    }
                 }
                 foreach (string file in Directory.GetFiles(from))
                 {
                     // журнал ошибок прежней версии переносить незачем
                     if (string.Equals(Path.GetFileName(file), "error.log", StringComparison.OrdinalIgnoreCase)) continue;
-                    File.Copy(file, Path.Combine(to, Path.GetFileName(file)), true);
+                    try { File.Copy(file, Path.Combine(to, Path.GetFileName(file)), true); }
+                    catch { }
                 }
             }
-            catch { /* не смогли — программа просто начнёт с пустого списка профилей */ }
+            catch { /* не смогли — прежние файлы остались на месте, вернуть их можно руками */ }
         }
 
         public static string ProfilesDir

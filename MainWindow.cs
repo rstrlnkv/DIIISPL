@@ -27,11 +27,15 @@ namespace DIIISPL
         /// <summary>Сказать то, что не поместилось бы в спрятанное окно. Слушает трей.</summary>
         public event Action<string, bool> ApplyReported;
 
+        /// <summary>Окно ушло в трей. Слушает трей — ему есть чем об этом сказать.</summary>
+        public event Action HiddenToTray;
+
         private readonly ListBox _profileList = new ListBox();
         private readonly TextBlock _nameText = new TextBlock();
         private readonly TextBlock _nameHint = new TextBlock();
         private readonly TextBox _nameBox = new TextBox();
         private readonly Button _hotkeyButton = new Button();
+        private Button _moreButton;
 #if DEV
         private readonly Button _taskbarButton = new Button();   // только в сборках Dev
 #endif
@@ -107,6 +111,12 @@ namespace DIIISPL
                 CancelRename();
                 _capturingHotkey = false;
                 Hide();
+
+                // Крестик прячет окно, а не закрывает программу. Молча это читается
+                // как «закрыл»: дальше человек либо удивляется, что «закрытая»
+                // программа переключает экраны, либо ищет выход и не находит —
+                // «Выход» есть только в меню значка, о котором ещё надо догадаться.
+                Raise(HiddenToTray);
             };
 
             ReloadLive();
@@ -206,6 +216,11 @@ namespace DIIISPL
             headerButtons.Children.Add(newButton);
 
             var moreButton = SmallButton("···", "Переименовать, переставить, удалить");
+            // Без профиля эта кнопка и «Сочетание клавиш» на нажатие не отвечали
+            // ничем: ни действия, ни объяснения. Соседние «Сохранить» и «Применить»
+            // в этом состоянии честно погашены — образец уже был.
+            moreButton.IsEnabled = false;
+            _moreButton = moreButton;
             moreButton.Margin = new Thickness(2, 0, 0, 0);
             moreButton.Click += delegate
             {
@@ -323,6 +338,7 @@ namespace DIIISPL
             _nameBox.FontWeight = FontWeights.SemiBold;
             _nameBox.Height = 42;
             _nameBox.MinWidth = 320;
+            _nameBox.MaxLength = 80;      // длиннее — и путь к файлу перешагнёт предел в 260 знаков
             _nameBox.Visibility = Visibility.Collapsed;
             _nameBox.KeyDown += delegate(object s, KeyEventArgs e)
             {
@@ -917,8 +933,20 @@ namespace DIIISPL
             // Наложенную раскладку Windows не примет — она расставит экраны
             // по-своему, а профиль останется с невозможными координатами. Прежде
             // про наложение только писали внизу, а применяли всё равно.
+            //
+            // Проверка стоит до признака занятости: занимать его ради отказа
+            // незачем, а выход отсюда без освобождения погасил бы кнопку навсегда.
             string overlap = _canvas.OverlapProblem();
             if (overlap != null) { UpdateStatus(overlap); return; }
+
+            // Признак занятости спрашиваем до записи на диск: иначе на «подождите»
+            // профиль уже сохранён и признак несохранённого погашен, хотя фраза
+            // обещает, что ничего не случилось.
+            if (!ApplyBusy.Begin())
+            {
+                UpdateStatus("Идёт перестроение экранов — подождите несколько секунд.");
+                return;
+            }
 
             SaveCurrent(false);
 
@@ -929,13 +957,6 @@ namespace DIIISPL
             // экраны уехала бы раскладка, которой нет ни на диске, ни на холсте;
             // в худшем — исключение в потоке пула, где его никто не ловит, то
             // есть тихая смерть процесса посреди перестроения дисплеев.
-            // Признак занятости один на всю программу: применять умеет и трей.
-            if (!ApplyBusy.Begin())
-            {
-                UpdateStatus("Идёт перестроение экранов — подождите несколько секунд.");
-                return;
-            }
-
             Layout layout = _current.DeepCopy();
             _applyButton.IsEnabled = false;
             UpdateStatus("Перестраиваю экраны…");
@@ -1032,7 +1053,7 @@ namespace DIIISPL
                     if (clash != null)
                     {
                         UpdateStatus(fromFocusLoss
-                            ? "Имя не изменилось: «" + clash + "» уже занят."
+                            ? "Имя не изменилось: профиль «" + clash + "» уже есть."
                             : "Профиль «" + clash + "» уже есть — придумайте другое имя. Esc — оставить прежнее.");
 
                         // Фокус возвращаем только если правку подтвердили сами —
@@ -1060,6 +1081,21 @@ namespace DIIISPL
             _nameBox.Visibility = Visibility.Collapsed;
             _nameText.Visibility = Visibility.Visible;
             UpdateHeader();
+        }
+
+        /// <summary>
+        /// Написать в полосу внизу итог применения, начатого не отсюда — горячей
+        /// клавишей или из меню значка. Без этого полного разбора не было нигде:
+        /// в подсказку трея он не помещается, а в окно не попадал вовсе, и совет
+        /// «откройте окно» вёл в пустоту.
+        /// </summary>
+        public void ShowApplyResult(string profileName, ApplyResult result)
+        {
+            var parts = new List<string>();
+            if (result.Success) parts.Add("Раскладка «" + profileName + "» применена.");
+            else parts.Add("«" + profileName + "» не удалось: " + result.Error);
+            foreach (string w in result.Warnings) parts.Add(w);
+            UpdateStatus(string.Join("  ", parts.ToArray()));
         }
 
         /// <summary>Закрыть поле имени, ничего не меняя.</summary>
@@ -1137,6 +1173,8 @@ namespace DIIISPL
             UpdateTaskbarButton();
 #endif
             _saveButton.IsEnabled = _current != null && _dirty;
+            _hotkeyButton.IsEnabled = _current != null;
+            if (_moreButton != null) _moreButton.IsEnabled = _current != null;
             _hotkeyButton.Content = Glyph("", _current != null && !string.IsNullOrEmpty(_current.Hotkey)
                 ? _current.Hotkey : "Сочетание клавиш");
             _updating = false;
@@ -1580,7 +1618,15 @@ namespace DIIISPL
             SaveCurrent(false);
             UpdateHeader();
             RefreshProfileList();
-            UpdateStatus("Сочетание " + combo + " назначено профилю «" + _current.Name + "».");
+            // Сочетание работает, только пока программа запущена, а автозапуск по
+            // умолчанию выключен и спрятан в меню значка. Молчать об этом нельзя:
+            // человек назначает клавишу, перезагружается — и она не работает, а
+            // окно по-прежнему уверяет, что всё назначено. Ради этой клавиши
+            // программа и существует.
+            UpdateStatus("Сочетание " + combo + " назначено профилю «" + _current.Name + "»." +
+                (App.AutoStartEnabled
+                    ? ""
+                    : " Оно работает, пока запущена программа — включите «Запускать при входе в Windows» в меню значка."));
         }
     }
 }

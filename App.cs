@@ -90,6 +90,13 @@ namespace DIIISPL
             {
                 Balloon(text, alarming ? Forms.ToolTipIcon.Error : Forms.ToolTipIcon.Info);
             };
+            _window.HiddenToTray += delegate
+            {
+                if (Settings.TrayHintShown) return;
+                Settings.TrayHintShown = true;
+                Balloon("DIIISPL продолжает работать здесь: горячие клавиши переключают раскладки. " +
+                        "Совсем выйти — пункт «Выход» в этом меню.", Forms.ToolTipIcon.Info);
+            };
 
             BuildTray();
             ReloadHotkeys();
@@ -364,11 +371,20 @@ namespace DIIISPL
 
                 Dispatcher.BeginInvoke(new Action(delegate
                 {
+                    // Полный разбор — в окно, короткое — в подсказку.
+                    //
+                    // Прежде сюда сваливались все предупреждения через пробел, а
+                    // подсказка обрезается на 255 знаках и обрезается молча. Это
+                    // ежедневный путь — клавиша и меню значка, — и полного текста
+                    // при этом не было нигде: в окно он не попадал вовсе, так что
+                    // открыть его и дочитать было нельзя.
+                    if (_window != null) _window.ShowApplyResult(layout.Name, result);
 
                     if (!result.Success)
-                        Balloon(layout.Name + ": " + result.Error, Forms.ToolTipIcon.Error);
+                        Balloon("«" + layout.Name + "» не удалось: " + result.Error, Forms.ToolTipIcon.Error);
                     else if (result.Warnings.Count > 0)
-                        Balloon(layout.Name + ": " + string.Join(" ", result.Warnings.ToArray()), Forms.ToolTipIcon.Warning);
+                        Balloon("Раскладка «" + layout.Name + "» применена. Ещё замечаний: " +
+                                result.Warnings.Count + " — откройте окно.", Forms.ToolTipIcon.Warning);
 
                     if (_window != null && _window.IsVisible)
                     {
