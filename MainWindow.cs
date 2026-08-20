@@ -182,7 +182,7 @@ namespace DIIISPL
             top.Children.Add(brandName);
 
             var brandSub = new TextBlock();
-            brandSub.Text = "Раскладки мониторов";
+            brandSub.Text = Text.AppTagline;
             brandSub.Style = (Style)Application.Current.Resources["Caption"];
             brandSub.Margin = new Thickness(0, 2, 0, 0);
             top.Children.Add(brandSub);
@@ -202,7 +202,7 @@ namespace DIIISPL
             headerRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
             var header = new TextBlock();
-            header.Text = "ПРОФИЛИ";
+            header.Text = Text.ProfilesHeader;
             header.Style = (Style)Application.Current.Resources["SectionHeader"];
             header.VerticalAlignment = VerticalAlignment.Center;
             headerRow.Children.Add(header);
@@ -211,11 +211,11 @@ namespace DIIISPL
             headerButtons.Orientation = Orientation.Horizontal;
             Grid.SetColumn(headerButtons, 1);
 
-            var newButton = SmallButton("+", "Новый профиль из текущей раскладки мониторов");
+            var newButton = SmallButton("+", Text.NewProfileTip);
             newButton.Click += delegate { NewFromCurrent(); };
             headerButtons.Children.Add(newButton);
 
-            var moreButton = SmallButton("···", "Переименовать, переставить, удалить");
+            var moreButton = SmallButton("···", Text.ProfileActionsTip);
             // Без профиля эта кнопка и «Сочетание клавиш» на нажатие не отвечали
             // ничем: ни действия, ни объяснения. Соседние «Сохранить» и «Применить»
             // в этом состоянии честно погашены — образец уже был.
@@ -255,7 +255,7 @@ namespace DIIISPL
             // кнопку другой формы.
             var about = new Button();
             about.Style = (Style)Application.Current.Resources["BtnSubtle"];
-            about.Content = "О программе";
+            about.Content = Text.About;
             about.Padding = new Thickness(10, 8, 10, 8);
             about.Height = double.NaN;
             about.HorizontalContentAlignment = HorizontalAlignment.Left;
@@ -326,7 +326,7 @@ namespace DIIISPL
             _nameText.MinWidth = 240;
             _nameText.TextTrimming = TextTrimming.CharacterEllipsis;
             _nameText.Cursor = Cursors.IBeam;
-            _nameText.ToolTip = "Двойной щелчок или F2 — переименовать";
+            _nameText.ToolTip = Text.RenameTip;
             _nameText.MouseLeftButtonDown += delegate(object s, MouseButtonEventArgs e)
             {
                 if (e.ClickCount == 2) BeginRename();
@@ -381,14 +381,14 @@ namespace DIIISPL
 
             _saveButton.Style = (Style)Application.Current.Resources["Btn"];
             _saveButton.Height = 42;
-            _saveButton.Content = Glyph("", "Сохранить");
+            _saveButton.Content = Glyph("", Text.Save);
             _saveButton.Margin = new Thickness(0, 0, 8, 0);
             _saveButton.Click += delegate { SaveCurrent(true); };
             actions.Children.Add(_saveButton);
 
             _applyButton.Style = (Style)Application.Current.Resources["BtnAccent"];
             _applyButton.Height = 42;
-            _applyButton.Content = Glyph("", "Применить");
+            _applyButton.Content = Glyph("", Text.Apply);
             _applyButton.Click += delegate { ApplyCurrent(); };
             actions.Children.Add(_applyButton);
 
@@ -452,8 +452,8 @@ namespace DIIISPL
             titleLeft.Children.Add(_monitorSubtitle);
             titleRow.Children.Add(titleLeft);
 
-            _primarySwitch.ToolTip = "На основном мониторе живут панель задач и новые окна";
-            UIElement primary = WrapSwitch(_primarySwitch, "Основной");
+            _primarySwitch.ToolTip = Text.PrimaryTip;
+            UIElement primary = WrapSwitch(_primarySwitch, Text.PrimaryScreen);
             Grid.SetColumn(primary, 1);
             titleRow.Children.Add(primary);
 
@@ -462,16 +462,16 @@ namespace DIIISPL
             var switches = new StackPanel();
             switches.Margin = new Thickness(0, 0, 18, 0);
             switches.VerticalAlignment = VerticalAlignment.Center;
-            switches.Children.Add(WrapSwitch(_enabledSwitch, "Включён"));
+            switches.Children.Add(WrapSwitch(_enabledSwitch, Text.Enabled));
 
-            _fieldRes = Field("Разрешение", _resCombo, 150);
-            _fieldHz = Field("Частота", _hzCombo, 100);
-            _fieldRot = Field("Поворот", _rotCombo, 120);
-            _fieldClone = Field("Дублирование", _cloneCombo, 170);
+            _fieldRes = Field(Text.Resolution, _resCombo, 150);
+            _fieldHz = Field(Text.Refresh, _hzCombo, 100);
+            _fieldRot = Field(Text.Rotation, _rotCombo, 120);
+            _fieldClone = Field(Text.Cloning, _cloneCombo, 170);
             _fieldHdr = Field("HDR", _hdrCombo, 120);
 
             _offNote.Style = (Style)Application.Current.Resources["Caption"];
-            _offNote.Text = "Включите монитор, чтобы настроить его в этом профиле.";
+            _offNote.Text = Text.TurnOnNote;
             _offNote.VerticalAlignment = VerticalAlignment.Center;
 
             _fieldsRow.Orientation = Orientation.Horizontal;
@@ -589,7 +589,7 @@ namespace DIIISPL
                 _canvas.Rebuild();
                 UpdateHeader();
                 UpdateProperties();
-                UpdateStatus("Профилей пока нет. Кнопка «+» над списком создаст профиль из того, как мониторы стоят сейчас.");
+                UpdateStatus(Text.NoProfilesHint);
             }
         }
 
@@ -624,7 +624,7 @@ namespace DIIISPL
                 dot.Margin = new Thickness(8, 1, 0, 0);
                 dot.VerticalAlignment = VerticalAlignment.Center;
                 dot.Fill = (Brush)Application.Current.Resources["Accent"];
-                dot.ToolTip = "Эта раскладка применена сейчас";
+                dot.ToolTip = Text.ActiveDotTip;
                 dot.Visibility = isActive ? Visibility.Visible : Visibility.Collapsed;
                 titleRow.Children.Add(dot);
 
@@ -636,8 +636,8 @@ namespace DIIISPL
                 int on = 0;
                 foreach (var d in l.Displays) if (d.Enabled) on++;
                 sub.Text = string.IsNullOrEmpty(l.Hotkey)
-                    ? ("мониторов: " + on)
-                    : (l.Hotkey + "   ·   мониторов: " + on);
+                    ? Text.MonitorsCount(on)
+                    : (l.Hotkey + "   ·   " + Text.MonitorsCount(on));
                 sp.Children.Add(sub);
 
                 // Строки «применена сейчас» здесь нет намеренно: точка у названия
@@ -663,19 +663,19 @@ namespace DIIISPL
             // вопросе о несохранённом, перехода не было, и «текущий» — прежний
             // профиль. Прежде пункт молча переименовывал и удалял не ту строку,
             // по которой щёлкнули.
-            menu.Items.Add(MenuAction("Переименовать", "F2", delegate
+            menu.Items.Add(MenuAction(Text.Rename, "F2", delegate
             {
                 if (!SelectProfile(layout)) return;
                 BeginRename();
             }));
-            menu.Items.Add(MenuAction("Переместить вверх", "Alt+↑", delegate { MoveProfile(layout, -1); }));
-            menu.Items.Add(MenuAction("Переместить вниз", "Alt+↓", delegate { MoveProfile(layout, +1); }));
+            menu.Items.Add(MenuAction(Text.MoveUp, "Alt+↑", delegate { MoveProfile(layout, -1); }));
+            menu.Items.Add(MenuAction(Text.MoveDown, "Alt+↓", delegate { MoveProfile(layout, +1); }));
 
             var sep = new Separator();
             sep.Style = (Style)Application.Current.Resources["MenuSeparator"];
             menu.Items.Add(sep);
 
-            menu.Items.Add(MenuAction("Удалить", "", delegate
+            menu.Items.Add(MenuAction(Text.Delete, "", delegate
             {
                 if (!SelectProfile(layout)) return;
                 DeleteCurrent();
@@ -805,11 +805,11 @@ namespace DIIISPL
         private void NewFromCurrent()
         {
             ReloadLive();
-            var layout = Layout.FromCurrent(Store.UniqueName("Новая раскладка"));
+            var layout = Layout.FromCurrent(Store.UniqueName(Text.NewProfileName));
             Store.Save(layout);
             ReloadProfiles(layout.Name);
             Raise(ProfilesChanged);
-            UpdateStatus("Создан профиль из текущей раскладки. Назовите его и нажмите «Сохранить».");
+            UpdateStatus(Text.ProfileCreated);
             // Просить переименовать и не открыть поле — значит просить впустую:
             // прежде фокус отдавали спрятанному _nameBox, курсор не появлялся
             // нигде, и набранное уходило в никуда.
@@ -819,7 +819,7 @@ namespace DIIISPL
         private void DeleteCurrent()
         {
             if (_current == null) return;
-            var dialog = new ConfirmDialog("Удалить профиль?", "«" + _current.Name + "» будет удалён безвозвратно.", "Удалить");
+            var dialog = new ConfirmDialog(Text.DeleteTitle, Text.DeleteBody(_current.Name), Text.Delete);
             dialog.Owner = this;
             if (dialog.ShowDialog() != true) return;
 
@@ -854,8 +854,7 @@ namespace DIIISPL
             // появляется при закрытии окна и при переходе на другой профиль — там
             // «Отмена» читается как «остаться и ничего не менять», а делала она
             // ровно обратное: молча выбрасывала правки.
-            var dialog = new ConfirmDialog("Сохранить правки в «" + _current.Name + "»?",
-                "Иначе они пропадут. Esc — вернуться и ничего не менять.", "Сохранить", "Не сохранять");
+            var dialog = new ConfirmDialog(Text.SaveTitle(_current.Name), Text.SaveBody, Text.Save, Text.DontSave);
             dialog.Owner = IsVisible ? this : null;
 
             bool? answer = dialog.ShowDialog();
@@ -905,14 +904,14 @@ namespace DIIISPL
         private void SaveCurrent(bool report)
         {
             if (_current == null) return;
-            if (string.IsNullOrEmpty(_current.Name.Trim())) _current.Name = Store.UniqueName("Раскладка");
+            if (string.IsNullOrEmpty(_current.Name.Trim())) _current.Name = Store.UniqueName(Text.DefaultProfileName);
             _canvas.Normalize();
             Store.Rename(_currentOriginalName, _current);
             _currentOriginalName = _current.Name;
             _dirty = false;
             _saveButton.IsEnabled = false;
             Raise(ProfilesChanged);
-            if (report) UpdateStatus("Сохранено.");
+            if (report) UpdateStatus(Text.Saved);
         }
 
         /// <summary>
@@ -944,7 +943,7 @@ namespace DIIISPL
             // обещает, что ничего не случилось.
             if (!ApplyBusy.Begin())
             {
-                UpdateStatus("Идёт перестроение экранов — подождите несколько секунд.");
+                UpdateStatus(Text.BusyWait);
                 return;
             }
 
@@ -959,7 +958,7 @@ namespace DIIISPL
             // есть тихая смерть процесса посреди перестроения дисплеев.
             Layout layout = _current.DeepCopy();
             _applyButton.IsEnabled = false;
-            UpdateStatus("Перестраиваю экраны…");
+            UpdateStatus(Text.Rebuilding);
 
             System.Threading.ThreadPool.QueueUserWorkItem(delegate
             {
@@ -990,8 +989,8 @@ namespace DIIISPL
                     // Имя профиля в строке обязательно: пока шло перестроение, человек
                     // мог перейти на другой профиль, и «Раскладка применена» относилась
                     // бы к тому, которого на экране уже нет.
-                    if (result.Success) parts.Add("Раскладка «" + layout.Name + "» применена.");
-                    else parts.Add("«" + layout.Name + "» не удалось: " + result.Error);
+                    if (result.Success) parts.Add(Text.ApplyDone(layout.Name));
+                    else parts.Add(Text.ApplyFailedShort(layout.Name, result.Error));
                     foreach (string w in result.Warnings) parts.Add(w);
                     string text = string.Join("  ", parts.ToArray());
                     UpdateStatus(text);
@@ -1002,7 +1001,7 @@ namespace DIIISPL
                     if (!IsVisible)
                     {
                         string brief = parts[0];
-                        if (parts.Count > 1) brief += " Ещё замечаний: " + (parts.Count - 1) + " — откройте окно.";
+                        if (parts.Count > 1) brief += Text.MoreNotes(parts.Count - 1);
                         Raise(ApplyReported, brief, !result.Success);
                     }
                 }));
@@ -1053,8 +1052,8 @@ namespace DIIISPL
                     if (clash != null)
                     {
                         UpdateStatus(fromFocusLoss
-                            ? "Имя не изменилось: профиль «" + clash + "» уже есть."
-                            : "Профиль «" + clash + "» уже есть — придумайте другое имя. Esc — оставить прежнее.");
+                            ? Text.NameUnchanged(clash)
+                            : Text.NameTaken(clash));
 
                         // Фокус возвращаем только если правку подтвердили сами —
                         // Enter. По уходу мышью не держим: тянуть фокус обратно
@@ -1092,8 +1091,8 @@ namespace DIIISPL
         public void ShowApplyResult(string profileName, ApplyResult result)
         {
             var parts = new List<string>();
-            if (result.Success) parts.Add("Раскладка «" + profileName + "» применена.");
-            else parts.Add("«" + profileName + "» не удалось: " + result.Error);
+            if (result.Success) parts.Add(Text.ApplyDone(profileName));
+            else parts.Add(Text.ApplyFailedShort(profileName, result.Error));
             foreach (string w in result.Warnings) parts.Add(w);
             UpdateStatus(string.Join("  ", parts.ToArray()));
         }
@@ -1147,10 +1146,10 @@ namespace DIIISPL
             if (_current != null)
                 foreach (TaskbarState s in TaskbarSettings.Order) if (_current.Taskbar[s].Enabled) on++;
 
-            _taskbarButton.Content = Glyph("", on > 0 ? "Панель задач · " + on : "Панель задач");
+            _taskbarButton.Content = Glyph("", on > 0 ? Text.TaskbarButtonN(on) : Text.TaskbarButton);
             _taskbarButton.ToolTip = ExplorerTap.Available
-                ? "Как выглядит панель задач в этом профиле"
-                : "В программе не хватает файла, отвечающего за вид панели задач";
+                ? Text.TaskbarTip
+                : Text.TaskbarMissing;
         }
 #endif
 
@@ -1176,7 +1175,7 @@ namespace DIIISPL
             _hotkeyButton.IsEnabled = _current != null;
             if (_moreButton != null) _moreButton.IsEnabled = _current != null;
             _hotkeyButton.Content = Glyph("", _current != null && !string.IsNullOrEmpty(_current.Hotkey)
-                ? _current.Hotkey : "Сочетание клавиш");
+                ? _current.Hotkey : Text.HotkeyButton);
             _updating = false;
         }
 
@@ -1189,10 +1188,10 @@ namespace DIIISPL
             foreach (var d in _current.Displays) if (d.Enabled) on++;
 
             var parts = new List<string>();
-            parts.Add(on == 1 ? "один монитор" : "мониторов: " + on);
-            if (!string.IsNullOrEmpty(_current.Hotkey)) parts.Add("клавиша " + _current.Hotkey);
+            parts.Add(on == 1 ? Text.OneMonitor : Text.MonitorsCount(on));
+            if (!string.IsNullOrEmpty(_current.Hotkey)) parts.Add(Text.KeyLabel(_current.Hotkey));
 #if DEV
-            if (_current.Taskbar != null && _current.Taskbar.AnyEnabled) parts.Add("свой вид панели задач");
+            if (_current.Taskbar != null && _current.Taskbar.AnyEnabled) parts.Add(Text.OwnTaskbarLook);
 #endif
 
             return string.Join(" · ", parts.ToArray());
@@ -1208,7 +1207,7 @@ namespace DIIISPL
 
             if (!has)
             {
-                _monitorTitle.Text = "Выберите монитор";
+                _monitorTitle.Text = Text.PickMonitor;
                 _monitorSubtitle.Text = "";
                 _resCombo.ItemsSource = null;
                 _hzCombo.ItemsSource = null;
@@ -1222,9 +1221,9 @@ namespace DIIISPL
 
             _monitorTitle.Text = d.Name;
             string subtitle = live != null
-                ? (live.ConnectionType + " · " + (live.Active ? "сейчас включён" : "сейчас выключен"))
-                : "сейчас не подключён";
-            if (d.Enabled && d.CloneGroup >= 0) subtitle += " · при дублировании HDR недоступен";
+                ? (live.ConnectionType + " · " + (live.Active ? Text.NowOn : Text.NowOff))
+                : Text.NowUnplugged;
+            if (d.Enabled && d.CloneGroup >= 0) subtitle += " · " + Text.NoHdrInClone;
             _monitorSubtitle.Text = subtitle;
 
             _enabledSwitch.IsChecked = d.Enabled;
@@ -1257,7 +1256,7 @@ namespace DIIISPL
             FillRates(d, live);
 
             var rotItems = new List<Item>();
-            rotItems.Add(new Item("Обычный", Native.DISPLAYCONFIG_ROTATION_IDENTITY));
+            rotItems.Add(new Item(Text.RotPlain, Native.DISPLAYCONFIG_ROTATION_IDENTITY));
             rotItems.Add(new Item("90°", Native.DISPLAYCONFIG_ROTATION_ROTATE90));
             rotItems.Add(new Item("180°", Native.DISPLAYCONFIG_ROTATION_ROTATE180));
             rotItems.Add(new Item("270°", Native.DISPLAYCONFIG_ROTATION_ROTATE270));
@@ -1265,11 +1264,11 @@ namespace DIIISPL
             foreach (Item it in rotItems) if ((uint)it.Value == d.Rotation) _rotCombo.SelectedItem = it;
 
             var cloneItems = new List<Item>();
-            cloneItems.Add(new Item("Отдельно", null));
+            cloneItems.Add(new Item(Text.CloneSeparate, null));
             foreach (var other in _current.Displays)
             {
                 if (ReferenceEquals(other, d) || !other.Enabled) continue;
-                cloneItems.Add(new Item("Дубль: " + other.Name, other));
+                cloneItems.Add(new Item(Text.CloneDup(other.Name), other));
             }
             _cloneCombo.ItemsSource = cloneItems;
             _cloneCombo.SelectedItem = cloneItems[0];
@@ -1284,9 +1283,9 @@ namespace DIIISPL
             _cloneCombo.IsEnabled = d.Enabled;
 
             var hdrItems = new List<Item>();
-            hdrItems.Add(new Item("Не менять", -1));
-            hdrItems.Add(new Item("Включить", 1));
-            hdrItems.Add(new Item("Выключить", 0));
+            hdrItems.Add(new Item(Text.HdrLeave, -1));
+            hdrItems.Add(new Item(Text.HdrOn, 1));
+            hdrItems.Add(new Item(Text.HdrOff, 0));
             _hdrCombo.ItemsSource = hdrItems;
             foreach (Item it in hdrItems) if ((int)it.Value == d.Hdr) _hdrCombo.SelectedItem = it;
 
@@ -1335,7 +1334,7 @@ namespace DIIISPL
             if (!has && d.Hz > 0) rates.Insert(0, d.Hz);
 
             var items = new List<Item>();
-            foreach (double hz in rates) items.Add(new Item(hz.ToString("0.##") + " Гц", hz));
+            foreach (double hz in rates) items.Add(new Item(hz.ToString("0.##") + " " + Text.Hz, hz));
             _hzCombo.ItemsSource = items;
             foreach (Item it in items) if (Math.Abs((double)it.Value - d.Hz) < 0.6) { _hzCombo.SelectedItem = it; break; }
             if (_hzCombo.SelectedItem == null && items.Count > 0) _hzCombo.SelectedItem = items[0];
@@ -1403,7 +1402,7 @@ namespace DIIISPL
                 // но раньше она просто прыгала обратно, и переключатель выглядел
                 // заедающим. Сказать, что делать вместо этого, стоит одной строки.
                 _updating = true; _primarySwitch.IsChecked = true; _updating = false;
-                UpdateStatus("Основной экран всегда один. Чтобы сменить его, отметьте «Основной» у другого монитора.");
+                UpdateStatus(Text.PrimaryOnlyOne);
                 return;
             }
             foreach (var o in _current.Displays) o.Primary = ReferenceEquals(o, d);
@@ -1472,7 +1471,7 @@ namespace DIIISPL
                 d.CloneGroup = other.CloneGroup;
                 d.X = other.X; d.Y = other.Y;
                 if (d.DesktopWidth != other.DesktopWidth || d.DesktopHeight != other.DesktopHeight)
-                    UpdateStatus("Разрешения различаются — при дублировании Windows подгонит картинку под общий режим.");
+                    UpdateStatus(Text.CloneModesDiffer);
             }
             CleanupCloneGroups();
             _canvas.Relayout();
@@ -1523,7 +1522,7 @@ namespace DIIISPL
             MarkDirty();
 
             if (d.Hdr == 1 && d.CloneGroup >= 0)
-                UpdateStatus("При дублировании HDR не работает. Разведите экраны — тогда его можно включить на каждом.");
+                UpdateStatus(Text.HdrNotInClone);
         }
 
         private void MarkDirty()
@@ -1551,8 +1550,8 @@ namespace DIIISPL
         {
             if (_current == null) return;
             _capturingHotkey = true;
-            _hotkeyButton.Content = Glyph("", "Нажмите сочетание…");
-            UpdateStatus("Нажмите сочетание клавиш. Esc — отмена, Delete — убрать сочетание.");
+            _hotkeyButton.Content = Glyph("", Text.PressCombo);
+            UpdateStatus(Text.PressComboHint);
         }
 
         private void OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -1579,14 +1578,14 @@ namespace DIIISPL
                 _capturingHotkey = false;
                 MarkDirty(); SaveCurrent(false);
                 UpdateHeader(); RefreshProfileList();
-                UpdateStatus("Сочетание убрано.");
+                UpdateStatus(Text.ComboRemoved);
                 return;
             }
             if (key == Key.LeftCtrl || key == Key.RightCtrl || key == Key.LeftAlt || key == Key.RightAlt ||
                 key == Key.LeftShift || key == Key.RightShift || key == Key.LWin || key == Key.RWin) return;
 
             string combo = Hotkey.Describe(Keyboard.Modifiers, key);
-            if (combo == null) { UpdateStatus("Такую клавишу назначить нельзя — выберите другую."); return; }
+            if (combo == null) { UpdateStatus(Text.ComboImpossible); return; }
 
             // Проверяем **до** записи. Прежде сочетание сохранялось сразу, а
             // разбор шёл после и молча: одиночная буква уезжала в профиль, и
@@ -1594,7 +1593,7 @@ namespace DIIISPL
             uint mods, vk; string err;
             if (!Hotkey.TryParse(combo, out mods, out vk, out err))
             {
-                UpdateStatus(combo + " — " + err + ". Нажмите другое сочетание или Esc.");
+                UpdateStatus(Text.ComboRejected(combo, err));
                 return;
             }
 
@@ -1606,9 +1605,7 @@ namespace DIIISPL
             {
                 if (ReferenceEquals(other, _current)) continue;
                 if (!string.Equals(other.Hotkey, combo, StringComparison.OrdinalIgnoreCase)) continue;
-                UpdateStatus(combo + " уже назначено профилю «" + other.Name +
-                             "». Сначала снимите его там: откройте «" + other.Name +
-                             "», нажмите «Сочетание клавиш» и Delete.");
+                UpdateStatus(Text.ComboBusy(combo, other.Name));
                 return;
             }
 
@@ -1623,10 +1620,8 @@ namespace DIIISPL
             // человек назначает клавишу, перезагружается — и она не работает, а
             // окно по-прежнему уверяет, что всё назначено. Ради этой клавиши
             // программа и существует.
-            UpdateStatus("Сочетание " + combo + " назначено профилю «" + _current.Name + "»." +
-                (App.AutoStartEnabled
-                    ? ""
-                    : " Оно работает, пока запущена программа — включите «Запускать при входе в Windows» в меню значка."));
+            UpdateStatus(Text.ComboSet(combo, _current.Name) +
+                (App.AutoStartEnabled ? "" : Text.ComboNeedsAutostart));
         }
     }
 }

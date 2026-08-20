@@ -269,5 +269,48 @@ namespace DIIISPL
         public static string CheckedMinutes(int n) { return G("upd.minutes", n); }
         public static string CheckedHours(int n) { return Plural("upd.hours", n); }
         public static string CheckedDays(int n) { return Plural("upd.days", n); }
+
+        // ------------------------------------------------------------------ окно: подписи и ответы
+        public static string RenameTip { get { return G("win.renameTip"); } }
+        public static string PrimaryTip { get { return G("win.primaryTip"); } }
+        public static string TurnOnNote { get { return G("win.turnOnNote"); } }
+        public static string NoProfilesHint { get { return G("win.noProfilesHint"); } }
+        public static string ActiveDotTip { get { return G("win.activeDot"); } }
+        public static string NewProfileName { get { return G("win.newProfileName"); } }
+        public static string DefaultProfileName { get { return G("win.defaultProfileName"); } }
+        public static string ProfileCreated { get { return G("win.created"); } }
+        public static string DeleteTitle { get { return G("win.deleteTitle"); } }
+        public static string DeleteBody(string name) { return G("win.deleteBody", name); }
+        public static string SaveTitle(string name) { return G("win.saveTitle", name); }
+        public static string SaveBody { get { return G("win.saveBody"); } }
+        public static string DontSave { get { return G("win.dontSave"); } }
+        public static string Saved { get { return G("win.saved"); } }
+        public static string Rebuilding { get { return G("win.rebuilding"); } }
+        public static string MoreNotes(int n) { return G("win.moreNotes", n); }
+        public static string NameUnchanged(string name) { return G("win.nameUnchanged", name); }
+        public static string NameTaken(string name) { return G("win.nameTaken", name); }
+        public static string TaskbarButton { get { return G("win.taskbarButton"); } }
+        public static string TaskbarButtonN(int n) { return G("win.taskbarButtonN", n); }
+        public static string TaskbarTip { get { return G("win.taskbarTip"); } }
+        public static string TaskbarMissing { get { return G("win.taskbarMissing"); } }
+        public static string OneMonitor { get { return G("win.oneMonitor"); } }
+        public static string OwnTaskbarLook { get { return G("win.ownTaskbar"); } }
+        public static string NowOn { get { return G("win.nowOn"); } }
+        public static string NowOff { get { return G("win.nowOff"); } }
+        public static string NowUnplugged { get { return G("win.nowUnplugged"); } }
+        public static string NoHdrInClone { get { return G("win.noHdrInClone"); } }
+        public static string RotPlain { get { return G("rot.plain"); } }
+        public static string CloneSeparate { get { return G("clone.separate"); } }
+        public static string CloneDup(string name) { return G("clone.dup", name); }
+        public static string HdrLeave { get { return G("hdr.leave"); } }
+        public static string PrimaryOnlyOne { get { return G("win.primaryOnlyOne"); } }
+        public static string CloneModesDiffer { get { return G("win.cloneModes"); } }
+        public static string PressComboHint { get { return G("win.pressComboHint"); } }
+        public static string ComboRemoved { get { return G("win.comboRemoved"); } }
+        public static string ComboImpossible { get { return G("win.comboImpossible"); } }
+        public static string ComboRejected(string combo, string why) { return G("win.comboRejected", combo, why); }
+        public static string ComboBusy(string combo, string other) { return G("win.comboBusy", combo, other); }
+        public static string ComboSet(string combo, string profile) { return G("win.comboSet", combo, profile); }
+        public static string ComboNeedsAutostart { get { return G("win.comboNeedsAutostart"); } }
     }
 }

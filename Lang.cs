@@ -189,6 +189,49 @@ namespace DIIISPL
             d["upd.hours.many"] = "checked {0} hours ago";
             d["upd.days.one"] = "checked {0} day ago";
             d["upd.days.many"] = "checked {0} days ago";
+
+            // окно менеджера — подписи и подсказки
+            d["win.renameTip"] = "Double-click or F2 to rename";
+            d["win.primaryTip"] = "The taskbar and new windows live on the primary monitor";
+            d["win.turnOnNote"] = "Turn the monitor on to set it up in this profile.";
+            d["win.noProfilesHint"] = "No profiles yet. The “+” button above the list makes one from the way the monitors stand now.";
+            d["win.activeDot"] = "This layout is applied right now";
+            d["win.newProfileName"] = "New layout";
+            d["win.defaultProfileName"] = "Layout";
+            d["win.created"] = "Profile created from the current layout. Give it a name and press “Save”.";
+            d["win.deleteTitle"] = "Delete the profile?";
+            d["win.deleteBody"] = "“{0}” will be gone for good.";
+            d["win.saveTitle"] = "Save the changes to “{0}”?";
+            d["win.saveBody"] = "Otherwise they are lost. Esc — go back and change nothing.";
+            d["win.dontSave"] = "Don’t save";
+            d["win.saved"] = "Saved.";
+            d["win.rebuilding"] = "Rearranging the screens…";
+            d["win.moreNotes"] = " {0} more note(s) — open the window.";
+            d["win.nameUnchanged"] = "The name is unchanged: profile “{0}” already exists.";
+            d["win.nameTaken"] = "Profile “{0}” already exists — pick another name. Esc — keep the old one.";
+            d["win.taskbarButton"] = "Taskbar";
+            d["win.taskbarButtonN"] = "Taskbar · {0}";
+            d["win.taskbarTip"] = "How the taskbar looks in this profile";
+            d["win.taskbarMissing"] = "The file that draws the taskbar look is missing";
+            d["win.oneMonitor"] = "one monitor";
+            d["win.ownTaskbar"] = "its own taskbar look";
+            d["win.nowOn"] = "on now";
+            d["win.nowOff"] = "off now";
+            d["win.nowUnplugged"] = "not connected right now";
+            d["win.noHdrInClone"] = "HDR is unavailable while duplicating";
+            d["rot.plain"] = "Normal";
+            d["clone.separate"] = "Separate";
+            d["clone.dup"] = "Duplicate: {0}";
+            d["hdr.leave"] = "Leave alone";
+            d["win.primaryOnlyOne"] = "There is always exactly one primary screen. To change it, mark “Primary” on another monitor.";
+            d["win.cloneModes"] = "The resolutions differ — while duplicating, Windows fits the picture to a common mode.";
+            d["win.pressComboHint"] = "Press a keyboard shortcut. Esc — cancel, Delete — remove the shortcut.";
+            d["win.comboRemoved"] = "Shortcut removed.";
+            d["win.comboImpossible"] = "That key cannot be assigned — pick another.";
+            d["win.comboRejected"] = "{0} — {1}. Press another shortcut or Esc.";
+            d["win.comboBusy"] = "{0} is already on profile “{1}”. Remove it there first: open “{1}”, press “Keyboard shortcut” and Delete.";
+            d["win.comboSet"] = "Shortcut {0} assigned to profile “{1}”.";
+            d["win.comboNeedsAutostart"] = " It works while the program is running — turn on “Start with Windows” in the tray menu.";
             return d;
         }
 
@@ -330,6 +373,48 @@ namespace DIIISPL
             d["upd.days.one"] = "проверялось {0} день назад";
             d["upd.days.few"] = "проверялось {0} дня назад";
             d["upd.days.many"] = "проверялось {0} дней назад";
+
+            d["win.renameTip"] = "Двойной щелчок или F2 — переименовать";
+            d["win.primaryTip"] = "На основном мониторе живут панель задач и новые окна";
+            d["win.turnOnNote"] = "Включите монитор, чтобы настроить его в этом профиле.";
+            d["win.noProfilesHint"] = "Профилей пока нет. Кнопка «+» над списком создаст профиль из того, как мониторы стоят сейчас.";
+            d["win.activeDot"] = "Эта раскладка применена сейчас";
+            d["win.newProfileName"] = "Новая раскладка";
+            d["win.defaultProfileName"] = "Раскладка";
+            d["win.created"] = "Создан профиль из текущей раскладки. Назовите его и нажмите «Сохранить».";
+            d["win.deleteTitle"] = "Удалить профиль?";
+            d["win.deleteBody"] = "«{0}» будет удалён безвозвратно.";
+            d["win.saveTitle"] = "Сохранить правки в «{0}»?";
+            d["win.saveBody"] = "Иначе они пропадут. Esc — вернуться и ничего не менять.";
+            d["win.dontSave"] = "Не сохранять";
+            d["win.saved"] = "Сохранено.";
+            d["win.rebuilding"] = "Перестраиваю экраны…";
+            d["win.moreNotes"] = " Ещё замечаний: {0} — откройте окно.";
+            d["win.nameUnchanged"] = "Имя не изменилось: профиль «{0}» уже есть.";
+            d["win.nameTaken"] = "Профиль «{0}» уже есть — придумайте другое имя. Esc — оставить прежнее.";
+            d["win.taskbarButton"] = "Панель задач";
+            d["win.taskbarButtonN"] = "Панель задач · {0}";
+            d["win.taskbarTip"] = "Как выглядит панель задач в этом профиле";
+            d["win.taskbarMissing"] = "В программе не хватает файла, отвечающего за вид панели задач";
+            d["win.oneMonitor"] = "один монитор";
+            d["win.ownTaskbar"] = "свой вид панели задач";
+            d["win.nowOn"] = "сейчас включён";
+            d["win.nowOff"] = "сейчас выключен";
+            d["win.nowUnplugged"] = "сейчас не подключён";
+            d["win.noHdrInClone"] = "при дублировании HDR недоступен";
+            d["rot.plain"] = "Обычный";
+            d["clone.separate"] = "Отдельно";
+            d["clone.dup"] = "Дубль: {0}";
+            d["hdr.leave"] = "Не менять";
+            d["win.primaryOnlyOne"] = "Основной экран всегда один. Чтобы сменить его, отметьте «Основной» у другого монитора.";
+            d["win.cloneModes"] = "Разрешения различаются — при дублировании Windows подгонит картинку под общий режим.";
+            d["win.pressComboHint"] = "Нажмите сочетание клавиш. Esc — отмена, Delete — убрать сочетание.";
+            d["win.comboRemoved"] = "Сочетание убрано.";
+            d["win.comboImpossible"] = "Такую клавишу назначить нельзя — выберите другую.";
+            d["win.comboRejected"] = "{0} — {1}. Нажмите другое сочетание или Esc.";
+            d["win.comboBusy"] = "{0} уже назначено профилю «{1}». Сначала снимите его там: откройте «{1}», нажмите «Сочетание клавиш» и Delete.";
+            d["win.comboSet"] = "Сочетание {0} назначено профилю «{1}».";
+            d["win.comboNeedsAutostart"] = " Оно работает, пока запущена программа — включите «Запускать при входе в Windows» в меню значка.";
             return d;
         }
     }
