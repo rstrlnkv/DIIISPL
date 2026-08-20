@@ -50,24 +50,24 @@ namespace DIIIX
                        "поэтому смена порта HDMI или DisplayPort профиль не ломает."),
                 Ui.Bullet("Собирает конфигурацию сама, а не просит Windows вспомнить сохранённую: " +
                        "позиции, разрешения, частоты, повороты, дублирование."),
-                Ui.Bullet("Выставляет HDR после смены раскладки — одинаково на всех выходах группы " +
-                       "дублирования, иначе Windows уводит группу в SDR."),
+                Ui.Bullet("Выставляет HDR после смены раскладки — одинаково на всех дублирующих " +
+                       "друг друга экранах, иначе Windows выключает его у всех сразу."),
                 Ui.Bullet("Задаёт вид панели задач, свой на каждое состояние экрана, и меняет его " +
                        "вместе с профилем.")));
 
             stack.Children.Add(Ui.Card("Чего она не делает", null,
-                Ui.Bullet("Не включает HDR при дублировании, если общий режим не проходит по " +
-                       "пропускной способности: это ограничение линка, а не программы."),
+                Ui.Bullet("Не включает HDR при дублировании, если выбранный режим не проходит " +
+                       "по кабелю: это ограничение железа, а не программы."),
                 Ui.Bullet("Не хранит ничего в системе, кроме своей записи автозапуска: профили " +
                        "лежат обычным текстом в %AppData%\\DIIIX."),
                 Ui.Bullet("Не переключает раскладки чаще раза в секунду — плотная очередь таких " +
                        "перестроек способна уронить видеодрайвер.")));
 
             stack.Children.Add(Ui.Card("На чём стоит", null,
-                Ui.Note("Вид панели задач задаёт библиотека DIIIX.ExplorerTAP.dll, работающая внутри " +
-                     "проводника. Она основана на компоненте ExplorerTAP из программы TranslucentTB, " +
-                     "© Charles Milette и участники, распространяемой под GNU GPL v3. Снаружи панель " +
-                     "задач Windows 11 не поддаётся: её фон рисует собственное дерево XAML."),
+                Ui.Note("Вид панели задач задаёт вспомогательная библиотека, работающая внутри " +
+                     "проводника: снаружи панель задач Windows 11 не поддаётся. Библиотека основана " +
+                     "на компоненте ExplorerTAP из программы TranslucentTB, © Charles Milette " +
+                     "и участники, распространяемой под GNU GPL v3."),
                 Link("Исходники TranslucentTB", "https://github.com/TranslucentTB/TranslucentTB")));
 
             stack.Children.Add(Ui.Card("Лицензия", "GNU General Public License v3 или новее",
@@ -107,14 +107,18 @@ namespace DIIIX
             return root;
         }
 
+        /// <summary>Версия без хвостовой доли: «1.0.0» читается лучше, чем «1.0.0.0».</summary>
         private static string Version()
         {
             try
             {
-                return FileVersionInfo.GetVersionInfo(
+                string v = FileVersionInfo.GetVersionInfo(
                     Assembly.GetExecutingAssembly().Location).FileVersion;
+                if (v != null && v.EndsWith(".0") && v.Split('.').Length == 4)
+                    v = v.Substring(0, v.Length - 2);
+                return v;
             }
-            catch { return "1.0.0.0"; }
+            catch { return "1.0.0"; }
         }
 
         /// <summary>Лицензия лежит рядом с программой; у собранной вручную — под именем LICENSE.</summary>

@@ -121,14 +121,12 @@ namespace DIIIX
             Console.WriteLine();
             if (!ExplorerTap.Available)
             {
-                Console.WriteLine("  Нет DIIIX.ExplorerTAP.dll рядом с программой — оформление панели недоступно.");
+                Console.WriteLine("  В программе не хватает файла для оформления панели задач.");
                 return 1;
             }
             if (args.Length < 2)
             {
                 Console.WriteLine("  Укажите вид: " + string.Join(", ", ExplorerTap.Names));
-                Console.WriteLine();
-                Console.Write(ExplorerTap.Diagnose());
                 return 2;
             }
 
@@ -246,7 +244,6 @@ namespace DIIIX
             var layout = Store.LoadByName(args[1]);
             if (layout == null) { Console.WriteLine("Профиль не найден: " + args[1]); return 2; }
             var res = Applier.Apply(layout);
-            foreach (string n in res.Notes) Console.WriteLine("  · " + n);
             foreach (string w in res.Warnings) Console.WriteLine("  ! " + w);
             if (!res.Success) { Console.WriteLine("Ошибка: " + res.Error); return 1; }
             Console.WriteLine("Применено: " + layout.Name);

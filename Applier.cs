@@ -12,7 +12,6 @@ namespace DIIIX
         public bool Success;
         public string Error;
         public List<string> Warnings = new List<string>();
-        public List<string> Notes = new List<string>();
         /// <summary>Мониторы, которые реально попали в заявку (были подключены на момент сборки).</summary>
         public List<string> Requested = new List<string>();
     }
@@ -119,7 +118,7 @@ namespace DIIIX
             if (layout.Taskbar == null || !layout.Taskbar.AnyEnabled) { TaskbarWatcher.Use(null); return; }
             if (!ExplorerTap.Available)
             {
-                res.Warnings.Add("Вид панели задач задан, но рядом с программой нет DIIIX.ExplorerTAP.dll.");
+                res.Warnings.Add("Профиль задаёт вид панели задач, но в программе не хватает файла для этого.");
                 return;
             }
 
@@ -199,7 +198,7 @@ namespace DIIIX
             Native.DISPLAYCONFIG_MODE_INFO[] allModes;
             if (!Monitors.QueryAllPaths(out allPaths, out allModes))
             {
-                res.Error = "Не удалось получить список возможных подключений (QueryDisplayConfig).";
+                res.Error = "Windows не отдала список подключений мониторов.";
                 return -1;
             }
 
@@ -327,7 +326,7 @@ namespace DIIIX
 
             if (paths.Count == 0)
             {
-                res.Error = "Не удалось собрать ни одного подключения.";
+                res.Error = "Не получилось составить раскладку: ни один монитор не удалось задействовать.";
                 return -1;
             }
 
@@ -335,9 +334,6 @@ namespace DIIIX
             var pathArr = paths.ToArray();
             var modeArr = modes.ToArray();
 
-            foreach (var p in pathArr)
-                res.Notes.Add("путь: src=" + p.sourceInfo.id + " target=" + p.targetInfo.id +
-                              " " + p.targetInfo.refreshRate.Numerator + " Гц");
             uint baseFlags = Native.SDC_APPLY | Native.SDC_USE_SUPPLIED_DISPLAY_CONFIG | Native.SDC_SAVE_TO_DATABASE;
 
             // Строго: без SDC_ALLOW_CHANGES Windows либо делает ровно то, что просят, либо отказывает.
@@ -346,13 +342,9 @@ namespace DIIIX
             // SDC_FORCE_MODE_ENUMERATION заставляет драйвер заново перечислить все режимы —
             // операция тяжёлая, поэтому она не в первой попытке, а в запасной.
             int err = Native.SetDisplayConfig((uint)pathArr.Length, pathArr, (uint)modeArr.Length, modeArr, baseFlags);
-            res.Notes.Add("строго: rc=" + err);
             if (err != 0)
-            {
                 err = Native.SetDisplayConfig((uint)pathArr.Length, pathArr, (uint)modeArr.Length, modeArr,
                         baseFlags | Native.SDC_FORCE_MODE_ENUMERATION);
-                res.Notes.Add("строго+перечисление: rc=" + err);
-            }
 
             if (err != 0)
             {
@@ -360,7 +352,6 @@ namespace DIIIX
                 // расхождения, если они есть, покажет сверка ниже — internals пользователю не нужны
                 err = Native.SetDisplayConfig((uint)pathArr.Length, pathArr, (uint)modeArr.Length, modeArr,
                         baseFlags | Native.SDC_ALLOW_CHANGES | Native.SDC_FORCE_MODE_ENUMERATION);
-                res.Notes.Add("с послаблениями: rc=" + err);
             }
             if (err != 0)
             {
@@ -373,8 +364,7 @@ namespace DIIIX
                 }
                 err = Native.SetDisplayConfig((uint)relaxed.Length, relaxed, (uint)modeArr.Length, modeArr,
                         baseFlags | Native.SDC_ALLOW_CHANGES | Native.SDC_FORCE_MODE_ENUMERATION);
-                if (err == 0) res.Warnings.Add("Частоту обновления пришлось отдать на выбор драйверу.");
-                res.Notes.Add("без частоты: rc=" + err);
+                if (err == 0) res.Warnings.Add("Частоту выбрал драйвер — заданную Windows не приняла.");
             }
             return err;
         }
@@ -450,7 +440,7 @@ namespace DIIIX
 
             if (notTurnedOn.Count > 0)
                 res.Warnings.Add("Не включились: " + string.Join(", ", notTurnedOn.ToArray()) +
-                                 ". Чаще всего монитор обесточен или спит так, что видеокарта не может поднять линк.");
+                                 ". Чаще всего монитор обесточен или спит так, что видеокарта его не видит.");
             if (notTurnedOff.Count > 0)
                 res.Warnings.Add("Остались включёнными вопреки профилю: " + string.Join(", ", notTurnedOff.ToArray()) + ".");
         }
@@ -508,7 +498,7 @@ namespace DIIIX
                         if (!cloneWarned.ContainsKey(self.CloneGroup))
                         {
                             cloneWarned[self.CloneGroup] = true;
-                            res.Warnings.Add("HDR при дублировании недоступен — Windows не даёт расширенный цвет выходам на одном рабочем столе. Разведите экраны, чтобы включить HDR на каждом.");
+                            res.Warnings.Add("При дублировании HDR не работает. Разведите экраны — тогда его можно включить на каждом.");
                         }
                     }
                     else res.Warnings.Add("«" + names[kv.Key] + "»: этот выход сейчас не отдаёт HDR — включить нечего.");
@@ -554,7 +544,7 @@ namespace DIIIX
                 if (want && !check.HdrEnabled)
                 {
                     bool cloned = IsCloned(layout, mon.Identity);
-                    res.Warnings.Add("«" + names[mon.Identity] + "»: Windows вернула SDR." +
+                    res.Warnings.Add("«" + names[mon.Identity] + "»: HDR не включился." +
                         (cloned
                             ? " При дублировании HDR держится, только если оба выхода тянут HDR в общем режиме — попробуйте задать группе 3840×2160 60 Гц."
                             : " Обычно это нехватка пропускной способности кабеля на выбранном режиме."));

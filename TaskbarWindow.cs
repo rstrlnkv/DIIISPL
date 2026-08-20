@@ -133,13 +133,12 @@ namespace DIIIX
 
             if (!_settings.AnyEnabled)
                 return Ui.Card("Вид панели задач", null,
-                    Ui.Row("Задавать вид панели задач в этом профиле",
+                    Ui.Row("Менять вид панели в этом профиле",
                            "Пока выключено, панель выглядит так, как её рисует Windows.",
                            master, 60));
 
             return Ui.Card("Вид панели задач", null,
-                Ui.Row("Задавать вид панели задач в этом профиле",
-                       "Профиль будет менять вид панели вместе с раскладкой.", master, 60),
+                Ui.Row("Менять вид панели в этом профиле", null, master, 60),
                 Ui.Row("Обычный вид", "Так панель выглядит, когда ничего особенного не происходит.",
                        AccentBox(look, false), 190),
                 ColorRow(look),
@@ -192,8 +191,8 @@ namespace DIIIX
             if (!UsesColor(look.Accent)) return null;
 
             string hint = look.Accent == "opaque"
-                ? "Цвет заливки. Прозрачность у непрозрачной панели не применяется."
-                : "Цвет и прозрачность: первые две цифры — насколько он плотный.";
+                ? "Первые две цифры не действуют — панель непрозрачная."
+                : "Первые две цифры — насколько цвет плотный.";
 
             return Ui.Row("Цвет", hint, ColorField(look), 190);
         }
@@ -203,18 +202,15 @@ namespace DIIIX
             return accent == "opaque" || accent == "acrylic" || accent == "blur";
         }
 
+        /// <summary>
+        /// Пояснение только там, где название не говорит всего. Остальным случаям
+        /// подписи не нужны: «Открыт поиск» и без пояснения «открыт поиск» понятно.
+        /// </summary>
         private static string HintFor(TaskbarState state)
         {
-            switch (state)
-            {
-                case TaskbarState.VisibleWindow: return "На этом экране открыто хоть одно окно.";
-                case TaskbarState.MaximizedWindow: return "Окно развёрнуто во весь экран.";
-                case TaskbarState.StartOpened: return "Открыто меню «Пуск».";
-                case TaskbarState.SearchOpened: return "Открыт поиск.";
-                case TaskbarState.TaskViewOpened: return "Открыто представление задач.";
-                case TaskbarState.BatterySaver: return "Включена экономия заряда.";
-                default: return null;
-            }
+            if (state == TaskbarState.VisibleWindow)
+                return "Считается для каждого экрана отдельно.";
+            return null;
         }
 
         // ---------------------------------------------------------------- элементы
@@ -420,7 +416,7 @@ namespace DIIIX
         {
             if (!ExplorerTap.Available)
             {
-                _hint.Text = "Рядом с программой нет DIIIX.ExplorerTAP.dll — вид панели задавать нечем.";
+                _hint.Text = "В программе не хватает файла для оформления панели — задать вид нечем.";
                 return;
             }
             _hint.Text = _settings.AnyEnabled

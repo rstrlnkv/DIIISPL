@@ -3,7 +3,6 @@
 // Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
 
 using System;
-using System.ComponentModel;
 using System.Runtime.InteropServices;
 
 namespace DIIIX
@@ -425,10 +424,26 @@ namespace DIIIX
         [DllImport("dwmapi.dll")]
         public static extern int DwmExtendFrameIntoClientArea(IntPtr hwnd, ref MARGINS margins);
 
+        /// <summary>
+        /// Причина отказа человеческими словами.
+        ///
+        /// Системное описание кода сюда не годится: коды, которыми отвечает
+        /// SetDisplayConfig, в общем справочнике Windows описаны совсем из другой
+        /// области — на 1610 пользователь получал «данные конфигурации продукта
+        /// повреждены, обратитесь в службу поддержки», что к мониторам отношения
+        /// не имеет.
+        /// </summary>
         public static string ErrorText(int code)
         {
-            try { return new Win32Exception(code).Message + " (код " + code + ")"; }
-            catch { return "код " + code; }
+            switch (code)
+            {
+                case 5:    return "система не дала прав на смену раскладки";
+                case 31:   return "видеодрайвер не смог её применить";
+                case 50:   return "оборудование такого не умеет";
+                case 87:   return "видеокарта не принимает такое сочетание режимов";
+                case 1610: return "на этом оборудовании такая раскладка невозможна";
+                default:   return "система не объяснила причину";
+            }
         }
     }
 }

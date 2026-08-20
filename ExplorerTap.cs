@@ -103,7 +103,7 @@ namespace DIIIX
                 }
                 if (hr != 0 || raw == IntPtr.Zero)
                 {
-                    _lastError = "не удалось подключиться к проводнику (0x" + hr.ToString("X8") + ")";
+                    _lastError = "не удалось подключиться к проводнику";
                     return null;
                 }
 
@@ -122,52 +122,12 @@ namespace DIIIX
                 _lastError = null;
                 return _service;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _lastError = ex.Message;
+                _lastError = "связь с проводником потеряна";
                 _service = null;
                 return null;
             }
-        }
-
-        [DllImport("oleaut32.dll")]
-        private static extern int GetActiveObject(ref Guid clsid, IntPtr reserved, out IntPtr obj);
-
-        /// <summary>Пошаговая диагностика подключения — какой именно шаг не проходит.</summary>
-        public static string Diagnose()
-        {
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine("  апартамент потока: " + System.Threading.Thread.CurrentThread.GetApartmentState());
-            sb.AppendLine("  разрядность: " + (IntPtr.Size * 8) + " бит");
-
-            IntPtr bar = PrimaryTaskbar();
-            sb.AppendLine("  панель задач: 0x" + bar.ToInt64().ToString("X"));
-
-            var unknown = new Guid("00000000-0000-0000-C000-000000000046");
-            IntPtr p1;
-            int hr1 = InjectExplorerTAP(bar, ref unknown, out p1);
-            sb.AppendLine("  Inject(IUnknown)   = 0x" + hr1.ToString("X8") + (p1 != IntPtr.Zero ? "  объект есть" : "  пусто"));
-
-            var clsid = new Guid("5a6ba2a9-37cb-4ed4-91bd-012125ecc43d");
-            IntPtr p2;
-            int hr2 = GetActiveObject(ref clsid, IntPtr.Zero, out p2);
-            sb.AppendLine("  GetActiveObject    = 0x" + hr2.ToString("X8") + (p2 != IntPtr.Zero ? "  служба в ROT" : "  нет"));
-
-            if (p2 != IntPtr.Zero)
-            {
-                var ver = new Guid("e0811f94-c7fd-4895-9df6-297b71e81e33");
-                IntPtr o;
-                sb.AppendLine("  QI IVersionedApi   = 0x" + Marshal.QueryInterface(p2, ref ver, out o).ToString("X8"));
-                var svc = IID_TaskbarAppearanceService;
-                IntPtr o2;
-                sb.AppendLine("  QI ITaskbarService = 0x" + Marshal.QueryInterface(p2, ref svc, out o2).ToString("X8"));
-            }
-
-            var direct = IID_TaskbarAppearanceService;
-            IntPtr p3;
-            int hr3 = InjectExplorerTAP(bar, ref direct, out p3);
-            sb.AppendLine("  Inject(службу)     = 0x" + hr3.ToString("X8"));
-            return sb.ToString();
         }
 
         /// <summary>Связь с проводником потеряна — при следующем обращении подключимся заново.</summary>
@@ -263,9 +223,9 @@ namespace DIIIX
                 _lastError = null;
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _lastError = ex.Message;
+                _lastError = "связь с проводником потеряна";
                 _service = null;         // проводник мог перезапуститься
                 return false;
             }

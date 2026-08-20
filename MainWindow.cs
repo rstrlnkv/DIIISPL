@@ -500,7 +500,7 @@ namespace DIIIX
                 _canvas.Rebuild();
                 UpdateHeader();
                 UpdateProperties();
-                UpdateStatus("Профилей пока нет — нажмите «Новый из текущей раскладки».");
+                UpdateStatus("Профилей пока нет. Кнопка «+» над списком создаст профиль из того, как мониторы стоят сейчас.");
             }
         }
 
@@ -844,7 +844,7 @@ namespace DIIIX
             _taskbarButton.Content = Glyph("", on > 0 ? "Панель задач · " + on : "Панель задач");
             _taskbarButton.ToolTip = ExplorerTap.Available
                 ? "Как выглядит панель задач в этом профиле"
-                : "Нет DIIIX.ExplorerTAP.dll рядом с программой";
+                : "В программе не хватает файла, отвечающего за вид панели задач";
         }
 
         private void UpdateHeader()
@@ -971,10 +971,9 @@ namespace DIIIX
             // Windows не предоставляет расширенный цвет выходам, объединённым в дублирование —
             // проверено на LG UltraGear + Q80A и на 60, и на 120 Гц
             bool cloned = d.CloneGroup >= 0;
+            // Подсказки про недоступность HDR в дубле здесь нет: в этом случае поле
+            // не показывается вовсе, а причина написана строкой под названием монитора.
             _hdrCombo.IsEnabled = d.Enabled && !cloned;
-            _hdrCombo.ToolTip = cloned
-                ? "Windows отключает HDR на выходах, объединённых в дублирование, независимо от разрешения и частоты. Чтобы получить HDR на обоих экранах, разведите их как отдельные рабочие столы."
-                : null;
 
             // Что показать: у выключенного монитора настраивать нечего, частота нужна
             // только при выборе, дублирование — только если есть с чем, HDR — только
@@ -1194,7 +1193,7 @@ namespace DIIIX
             MarkDirty();
 
             if (d.Hdr == 1 && d.CloneGroup >= 0)
-                UpdateStatus("HDR не работает при дублировании: Windows не даёт расширенный цвет выходам, сидящим на одном рабочем столе. Разведите экраны — тогда HDR можно включить на каждом.");
+                UpdateStatus("При дублировании HDR не работает. Разведите экраны — тогда его можно включить на каждом.");
         }
 
         private void MarkDirty()
@@ -1213,19 +1212,21 @@ namespace DIIIX
             _status.Text = text ?? "";
         }
 
+        /// <summary>
+        /// Строка внизу окна. Здесь только то, чего больше нигде не видно: имя профиля
+        /// написано в заголовке, состав — на холсте, и повторять их незачем.
+        /// </summary>
         private string Summary()
         {
             if (_current == null) return "";
-            var names = new List<string>();
-            foreach (var d in _current.Displays)
-                if (d.Enabled) names.Add(d.Name);
 
-            string now = _activeProfileName != null
-                ? ("Сейчас применена: «" + _activeProfileName + "»")
-                : "Сейчас применена раскладка, которой нет среди профилей";
+            int on = 0;
+            foreach (var d in _current.Displays) if (d.Enabled) on++;
+            if (on == 0) return "В этом профиле не выбран ни один монитор.";
 
-            if (names.Count == 0) return now + ".   В этом профиле не выбран ни один монитор.";
-            return now + ".   В профиле «" + _current.Name + "»: " + string.Join(", ", names.ToArray());
+            if (_activeProfileName == null) return "Сейчас применена раскладка, которой нет среди профилей.";
+            if (_activeProfileName == _current.Name) return "Эта раскладка применена сейчас.";
+            return "Сейчас применена «" + _activeProfileName + "».";
         }
 
         // ---------------------------------------------------------------- горячая клавиша

@@ -141,7 +141,8 @@ namespace DIIIX
             if (d.Enabled && d.Primary) badges.Children.Add(Badge("Основной", true));
             if (d.Enabled && d.CloneGroup >= 0) badges.Children.Add(Badge("Дубль", false));
             if (d.Enabled && d.Hdr == 1 && d.CloneGroup < 0) badges.Children.Add(Badge("HDR", false));
-            if (!live) badges.Children.Add(Badge("нет сигнала", false));
+            // Метки «нет сигнала» здесь нет: строкой выше уже написано «не подключён»,
+            // и повторять то же самое другими словами в одной карточке незачем.
 
             card.Background = (Brush)FindResource(d.Enabled ? "Screen" : "ScreenOff");
             card.Opacity = d.Enabled ? 1.0 : 0.55;
