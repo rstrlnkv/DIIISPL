@@ -189,7 +189,7 @@ namespace DIIISPL
 #if DEV
             TaskbarWatcher.ResetCache();
 
-            if (layout.Taskbar == null || !layout.Taskbar.AnyEnabled) { TaskbarWatcher.Use(null); return; }
+            if (layout.Taskbar == null || !layout.Taskbar.AnyEnabled) { TaskbarWatcher.Use(null); TaskbarWatcher.ResetSoon(); return; }
             if (!ExplorerTap.Available)
             {
                 res.Warnings.Add(Text.NoTaskbarLibrary);
@@ -197,6 +197,10 @@ namespace DIIISPL
             }
 
             TaskbarWatcher.Use(layout.Taskbar);
+
+            // И ещё раз, когда панели улягутся: пересоздаёт их Windows не сразу,
+            // и всё, что наблюдатель успел о них запомнить между делом, — неправда.
+            TaskbarWatcher.ResetSoon();
             if (ExplorerTap.LastError != null)
                 res.Warnings.Add(Text.TaskbarPrefix(ExplorerTap.LastError));
 #endif

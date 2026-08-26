@@ -252,6 +252,23 @@ namespace DIIISPL
             };
             menu.Items.Add(follow);
 
+#if DEV
+            // Ручной сброс — тот же, что делается сам после применения профиля.
+            // Нужен потому, что сам он может опоздать: панели пересоздаются, когда
+            // Windows сочтёт нужным, и разглядеть застрявший вид человек может
+            // раньше программы.
+            var repaint = new MenuItem();
+            repaint.Style = (Style)Resources["FlyoutMenuItem"];
+            repaint.Header = Text.TrayTaskbarReset;
+            repaint.IsEnabled = ExplorerTap.Available;
+            repaint.Click += delegate
+            {
+                TaskbarWatcher.ResetCache();
+                StartTaskbarForActiveProfile();
+            };
+            menu.Items.Add(repaint);
+#endif
+
             var auto = new MenuItem();
             auto.Style = (Style)Resources["FlyoutMenuItem"];
             auto.Header = Text.RunAtLogon;

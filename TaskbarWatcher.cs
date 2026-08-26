@@ -21,6 +21,19 @@ namespace DIIISPL
         private static System.Windows.Threading.DispatcherTimer _timer;
         private static readonly Dictionary<IntPtr, string> _appliedPerBar = new Dictionary<IntPtr, string>();
 
+        /// <summary>
+        /// Память о применённом правится из двух потоков: Tick крутится на потоке
+        /// окна, а ResetCache зовёт применение раскладки — из потока пула. Прежде
+        /// оба ходили в один Dictionary без защиты, и это не теория: запись,
+        /// начатая до сброса, переживала его. Наблюдатель потом видел «этой панели
+        /// такой вид уже применён» и пропускал настоящую покраску — панель
+        /// оставалась с видом от прежней раскладки.
+        /// </summary>
+        private static readonly object Lock = new object();
+
+        /// <summary>Отложенный сброс: панели пересоздаются не сразу, см. ResetSoon.</summary>
+        private static System.Windows.Threading.DispatcherTimer _settle;
+
         /// <summary>Задать настройки текущего профиля и начать следить.</summary>
         public static void Use(TaskbarSettings settings)
         {
@@ -66,11 +79,51 @@ namespace DIIISPL
         /// </summary>
         public static void ResetCache()
         {
-            _appliedPerBar.Clear();
-            ExplorerTap.Forget();
+            lock (Lock)
+            {
+                _appliedPerBar.Clear();
+                ExplorerTap.Forget();
+            }
         }
 
         private static void Tick()
+        {
+            lock (Lock) { TickCore(); }
+        }
+
+        /// <summary>
+        /// Ещё один сброс, когда панели улягутся.
+        ///
+        /// Сброс при применении раскладки происходит сразу после SetDisplayConfig,
+        /// а панели задач Windows пересоздаёт погодя. Между этими мгновениями
+        /// наблюдатель успевает посмотреть на прежние окна и запомнить про них
+        /// неправду — замок от этого не спасает, он спасает только от порчи самой
+        /// памяти. Поэтому спустя полторы секунды память чистится ещё раз, уже
+        /// на потоке окна, где переплестись с Tick она не может.
+        ///
+        /// Из командной строки диспетчера нет и следить некому — тогда и
+        /// откладывать нечего.
+        /// </summary>
+        public static void ResetSoon()
+        {
+            var app = System.Windows.Application.Current;
+            if (app == null) return;
+
+            app.Dispatcher.BeginInvoke(new Action(delegate
+            {
+                if (_settle == null)
+                {
+                    _settle = new System.Windows.Threading.DispatcherTimer(
+                        System.Windows.Threading.DispatcherPriority.Normal, app.Dispatcher);
+                    _settle.Interval = TimeSpan.FromMilliseconds(1500);
+                    _settle.Tick += delegate { _settle.Stop(); ResetCache(); Tick(); };
+                }
+                _settle.Stop();
+                _settle.Start();
+            }));
+        }
+
+        private static void TickCore()
         {
             if (_settings == null || !ExplorerTap.Available) return;
 

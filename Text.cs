@@ -324,6 +324,7 @@ namespace DIIISPL
         public static string OpenManager { get { return G("tray.manager"); } }
         public static string RunAtLogon { get { return G("tray.runAtLogon"); } }
         public static string AutoSwitchMenu { get { return G("tray.autoSwitch"); } }
+        public static string TrayTaskbarReset { get { return G("tray.tbReset"); } }
         public static string AutoSwitchTip { get { return G("tray.autoSwitchTip"); } }
         public static string AutoSwitched(string name) { return G("auto.switched", name); }
         public static string AboutMenu { get { return G("tray.about"); } }
@@ -537,6 +538,8 @@ namespace DIIISPL
         public static string TbWinTitle { get { return G("tb.win.title"); } }
         public static string TbWinSubtitle(string profile) { return G("tb.win.subtitle", profile); }
         public static string TbWinDone { get { return G("tb.win.done"); } }
+        public static string TbWinReset { get { return G("tb.win.reset"); } }
+        public static string TbWinResetTip { get { return G("tb.win.resetTip"); } }
         public static string TbWinCard { get { return G("tb.win.card"); } }
         public static string TbWinMaster { get { return G("tb.win.master"); } }
         public static string TbWinMasterOff { get { return G("tb.win.masterOff"); } }

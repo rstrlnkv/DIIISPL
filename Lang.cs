@@ -154,6 +154,7 @@ namespace DIIISPL
             d["tray.manager"] = "Layout manager…";
             d["tray.runAtLogon"] = "Start with Windows";
             d["tray.autoSwitch"] = "Follow the monitors";
+            d["tray.tbReset"] = "Reset the taskbar look";
             d["tray.autoSwitchTip"] = "Apply the profile that matches the monitors you plugged in";
             d["auto.switched"] = "Profile “{0}” applied: the set of monitors changed.";
             d["tray.about"] = "About…";
@@ -364,6 +365,8 @@ namespace DIIISPL
             d["tb.win.title"] = "Taskbar";
             d["tb.win.subtitle"] = "Profile “{0}”";
             d["tb.win.done"] = "Done";
+            d["tb.win.reset"] = "Reset the look";
+            d["tb.win.resetTip"] = "Forget what has already been applied and paint the taskbars anew — for when the look got stuck from a previous layout";
             d["tb.win.card"] = "Taskbar look";
             d["tb.win.master"] = "Change the taskbar look in this profile";
             d["tb.win.masterOff"] = "While this is off, the taskbar looks the way Windows draws it.";
@@ -492,6 +495,7 @@ namespace DIIISPL
             d["tray.manager"] = "Менеджер раскладок…";
             d["tray.runAtLogon"] = "Запускать при входе в Windows";
             d["tray.autoSwitch"] = "Следовать за мониторами";
+            d["tray.tbReset"] = "Сбросить вид панели задач";
             d["tray.autoSwitchTip"] = "Применять профиль, подходящий подключённым мониторам";
             d["auto.switched"] = "Профиль «{0}» применён: изменился состав мониторов.";
             d["tray.about"] = "О программе…";
@@ -701,6 +705,8 @@ namespace DIIISPL
             d["tb.win.title"] = "Панель задач";
             d["tb.win.subtitle"] = "Профиль «{0}»";
             d["tb.win.done"] = "Готово";
+            d["tb.win.reset"] = "Сбросить вид";
+            d["tb.win.resetTip"] = "Забыть, что уже применено, и покрасить панели заново — на случай, когда вид застрял от прежней раскладки";
             d["tb.win.card"] = "Вид панели задач";
             d["tb.win.master"] = "Менять вид панели в этом профиле";
             d["tb.win.masterOff"] = "Пока выключено, панель выглядит так, как её рисует Windows.";

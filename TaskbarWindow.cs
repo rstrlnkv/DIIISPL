@@ -82,6 +82,22 @@ namespace DIIISPL
             _hint.TextTrimming = TextTrimming.CharacterEllipsis;
             bottom.Children.Add(_hint);
 
+            // Две кнопки в одной колонке: «Сбросить» слева от «Готово», чтобы
+            // главная кнопка осталась там, где её ищут глазами, — у самого края.
+            var buttons = new StackPanel();
+            buttons.Orientation = Orientation.Horizontal;
+            Grid.SetColumn(buttons, 1);
+
+            var reset = new Button();
+            reset.Style = (Style)Application.Current.Resources["Btn"];
+            reset.Content = Text.TbWinReset;
+            reset.ToolTip = Text.TbWinResetTip;
+            reset.MinWidth = 120;
+            reset.Height = 36;
+            reset.Margin = new Thickness(0, 0, 8, 0);
+            reset.Click += delegate { Preview(); };
+            buttons.Children.Add(reset);
+
             var close = new Button();
             close.Style = (Style)Application.Current.Resources["BtnAccent"];
             close.Content = Text.TbWinDone;
@@ -89,8 +105,8 @@ namespace DIIISPL
             close.Height = 36;
             close.IsDefault = true;
             close.Click += delegate { DialogResult = true; };
-            Grid.SetColumn(close, 1);
-            bottom.Children.Add(close);
+            buttons.Children.Add(close);
+            bottom.Children.Add(buttons);
 
             root.Children.Add(bottom);
             return root;
