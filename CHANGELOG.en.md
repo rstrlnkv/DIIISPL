@@ -8,21 +8,16 @@ The same in Russian — [CHANGELOG.md](CHANGELOG.md).
 Releases with a `-dev` suffix go out on the Dev channel: they carry the taskbar
 settings, which stable builds do not have at all.
 
-## 0.2.2 — 2026-08-27
-
-- **UPD** The taskbar looks are named for what they do: “Transparent” is now “Colour with transparency”, “Opaque” is “Colour, no transparency”. The difference is not the look’s transparency but whether the colour’s transparency is honoured.
-- **UPD** “As usual” in the list of cases is now “No special look”: such a case is not considered at all, and the taskbar takes the look of the next matching case, not the usual one.
-
-## 0.2.1 — 2026-08-27
-
-- **FIX** The taskbar look no longer gets stuck from a previous layout: the memory of what had been applied was written from two threads without a lock.
-- **NEW** “Reset the taskbar look” — a button in the taskbar settings and an item in the tray menu, for when the look gets stuck anyway.
-
-## 0.2.0 — 2026-08-26
+## 0.2.2-dev.1 — 2026-08-27
 
 - **NEW** The profile follows the monitors: plug a display in and the layout that fits it is applied.
+- **NEW** A profile can be kept out of the automatic pick — “Pick automatically” in the “···” menu; a hotkey still applies it.
 - **NEW** The whole release history lives inside the program: the “What’s new” button opens it in a window, no browser needed.
 - **NEW** The `/auto` command prints which profile matches the monitors now and what the program would do.
+- **NEW** “Reset the taskbar look” — a button in the taskbar settings and an item in the tray menu.
+- **FIX** The taskbar look no longer gets stuck from a previous layout: the memory of what had been applied was written from two threads without a lock.
+- **UPD** The taskbar looks are named for what they do: “Transparent” is now “Colour with transparency”, “Opaque” is “Colour, no transparency”. The difference is not the look’s transparency but whether the colour’s transparency is honoured.
+- **UPD** “As usual” in the list of cases is now “No special look”: such a case is not considered at all, and the taskbar takes the look of the next matching case, not the usual one.
 
 ## 0.1.4-dev.1 — 2026-08-26
 
