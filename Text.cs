@@ -407,6 +407,7 @@ namespace DIIISPL
         public static string CliHelpDelete { get { return G("cli.help.delete"); } }
         public static string CliHelpMonitors { get { return G("cli.help.monitors"); } }
         public static string CliHelpHdr { get { return G("cli.help.hdr"); } }
+        public static string CliHelpState { get { return G("cli.help.state"); } }
         public static string CliHelpTaskbar { get { return G("cli.help.taskbar"); } }
         public static string CliHelpTaskbarState { get { return G("cli.help.taskbarState"); } }
         public static string CliNoMonitors { get { return G("cli.noMonitors"); } }

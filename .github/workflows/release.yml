@@ -135,6 +135,52 @@ jobs:
           }
           Write-Host "Подписан: $($sig.SignerCertificate.Thumbprint)"
 
+      # Описание выпуска собирается здесь, а не в шаге ниже: сверху — раздел
+      # собираемой версии из CHANGELOG.md и CHANGELOG.en.md, под ним — неизменный
+      # рассказ о программе на тех же двух языках. Кнопка «Что нового» из окна
+      # ведёт именно на эту страницу, и первым человек должен увидеть то, за чем
+      # пришёл, а не то, что не менялось с прошлого раза.
+      #
+      # Нет раздела хотя бы в одном языке — падаем здесь. Выпуск без «что нового»
+      # создался бы молча и позеленел бы, а нашёлся бы только глазами человека,
+      # пришедшего читать, — и переписывать пришлось бы уже опубликованное.
+      - name: Что нового
+        shell: pwsh
+        run: |
+          function Section([string]$file, [string]$version) {
+            if (-not (Test-Path $file)) { throw "Нет файла $file." }
+            $found = $false
+            $lines = New-Object System.Collections.Generic.List[string]
+            foreach ($line in (Get-Content $file -Encoding utf8)) {
+              # Заголовок раздела — «## 0.1.3-dev.1 — 2026-08-21»; сверяем первое слово.
+              if ($line -match '^##\s+(\S+)') {
+                if ($found) { break }
+                if ($Matches[1] -eq $version) { $found = $true }
+                continue
+              }
+              if ($found) { $lines.Add($line) }
+            }
+            if (-not $found) { throw "В $file нет раздела «$version» — впишите его до того, как ставить тег." }
+            $text = ($lines -join "`n").Trim()
+            if ($text -eq '') { throw "Раздел «$version» в $file пуст." }
+            return $text
+          }
+
+          $tag = $env:DIIISPL_TAG
+          $msi = "DIIISPL-$env:DIIISPL_VERSION-$env:DIIISPL_CHANNEL-x64.msi"
+          $aboutRu = (Get-Content '.github/release-about.ru.md' -Raw -Encoding utf8).Replace('{MSI}', $msi).Trim()
+          $aboutEn = (Get-Content '.github/release-about.en.md' -Raw -Encoding utf8).Replace('{MSI}', $msi).Trim()
+
+          $body = @(
+            "## Что нового в $tag", '', (Section 'CHANGELOG.md'    $tag), '',
+            "## What's new in $tag", '', (Section 'CHANGELOG.en.md' $tag), '',
+            '---', '', $aboutRu, '',
+            '---', '', $aboutEn
+          ) -join "`n"
+
+          Set-Content release-body.md $body -Encoding utf8
+          Write-Host $body
+
       - name: Выпуск
         uses: softprops/action-gh-release@v2
         with:
@@ -143,26 +189,11 @@ jobs:
           # из окна программы, а суффикс «-dev.1» в теге прочитают не все.
           name: ${{ env.DIIISPL_CHANNEL == 'dev' && format('{0} · Dev — с панелью задач', env.DIIISPL_TAG) || env.DIIISPL_TAG }}
           prerelease: ${{ env.DIIISPL_EARLY }}
-          # Описание пишем своё: кнопка «Что нового» в окне программы ведёт именно
-          # сюда, а generate_release_notes собирает текст из слитых pull request'ов —
-          # у нас их нет, и страница встретила бы человека пустой строчкой.
-          # Сгенерированное допишется следом, одно другому не мешает.
-          body: |
-            Менеджер раскладок мониторов для Windows 11: раскладка собирается внутри
-            программы, мониторы опознаются по EDID — не по номеру выхода видеокарты, —
-            а профиль переключается горячей клавишей. Вместе с раскладкой переключается HDR.
-
-            **Ставится** файлом `DIIISPL-${{ env.DIIISPL_VERSION }}-${{ env.DIIISPL_CHANNEL }}-x64.msi` ниже.
-            Программа и установщик говорят на языке Windows — по-английски или по-русски;
-            язык переключается в окне «О программе». Свой язык добавляется файлом, без
-            пересборки: `DIIISPL.exe /lang cs` пишет образец для перевода.
-
-            Windows покажет издателя неизвестным, а SmartScreen может предупредить:
-            программа подписана самодельным сертификатом, и его корень на вашей машине
-            не установлен. Обновления при этом программа сверяет с отпечатком этого же
-            сертификата и чужой пакет не поставит.
-
-            Профили лежат в `%AppData%\DIIISPL`. Удаление программы их не трогает.
+          # Описание пишем своё, шагом выше: generate_release_notes собирает текст
+          # из слитых pull request'ов — у нас их нет, и страница встретила бы
+          # человека пустой строчкой. Сгенерированное допишется следом, одно
+          # другому не мешает.
+          body_path: release-body.md
           generate_release_notes: true
           files: DIIISPL-${{ env.DIIISPL_VERSION }}-${{ env.DIIISPL_CHANNEL }}-x64.msi
           # Без этого выпуск без пакета создаётся молча и шаг зеленеет. А выпуск

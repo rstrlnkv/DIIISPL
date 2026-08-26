@@ -20,6 +20,12 @@ namespace DIIISPL
                     case "monitors": return DumpMonitors();
                     case "hdr": return DumpHdr();
                     case "state": return DumpState();
+                    // «/help» и «/?» — не опечатка, а вопрос. Прежде на них
+                    // отвечали «не знаю такой команды» и кодом 2: справка
+                    // печаталась, но сперва человека упрекали за то, что он
+                    // спросил единственным очевидным способом.
+                    case "help":
+                    case "?": return Help();
 #if DEV
                     case "taskbar": return SetTaskbar(args);
                     case "taskbar-state": return DumpTaskbarState(args);
@@ -59,6 +65,7 @@ namespace DIIISPL
             Console.WriteLine(Text.CliHelpDelete);
             Console.WriteLine(Text.CliHelpMonitors);
             Console.WriteLine(Text.CliHelpHdr);
+            Console.WriteLine(Text.CliHelpState);
             Console.WriteLine(Text.CliHelpLang);
 #if DEV
             Console.WriteLine(Text.CliHelpTaskbar);

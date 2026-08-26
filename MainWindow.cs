@@ -39,6 +39,13 @@ namespace DIIISPL
         private Button _moreButton;
 #if DEV
         private readonly Button _taskbarButton = new Button();   // только в сборках Dev
+        // Экран с полосой у нижнего края — это и есть панель задач. Прежде
+        // здесь стоял «TVMonitor»: монитор на подставке, в программе, где
+        // монитор значит монитор.
+        private const string TaskbarGlyph = "\uE90E";
+        // Шапка и ряд кнопок — чтобы померить, помещается ли подпись словами.
+        private Grid _headerGrid;
+        private StackPanel _headerActions;
 #endif
         private readonly Button _applyButton = new Button();
         private readonly Button _saveButton = new Button();
@@ -83,6 +90,11 @@ namespace DIIISPL
             TextOptions.SetTextFormattingMode(this, TextFormattingMode.Ideal);
 
             Content = BuildUi();
+
+#if DEV
+            // Ширина окна решает, словами подписана кнопка панели задач или числом.
+            SizeChanged += delegate { UpdateTaskbarButton(); };
+#endif
 
             SourceInitialized += delegate { Fluent.ApplyWindowStyling(this); };
             PreviewKeyDown += OnPreviewKeyDown;
@@ -314,6 +326,9 @@ namespace DIIISPL
             header.Margin = new Thickness(4, 0, 0, 14);
             header.ColumnDefinitions.Add(new ColumnDefinition());
             header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+#if DEV
+            _headerGrid = header;
+#endif
 
             // Название по умолчанию — обычный заголовок. Правка включается двойным щелчком,
             // клавишей F2 или пунктом «Переименовать» в списке слева.
@@ -370,6 +385,9 @@ namespace DIIISPL
             var actions = new StackPanel();
             actions.Orientation = Orientation.Horizontal;
             Grid.SetColumn(actions, 1);
+#if DEV
+            _headerActions = actions;
+#endif
 
 #if DEV
             // вид панели задач — свойство профиля, а не монитора, поэтому здесь
@@ -1153,11 +1171,32 @@ namespace DIIISPL
             if (_current != null)
                 foreach (TaskbarState s in TaskbarSettings.Order) if (_current.Taskbar[s].Enabled) on++;
 
-            _taskbarButton.Content = Glyph("", on > 0 ? on.ToString(CultureInfo.InvariantCulture) : "");
-            // Что это за кнопка — в подсказке: на самой кнопке места нет.
+            string count = on > 0 ? on.ToString(CultureInfo.InvariantCulture) : "";
+            string words = on > 0 ? Text.TaskbarButtonN(on) : Text.TaskbarButton;
+
+            // Подпись словами, пока она помещается. Прежде на кнопке всегда
+            // стояло одно число: сжатие делалось ради узкого окна, а действовало
+            // при любой ширине — и в широком окне «4» рядом с «F16» не говорило
+            // ничего, пока между кнопкой и названием профиля пустовала половина
+            // шапки.
+            //
+            // Помещается ли — не порог в пикселях, а мерка: ряд кнопок просят
+            // назвать свою ширину и складывают с названием, ужатым до предела.
+            // Так подпись остаётся словами и по-английски, где она короче, и
+            // сжимается там, где в сочетании клавиш выросло «Ctrl+Shift+F12».
+            bool compact = false;
+            _taskbarButton.Content = Glyph(TaskbarGlyph, words);
+            if (_headerGrid != null && _headerGrid.ActualWidth > 0)
+            {
+                _headerActions.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                compact = _headerActions.DesiredSize.Width + _nameText.MinWidth > _headerGrid.ActualWidth;
+                if (compact) _taskbarButton.Content = Glyph(TaskbarGlyph, count);
+            }
+
+            // В подсказке — то, чего нет на кнопке. Пока подпись словами,
+            // повторять её незачем; сжатую до числа — наоборот, надо назвать.
             _taskbarButton.ToolTip = (ExplorerTap.Available ? Text.TaskbarTip : Text.TaskbarMissing)
-                                     + Environment.NewLine
-                                     + (on > 0 ? Text.TaskbarButtonN(on) : Text.TaskbarButton);
+                                     + (compact ? Environment.NewLine + words : "");
         }
 #endif
 

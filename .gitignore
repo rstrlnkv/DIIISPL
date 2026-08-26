@@ -28,6 +28,9 @@ installer/LICENSE.rtf
 *.wixpdb
 installer/sign.thumbprint
 
+# описание выпуска, собранное сборщиком из CHANGELOG.md и CHANGELOG.en.md
+release-body.md
+
 # Приватное лежит в подмодуле .backstage, а сюда приходит ссылками: папки —
 # соединением, файлы — жёсткой ссылкой (настоящие символьные на Windows требуют
 # особых прав). Сам .backstage не игнорируется — он и есть подмодуль; игнорируются

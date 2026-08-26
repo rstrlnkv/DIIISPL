@@ -238,6 +238,7 @@ namespace DIIISPL
             d["cli.help.delete"] = "  DIIISPL.exe /delete \"Name\"  delete a profile";
             d["cli.help.monitors"] = "  DIIISPL.exe /monitors       what is connected and how it is identified";
             d["cli.help.hdr"] = "  DIIISPL.exe /hdr            HDR state on every output";
+            d["cli.help.state"] = "  DIIISPL.exe /state          the same for scripts: one line per monitor, fields split by tabs";
             d["cli.help.taskbar"] = "  DIIISPL.exe /taskbar look [AARRGGBB] [line]   taskbar look right now";
             d["cli.help.taskbarState"] = "  DIIISPL.exe /taskbar-state [\"Name\"]           what is on the screens and which look follows";
             d["cli.noMonitors"] = "  no monitors found";
@@ -559,6 +560,7 @@ namespace DIIISPL
             d["cli.help.delete"] = "  DIIISPL.exe /delete \"Имя\"   удалить профиль";
             d["cli.help.monitors"] = "  DIIISPL.exe /monitors       что подключено и как опознано";
             d["cli.help.hdr"] = "  DIIISPL.exe /hdr            состояние HDR на каждом выходе";
+            d["cli.help.state"] = "  DIIISPL.exe /state          то же для скриптов: строка на монитор, поля через табуляцию";
             d["cli.help.taskbar"] = "  DIIISPL.exe /taskbar вид [AARRGGBB] [line]   вид панели задач сейчас";
             d["cli.help.taskbarState"] = "  DIIISPL.exe /taskbar-state [\"Имя\"]           что видно на экранах и какой вид из этого следует";
             d["cli.noMonitors"] = "  мониторы не найдены";

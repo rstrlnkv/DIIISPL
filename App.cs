@@ -23,6 +23,7 @@ namespace DIIISPL
         private MainWindow _window;
         private HwndSource _messageWindow;
         private readonly Dictionary<int, string> _hotkeyProfiles = new Dictionary<int, string>();
+        private System.Windows.Threading.DispatcherTimer _recheck;
         private static uint _showMessage;
         private static Mutex _mutex;
 
@@ -115,6 +116,26 @@ namespace DIIISPL
 #endif
 
             CheckForUpdateQuietly();
+
+            // ...и потом раз в час. Прежде спрашивали ровно один раз, при
+            // запуске, — а программа поднимается вместе с Windows, когда сети
+            // чаще всего ещё нет. Не дозвонившись, проверка молча выходила и
+            // повторить её было некому: следующая попытка — только при
+            // следующем запуске, а запускают редко, программа живёт в трее
+            // неделями.
+            //
+            // Измерено 26.08.2026 на живой машине: работала копия 0.1.2,
+            // 0.1.3 вышла пятью днями раньше, окно говорило «проверялось
+            // 4 дня назад» — а кнопка «Проверить» находила её сразу.
+            //
+            // Час — это период будильника, а не частота обращений к GitHub:
+            // внутри стоит условие «прошло ли 24 часа с последней удачной
+            // проверки». Значит удачная остаётся одна в сутки, а неудачная
+            // повторяется через час, пока не выйдет.
+            _recheck = new System.Windows.Threading.DispatcherTimer();
+            _recheck.Interval = TimeSpan.FromHours(1);
+            _recheck.Tick += delegate { CheckForUpdateQuietly(); };
+            _recheck.Start();
 
             if (!startHidden) ShowManager();
             Run();
