@@ -24,6 +24,10 @@ namespace DIIISPL
         private HwndSource _messageWindow;
         private readonly Dictionary<int, string> _hotkeyProfiles = new Dictionary<int, string>();
         private System.Windows.Threading.DispatcherTimer _recheck;
+        /// <summary>Каким был состав экранов, когда мы смотрели в прошлый раз. null — ещё не смотрели.</summary>
+        private List<string> _composition;
+        /// <summary>Ждём тишины после WM_DISPLAYCHANGE: Windows шлёт их пачкой.</summary>
+        private System.Windows.Threading.DispatcherTimer _settle;
         private static uint _showMessage;
         private static Mutex _mutex;
 
@@ -137,6 +141,13 @@ namespace DIIISPL
             _recheck.Tick += delegate { CheckForUpdateQuietly(); };
             _recheck.Start();
 
+            // И сразу посмотреть, не подходит ли составу экранов другой профиль.
+            // Это тот самый случай, ради которого всё писалось: человек включает
+            // ПК, телевизор доступен, а раскладка остаётся вчерашней. Смотрим не
+            // сию секунду, а через паузу — после входа в Windows экраны ещё
+            // договариваются между собой.
+            ScheduleAutoSwitch();
+
             if (!startHidden) ShowManager();
             Run();
         }
@@ -221,6 +232,25 @@ namespace DIIISPL
             manager.Header = Text.OpenManager;
             manager.Click += delegate { ShowManager(); };
             menu.Items.Add(manager);
+
+            // Рядом с автозапуском: обе настройки — про поведение программы,
+            // а не про отдельный профиль.
+            var follow = new MenuItem();
+            follow.Style = (Style)Resources["FlyoutMenuItem"];
+            follow.Header = Text.AutoSwitchMenu;
+            follow.ToolTip = Text.AutoSwitchTip;
+            follow.IsChecked = Settings.AutoSwitch;
+            follow.Click += delegate
+            {
+                Settings.AutoSwitch = !Settings.AutoSwitch;
+                // Включили — запоминаем нынешний состав и ждём настоящей смены.
+                // Иначе переключатель сам бы и перестроил экраны, а человек
+                // просил лишь включить настройку.
+                if (Settings.AutoSwitch)
+                    try { _composition = AutoSwitch.Composition(Monitors.Enumerate()); }
+                    catch { _composition = null; }
+            };
+            menu.Items.Add(follow);
 
             var auto = new MenuItem();
             auto.Style = (Style)Resources["FlyoutMenuItem"];
@@ -455,7 +485,69 @@ namespace DIIISPL
         /// Пока перестроение идёт, второе не начинаем: затвор его всё равно не
         /// пустит, а очередь из ждущих потоков не нужна никому.
         /// </summary>
+        /// <summary>
+        /// Подождать тишины и посмотреть, не сменился ли состав экранов.
+        ///
+        /// Каждое новое событие отодвигает решение: Windows шлёт их пачкой, пока
+        /// дожёвывает подключение, и состав, посчитанный на середине, — это
+        /// состав, которого через секунду уже не будет.
+        /// </summary>
+        private void ScheduleAutoSwitch()
+        {
+            if (_settle == null)
+            {
+                _settle = new System.Windows.Threading.DispatcherTimer();
+                _settle.Interval = TimeSpan.FromSeconds(2);
+                _settle.Tick += delegate { _settle.Stop(); ConsiderAutoSwitch(); };
+            }
+            _settle.Stop();
+            _settle.Start();
+        }
+
+        /// <summary>
+        /// Подходит ли составу экранов другой профиль — и применить его, если да.
+        ///
+        /// Решение принимается по составу, а не по событию, и это главная
+        /// защита от петли: применение раскладки шлёт WM_DISPLAYCHANGE, но
+        /// набор подключённых мониторов при этом не меняется. Значит второй
+        /// раз здесь ничего не случится, даже если снять все прочие замки.
+        /// </summary>
+        private void ConsiderAutoSwitch()
+        {
+            if (!Settings.AutoSwitch) return;
+
+            // Своё применение идёт прямо сейчас — вернёмся, когда закончится.
+            if (ApplyBusy.Active) { ScheduleAutoSwitch(); return; }
+
+            List<MonitorInfo> live;
+            List<Layout> profiles;
+            try { live = Monitors.Enumerate(); profiles = Store.LoadAll(); }
+            catch { return; }
+
+            List<string> now = AutoSwitch.Composition(live);
+
+            // Состав тот же — значит поменялась раскладка, а не набор экранов.
+            // Поменять её мог человек, и приходить сюда со своим мнением незачем.
+            if (AutoSwitch.Same(now, _composition)) return;
+            _composition = now;
+
+            Layout pick = AutoSwitch.Pick(now, profiles);
+            if (pick == null) return;
+
+            // Уже стоит — молчим: иначе каждое включение телевизора отвечало бы
+            // подсказкой о том, что ничего не произошло.
+            if (pick.ChangesNothing(live)) return;
+
+            ApplyByName(pick.Name, true);
+        }
+
         private void ApplyByName(string name)
+        {
+            ApplyByName(name, false);
+        }
+
+        /// <param name="announce">Сказать подсказкой и об удаче: человек этого применения не просил.</param>
+        private void ApplyByName(string name, bool announce)
         {
             var layout = Store.LoadByName(name);
             if (layout == null) return;
@@ -494,6 +586,8 @@ namespace DIIISPL
                         Balloon(Text.ApplyFailedShort(layout.Name, result.Error), Forms.ToolTipIcon.Error);
                     else if (result.Warnings.Count > 0)
                         Balloon(Text.ApplyDoneShort(layout.Name, result.Warnings.Count), Forms.ToolTipIcon.Warning);
+                    else if (announce)
+                        Balloon(Text.AutoSwitched(layout.Name), Forms.ToolTipIcon.Info);
 
                     if (_window != null && _window.IsVisible)
                     {
@@ -523,6 +617,7 @@ namespace DIIISPL
             }
             else if (msg == Native.WM_DISPLAYCHANGE)
             {
+                ScheduleAutoSwitch();
                 if (_window != null && _window.IsVisible)
                 {
                     _window.ReloadLive();

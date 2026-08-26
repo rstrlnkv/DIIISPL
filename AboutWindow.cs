@@ -30,6 +30,8 @@ namespace DIIISPL
         private readonly TextBlock _badge = new TextBlock();
 
         private Updater.Release _found;      // найденный выпуск, если он новее
+        /// <summary>«Что нового» под строкой находки — пока не нашли, пусто и не видно.</summary>
+        private readonly StackPanel _notes = new StackPanel();
         private bool _busy;
 
         public AboutWindow()
@@ -293,6 +295,8 @@ namespace DIIISPL
 
             var stack = new StackPanel();
             stack.Children.Add(top);
+            _notes.Visibility = Visibility.Collapsed;
+            stack.Children.Add(_notes);
             stack.Children.Add(line);
             stack.Children.Add(bottom);
             stack.Children.Add(_channelHint);
@@ -404,7 +408,7 @@ namespace DIIISPL
             news.Content = Text.WhatsNew;
             news.Height = 38;
             news.Margin = new Thickness(0, 0, 6, 0);
-            news.Click += delegate { Updater.OpenPage(Updater.ReleasesPage); };
+            news.Click += delegate { ShowChangelog(); };
             grid.Children.Add(news);
 
             var github = new Button();
@@ -417,6 +421,14 @@ namespace DIIISPL
             grid.Children.Add(github);
 
             return grid;
+        }
+
+        /// <summary>История выпусков — своим окном, из того, что лежит внутри программы.</summary>
+        private void ShowChangelog()
+        {
+            var window = new ChangelogWindow();
+            window.Owner = this;
+            window.ShowDialog();
         }
 
         private UIElement Footer()
@@ -468,9 +480,50 @@ namespace DIIISPL
         {
             _busy = false;
             _updateStatus.Text = Updater.Ago(Settings.LastCheck);
+            ShowHighlights(null);
             _updateStatus.Foreground = (Brush)Application.Current.Resources["TextSec"];
             _updateAction.Content = Text.CheckButton;
             _updateAction.IsEnabled = true;
+        }
+
+        /// <summary>
+        /// Показать «что нового» прямо здесь. Описание выпуска и так скачано:
+        /// прежде его разбирали и выбрасывали, а человек шёл за тем же текстом
+        /// в браузер. У старых выпусков раздела нет — тогда не показываем ничего.
+        /// </summary>
+        private void ShowHighlights(Updater.Release release)
+        {
+            _notes.Children.Clear();
+            _notes.Visibility = Visibility.Collapsed;
+            if (release == null) return;
+
+            int more;
+            var lines = Updater.Highlights(release.Notes, 5, out more);
+            if (lines.Count == 0) return;
+
+            foreach (string s in lines)
+            {
+                var t = new TextBlock();
+                t.Style = (Style)Application.Current.Resources["Caption"];
+                t.Text = "•  " + s;
+                t.TextWrapping = TextWrapping.Wrap;
+                t.Margin = new Thickness(0, 6, 0, 0);
+                _notes.Children.Add(t);
+            }
+
+            if (more > 0)
+            {
+                var link = new TextBlock();
+                link.Style = (Style)Application.Current.Resources["Caption"];
+                link.Text = Text.MoreInNotes(more);
+                link.Margin = new Thickness(0, 8, 0, 0);
+                link.Foreground = (Brush)Application.Current.Resources["Accent"];
+                link.Cursor = System.Windows.Input.Cursors.Hand;
+                string page = release.Page;
+                link.MouseLeftButtonUp += delegate { Updater.OpenPage(page); };
+                _notes.Children.Add(link);
+            }
+            _notes.Visibility = Visibility.Visible;
         }
 
         private void Say(string text, bool alarming)
@@ -518,6 +571,7 @@ namespace DIIISPL
                     _found = release;
                     Say(Text.NewVersionFound(release.Version.Major + "." + release.Version.Minor +
                                              "." + release.Version.Build), true);
+                    ShowHighlights(release);
                     _updateAction.Content = Text.UpdateButton;
                     _updateAction.Style = (Style)Application.Current.Resources["BtnAccent"];
                 }));

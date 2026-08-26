@@ -51,6 +51,17 @@ namespace DIIISPL
         public string Name = "";
         public string Hotkey = "";
         public int Order = 0;                 // порядок в списке, задаётся пользователем
+
+        /// <summary>
+        /// Годится ли профиль для автоматического выбора по составу экранов.
+        ///
+        /// По умолчанию годится: возможность на то и заведена. Но профиль
+        /// бывает и особым — снятый на пробу, отладочный, «как было вчера», —
+        /// и такой не должен вставать сам только потому, что подошёл. Клавишей
+        /// он применяется по-прежнему: исключение касается только выбора без
+        /// участия человека.
+        /// </summary>
+        public bool Auto = true;
         public List<LayoutDisplay> Displays = new List<LayoutDisplay>();
 
 #if DEV
@@ -273,6 +284,7 @@ namespace DIIISPL
         public void AdoptSettingsFrom(Layout old)
         {
             Hotkey = old.Hotkey;
+            Auto = old.Auto;
             Order = old.Order;
 #if DEV
             Taskbar = old.Taskbar.Copy();
@@ -296,6 +308,7 @@ namespace DIIISPL
         {
             Name = src.Name;
             Hotkey = src.Hotkey;
+            Auto = src.Auto;
             Order = src.Order;
 
             Displays.Clear();
@@ -320,6 +333,7 @@ namespace DIIISPL
             var copy = new Layout();
             copy.Name = Name;
             copy.Hotkey = Hotkey;
+            copy.Auto = Auto;
             copy.Order = Order;
 #if DEV
             copy.Taskbar = Taskbar.Copy();
@@ -419,6 +433,7 @@ namespace DIIISPL
             sb.AppendLine("name = " + Name);
             sb.AppendLine("hotkey = " + (Hotkey ?? ""));
             sb.AppendLine("order = " + Order.ToString(CultureInfo.InvariantCulture));
+            sb.AppendLine("auto = " + (Auto ? "1" : "0"));
 #if !DEV
             // Поле прежнего формата возвращаем на место как было: разобрать его
             // стабильная сборка не умеет, а выбрасывать чужое — не её дело.
@@ -559,6 +574,9 @@ namespace DIIISPL
                     if (key == "name") layout.Name = val;
                     else if (key == "hotkey") layout.Hotkey = val;
                     else if (key == "order") layout.Order = ParseInt(val);
+                    // Поля нет — значит файл написан прежней версией, и профиль
+                    // участвует: до этой возможности участвовали все.
+                    else if (key == "auto") layout.Auto = val != "0";
                     // прежний формат: одно поле на весь профиль
 #if DEV
                     else if (key == "taskbar") layout.Taskbar.AdoptLegacy(val);

@@ -218,6 +218,7 @@ namespace DIIISPL
         public static string Apply { get { return G("common.apply"); } }
         public static string Delete { get { return G("common.delete"); } }
         public static string Rename { get { return G("common.rename"); } }
+        public static string AutoPick { get { return G("common.autoPick"); } }
         public static string About { get { return G("common.about"); } }
         public static string Exit { get { return G("common.exit"); } }
         public static string Hz { get { return G("common.hz"); } }
@@ -322,6 +323,9 @@ namespace DIIISPL
         public static string NoProfilesYet { get { return G("tray.noProfiles"); } }
         public static string OpenManager { get { return G("tray.manager"); } }
         public static string RunAtLogon { get { return G("tray.runAtLogon"); } }
+        public static string AutoSwitchMenu { get { return G("tray.autoSwitch"); } }
+        public static string AutoSwitchTip { get { return G("tray.autoSwitchTip"); } }
+        public static string AutoSwitched(string name) { return G("auto.switched", name); }
         public static string AboutMenu { get { return G("tray.about"); } }
         public static string BusyWait { get { return G("tray.busy"); } }
         public static string HotkeyProblem(string combo, string why) { return G("err.hotkeyProblem", combo, why); }
@@ -408,6 +412,15 @@ namespace DIIISPL
         public static string CliHelpMonitors { get { return G("cli.help.monitors"); } }
         public static string CliHelpHdr { get { return G("cli.help.hdr"); } }
         public static string CliHelpState { get { return G("cli.help.state"); } }
+        public static string CliHelpAuto { get { return G("cli.help.auto"); } }
+        public static string AutoConnected(int n) { return G("auto.connected", n); }
+        public static string AutoOn { get { return G("auto.on"); } }
+        public static string AutoOff { get { return G("auto.off"); } }
+        public static string AutoNoFit { get { return G("auto.noFit"); } }
+        public static string AutoFits(string name) { return G("auto.fits", name); }
+        public static string AutoAlready { get { return G("auto.already"); } }
+        public static string AutoWould { get { return G("auto.would"); } }
+        public static string AutoExcluded(int n) { return G("auto.excluded", n); }
         public static string CliHelpTaskbar { get { return G("cli.help.taskbar"); } }
         public static string CliHelpTaskbarState { get { return G("cli.help.taskbarState"); } }
         public static string CliNoMonitors { get { return G("cli.noMonitors"); } }
@@ -480,6 +493,10 @@ namespace DIIISPL
         public static string AboutChannel { get { return G("about.channel"); } }
         public static string AboutLanguage { get { return G("about.language"); } }
         public static string WhatsNew { get { return G("about.whatsNew"); } }
+        public static string ChangelogYours { get { return G("changelog.yours"); } }
+        public static string ChangelogEmpty { get { return G("changelog.empty"); } }
+        public static string NotesHeading { get { return G("upd.notesHeading"); } }
+        public static string MoreInNotes(int n) { return G("upd.moreNotes", n); }
         public static string AboutFooter(string app) { return G("about.footer", app); }
         public static string ChannelDevHint { get { return G("about.devHint"); } }
         public static string ChannelStableHint { get { return G("about.stableHint"); } }

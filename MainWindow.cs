@@ -696,6 +696,17 @@ namespace DIIISPL
             menu.Items.Add(MenuAction(Text.MoveUp, "Alt+↑", delegate { MoveProfile(layout, -1); }));
             menu.Items.Add(MenuAction(Text.MoveDown, "Alt+↓", delegate { MoveProfile(layout, +1); }));
 
+            // Исключение из автоматики — тоже свойство профиля, поэтому живёт
+            // рядом с переименованием и порядком, а не в общих настройках.
+            // Галка ставится вручную, а не IsCheckable: щёлкнув, человек должен
+            // увидеть, что вышло, только после записи на диск.
+            var pick = new MenuItem();
+            pick.Style = (Style)Application.Current.Resources["FlyoutMenuItem"];
+            pick.Header = Text.AutoPick;
+            pick.IsChecked = layout.Auto;
+            pick.Click += delegate { ToggleAutoPick(layout); };
+            menu.Items.Add(pick);
+
             var sep = new Separator();
             sep.Style = (Style)Application.Current.Resources["MenuSeparator"];
             menu.Items.Add(sep);
@@ -706,6 +717,22 @@ namespace DIIISPL
                 DeleteCurrent();
             }));
             return menu;
+        }
+
+        /// <summary>
+        /// Включить или исключить профиль из автоматического выбора.
+        ///
+        /// Пишем сразу на диск, как это делают сочетание клавиш и порядок:
+        /// решение принято щелчком, и держать его в памяти до «Сохранить»
+        /// значило бы потерять при закрытии окна.
+        /// </summary>
+        private void ToggleAutoPick(Layout layout)
+        {
+            layout.Auto = !layout.Auto;
+            Store.Save(layout);
+            RefreshProfileList();
+            SelectListItemFor(_current);
+            Raise(ProfilesChanged);
         }
 
         private MenuItem MenuAction(string header, string gesture, Action action)

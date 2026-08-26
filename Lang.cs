@@ -60,6 +60,7 @@ namespace DIIISPL
             d["common.apply"] = "Apply";
             d["common.delete"] = "Delete";
             d["common.rename"] = "Rename";
+            d["common.autoPick"] = "Pick automatically";
             d["common.about"] = "About";
             d["common.exit"] = "Exit";
             d["common.hz"] = "Hz";
@@ -152,6 +153,9 @@ namespace DIIISPL
             d["tray.noProfiles"] = "No profiles yet";
             d["tray.manager"] = "Layout manager…";
             d["tray.runAtLogon"] = "Start with Windows";
+            d["tray.autoSwitch"] = "Follow the monitors";
+            d["tray.autoSwitchTip"] = "Apply the profile that matches the monitors you plugged in";
+            d["auto.switched"] = "Profile “{0}” applied: the set of monitors changed.";
             d["tray.about"] = "About…";
             d["tray.busy"] = "The screens are being rearranged — wait a few seconds.";
             d["tray.hotkeyShared"] = "{0} — the same shortcut on “{1}” and “{2}”";
@@ -165,6 +169,10 @@ namespace DIIISPL
             d["upd.gibberish"] = "GitHub answered with something unreadable";
             d["upd.onlyPre"] = "no finished releases yet — what is out is marked pre-release. Those arrive on the Dev channel";
             d["upd.noReleases"] = "no releases yet";
+            // Заголовок раздела в описании выпуска — по нему программа находит
+            // свой язык. Должен совпадать с тем, что пишет сборщик в тело выпуска.
+            d["upd.notesHeading"] = "What's new in";
+            d["upd.moreNotes"] = "and {0} more — open the page";
             d["upd.unreachable"] = "could not reach GitHub";
             d["upd.listUnreadable"] = "could not read the release list";
             d["upd.noInstaller"] = "this release has no installer attached";
@@ -239,6 +247,15 @@ namespace DIIISPL
             d["cli.help.monitors"] = "  DIIISPL.exe /monitors       what is connected and how it is identified";
             d["cli.help.hdr"] = "  DIIISPL.exe /hdr            HDR state on every output";
             d["cli.help.state"] = "  DIIISPL.exe /state          the same for scripts: one line per monitor, fields split by tabs";
+            d["cli.help.auto"] = "  DIIISPL.exe /auto           which profile matches the monitors now, and what the program would do";
+            d["auto.connected"] = "Monitors connected: {0}";
+            d["auto.on"] = "Following the monitors: on.";
+            d["auto.off"] = "Following the monitors: off — the program will not switch anything by itself.";
+            d["auto.noFit"] = "No profile fits these monitors, so there is nothing to switch to.";
+            d["auto.fits"] = "Matching profile: “{0}”.";
+            d["auto.already"] = "It is already applied — nothing to change.";
+            d["auto.would"] = "Had the set just changed, the program would apply it.";
+            d["auto.excluded"] = "Profiles excluded from automatic picking: {0}.";
             d["cli.help.taskbar"] = "  DIIISPL.exe /taskbar look [AARRGGBB] [line]   taskbar look right now";
             d["cli.help.taskbarState"] = "  DIIISPL.exe /taskbar-state [\"Name\"]           what is on the screens and which look follows";
             d["cli.noMonitors"] = "  no monitors found";
@@ -302,6 +319,8 @@ namespace DIIISPL
             d["about.channel"] = "Update channel";
             d["about.language"] = "Language";
             d["about.whatsNew"] = "What’s new";
+            d["changelog.yours"] = "you have this one";
+            d["changelog.empty"] = "This build carries no changelog inside.";
             d["about.footer"] = "© 2026 {0} · GPL-3.0";
             d["about.devHint"] = "Dev builds arrive before the general release and can do more — set the taskbar look, for one. In exchange, they break more often.";
             d["about.stableHint"] = "Only finished releases arrive. What is still being worked on — the taskbar look — is in Dev builds only.";
@@ -386,6 +405,7 @@ namespace DIIISPL
             d["common.apply"] = "Применить";
             d["common.delete"] = "Удалить";
             d["common.rename"] = "Переименовать";
+            d["common.autoPick"] = "Выбирать автоматически";
             d["common.about"] = "О программе";
             d["common.exit"] = "Выход";
             d["common.hz"] = "Гц";
@@ -471,6 +491,9 @@ namespace DIIISPL
             d["tray.noProfiles"] = "Профилей пока нет";
             d["tray.manager"] = "Менеджер раскладок…";
             d["tray.runAtLogon"] = "Запускать при входе в Windows";
+            d["tray.autoSwitch"] = "Следовать за мониторами";
+            d["tray.autoSwitchTip"] = "Применять профиль, подходящий подключённым мониторам";
+            d["auto.switched"] = "Профиль «{0}» применён: изменился состав мониторов.";
             d["tray.about"] = "О программе…";
             d["tray.busy"] = "Идёт перестроение экранов — подождите несколько секунд.";
             d["tray.hotkeyShared"] = "{0} — одно сочетание у «{1}» и «{2}»";
@@ -483,6 +506,8 @@ namespace DIIISPL
             d["upd.gibberish"] = "GitHub ответил чем-то непонятным";
             d["upd.onlyPre"] = "готовых выпусков пока нет — то, что вышло, помечено предварительным. Такие приходят на канале Dev";
             d["upd.noReleases"] = "выпусков пока нет";
+            d["upd.notesHeading"] = "Что нового в";
+            d["upd.moreNotes"] = "ещё {0} — открыть страницу";
             d["upd.unreachable"] = "не удалось связаться с GitHub";
             d["upd.listUnreadable"] = "не удалось прочитать список выпусков";
             d["upd.noInstaller"] = "к этому выпуску не приложен установщик";
@@ -561,6 +586,15 @@ namespace DIIISPL
             d["cli.help.monitors"] = "  DIIISPL.exe /monitors       что подключено и как опознано";
             d["cli.help.hdr"] = "  DIIISPL.exe /hdr            состояние HDR на каждом выходе";
             d["cli.help.state"] = "  DIIISPL.exe /state          то же для скриптов: строка на монитор, поля через табуляцию";
+            d["cli.help.auto"] = "  DIIISPL.exe /auto           какой профиль подходит мониторам сейчас и что программа сделала бы";
+            d["auto.connected"] = "Подключено мониторов: {0}";
+            d["auto.on"] = "Следование за мониторами: включено.";
+            d["auto.off"] = "Следование за мониторами: выключено — сама программа ничего переключать не станет.";
+            d["auto.noFit"] = "Ни один профиль этим мониторам не подходит — переключаться не на что.";
+            d["auto.fits"] = "Подходит профиль «{0}».";
+            d["auto.already"] = "Он и так применён — менять нечего.";
+            d["auto.would"] = "Если бы состав только что изменился, программа применила бы его.";
+            d["auto.excluded"] = "Исключено из автоматического выбора профилей: {0}.";
             d["cli.help.taskbar"] = "  DIIISPL.exe /taskbar вид [AARRGGBB] [line]   вид панели задач сейчас";
             d["cli.help.taskbarState"] = "  DIIISPL.exe /taskbar-state [\"Имя\"]           что видно на экранах и какой вид из этого следует";
             d["cli.noMonitors"] = "  мониторы не найдены";
@@ -623,6 +657,8 @@ namespace DIIISPL
             d["about.channel"] = "Канал обновлений";
             d["about.language"] = "Язык";
             d["about.whatsNew"] = "Что нового";
+            d["changelog.yours"] = "сейчас у вас";
+            d["changelog.empty"] = "В эту сборку чейнджлог не попал.";
             d["about.footer"] = "© 2026 {0} · GPL-3.0";
             d["about.devHint"] = "Сборки Dev приходят раньше общего выпуска и умеют больше — например, задавать вид панели задач. Взамен в них чаще что-то не работает.";
             d["about.stableHint"] = "Приходят только готовые выпуски. То, что ещё дорабатывается — вид панели задач, — есть только в сборках Dev.";

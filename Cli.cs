@@ -20,6 +20,7 @@ namespace DIIISPL
                     case "monitors": return DumpMonitors();
                     case "hdr": return DumpHdr();
                     case "state": return DumpState();
+                    case "auto": return DumpAuto();
                     // «/help» и «/?» — не опечатка, а вопрос. Прежде на них
                     // отвечали «не знаю такой команды» и кодом 2: справка
                     // печаталась, но сперва человека упрекали за то, что он
@@ -66,6 +67,7 @@ namespace DIIISPL
             Console.WriteLine(Text.CliHelpMonitors);
             Console.WriteLine(Text.CliHelpHdr);
             Console.WriteLine(Text.CliHelpState);
+            Console.WriteLine(Text.CliHelpAuto);
             Console.WriteLine(Text.CliHelpLang);
 #if DEV
             Console.WriteLine(Text.CliHelpTaskbar);
@@ -212,6 +214,36 @@ namespace DIIISPL
                     m.HdrSupported ? (m.HdrEnabled ? "hdr-on" : "hdr-off") : "hdr-na"
                 }));
             }
+            return 0;
+        }
+
+        /// <summary>
+        /// Какой профиль подходит мониторам сейчас и что программа сделала бы.
+        ///
+        /// Без этой команды решение об автоматическом переключении нельзя
+        /// проверить иначе как выдёргиванием кабеля. Печатает она то же самое,
+        /// что решает программа, — тем же кодом, а не пересказом.
+        /// </summary>
+        private static int DumpAuto()
+        {
+            Console.WriteLine();
+            var live = Monitors.Enumerate();
+            var now = AutoSwitch.Composition(live);
+            Console.WriteLine(Text.AutoConnected(now.Count));
+            foreach (string id in now) Console.WriteLine("    " + id);
+            Console.WriteLine();
+            Console.WriteLine(Settings.AutoSwitch ? Text.AutoOn : Text.AutoOff);
+
+            List<Layout> profiles = Store.LoadAll();
+            int off = 0;
+            foreach (Layout l in profiles) if (!l.Auto) off++;
+            if (off > 0) Console.WriteLine(Text.AutoExcluded(off));
+
+            Layout pick = AutoSwitch.Pick(now, profiles);
+            if (pick == null) { Console.WriteLine(Text.AutoNoFit); return 0; }
+
+            Console.WriteLine(Text.AutoFits(pick.Name));
+            Console.WriteLine(pick.ChangesNothing(live) ? Text.AutoAlready : Text.AutoWould);
             return 0;
         }
 

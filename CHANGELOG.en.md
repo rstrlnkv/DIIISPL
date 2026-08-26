@@ -8,6 +8,12 @@ The same in Russian — [CHANGELOG.md](CHANGELOG.md).
 Releases with a `-dev` suffix go out on the Dev channel: they carry the taskbar
 settings, which stable builds do not have at all.
 
+## 0.2.0 — 2026-08-26
+
+- **NEW** The profile follows the monitors: plug a display in and the layout that fits it is applied.
+- **NEW** The whole release history lives inside the program: the “What’s new” button opens it in a window, no browser needed.
+- **NEW** The `/auto` command prints which profile matches the monitors now and what the program would do.
+
 ## 0.1.4-dev.1 — 2026-08-26
 
 - **FIX** Updates are checked more than once per launch: if GitHub cannot be reached, the program tries again in an hour.
