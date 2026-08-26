@@ -138,7 +138,10 @@ namespace DIIISPL
                 var state = Evaluate(monitor, battery, start, search, taskView);
 
                 var look = _settings[state];
-                if (!look.Enabled) look = _settings[TaskbarState.Desktop];
+                // Запасного «взять обычный вид» здесь нет намеренно: Evaluate
+                // возвращает только включённые случаи. Случай без особого вида
+                // означает не «выглядеть как обычно», а «не рассматривать» —
+                // вид тогда берётся от следующего подходящего, и он уже выбран.
 
                 string signature = state + "|" + look.Serialize();
                 string applied;

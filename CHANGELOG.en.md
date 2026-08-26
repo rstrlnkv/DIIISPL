@@ -8,6 +8,11 @@ The same in Russian — [CHANGELOG.md](CHANGELOG.md).
 Releases with a `-dev` suffix go out on the Dev channel: they carry the taskbar
 settings, which stable builds do not have at all.
 
+## 0.2.2 — 2026-08-27
+
+- **UPD** The taskbar looks are named for what they do: “Transparent” is now “Colour with transparency”, “Opaque” is “Colour, no transparency”. The difference is not the look’s transparency but whether the colour’s transparency is honoured.
+- **UPD** “As usual” in the list of cases is now “No special look”: such a case is not considered at all, and the taskbar takes the look of the next matching case, not the usual one.
+
 ## 0.2.1 — 2026-08-27
 
 - **FIX** The taskbar look no longer gets stuck from a previous layout: the memory of what had been applied was written from two threads without a lock.
