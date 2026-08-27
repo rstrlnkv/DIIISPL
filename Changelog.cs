@@ -10,13 +10,20 @@ using System.Text;
 
 namespace DIIISPL
 {
+    /// <summary>Строка изменения: бейдж и текст порознь — в окне они рисуются по-разному.</summary>
+    internal sealed class ChangelogLine
+    {
+        public string Badge = "";          // NEW, FIX, UPD; пусто — строка без бейджа
+        public string Text = "";
+    }
+
     /// <summary>Один выпуск в чейнджлоге: номер, дата и строки изменений.</summary>
     internal sealed class ChangelogEntry
     {
         public string Version = "";
         public string Date = "";
         public string Note = "";           // «Первый выпуск.» и подобное — абзац перед списком
-        public List<string> Lines = new List<string>();
+        public List<ChangelogLine> Lines = new List<ChangelogLine>();
     }
 
     /// <summary>
@@ -72,26 +79,43 @@ namespace DIIISPL
                 if (current == null) continue;      // шапка файла до первого выпуска
                 if (line.Length == 0 || line.StartsWith("#")) continue;
 
-                if (line.StartsWith("- ")) current.Lines.Add(Plain(line.Substring(2)));
+                if (line.StartsWith("- ")) current.Lines.Add(Split(line.Substring(2)));
                 else if (current.Lines.Count == 0 && current.Note.Length == 0) current.Note = Plain(line);
             }
             return list;
         }
 
         /// <summary>
-        /// Строка без разметки: звёздочки вокруг бейджа и кавычки вокруг команд
-        /// в окне не нужны — там их некому превратить в оформление.
+        /// Разобрать строку списка на бейдж и текст. «**NEW** Профиль встаёт сам» —
+        /// это бейдж «NEW» и всё остальное; звёздочки и кавычки вокруг команд
+        /// убираются, потому что в окне их некому превратить в оформление.
         /// </summary>
-        public static string Plain(string text)
+        public static ChangelogLine Split(string bullet)
         {
-            string s = text.Trim();
+            var line = new ChangelogLine();
+            string s = bullet.Trim();
+
             if (s.StartsWith("**"))
             {
                 int end = s.IndexOf("**", 2);
                 if (end > 2)
-                    s = s.Substring(2, end - 2) + " · " + s.Substring(end + 2).TrimStart();
+                {
+                    line.Badge = s.Substring(2, end - 2).Trim();
+                    s = s.Substring(end + 2).TrimStart();
+                }
             }
-            return s.Replace("`", "");
+            line.Text = s.Replace("`", "");
+            return line;
+        }
+
+        /// <summary>
+        /// То же самое одной строкой — для мест, где бейджу негде быть отдельным:
+        /// подсказка о найденном обновлении и абзац перед списком.
+        /// </summary>
+        public static string Plain(string text)
+        {
+            ChangelogLine line = Split(text);
+            return line.Badge.Length > 0 ? line.Badge + " · " + line.Text : line.Text;
         }
 
         private static string Raw(string code)

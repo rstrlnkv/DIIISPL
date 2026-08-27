@@ -102,7 +102,13 @@ namespace DIIISPL
                 .Replace("{ACCENTPRESS}", Hex(accentPress))
                 .Replace("{ACCENTTEXT}", accentText)
                 .Replace("{SCREEN}", dark ? "#FF3A3A3A" : "#FFE8E8E8")
-                .Replace("{SCREENOFF}", dark ? "#FF262626" : "#FFEDEDED");
+                .Replace("{SCREENOFF}", dark ? "#FF262626" : "#FFEDEDED")
+                .Replace("{BADGENEWBG}",   dark ? "#FF1E3A2A" : "#FFE3F3E8")
+                .Replace("{BADGENEWTEXT}", dark ? "#FF6FD08C" : "#FF1E7A3C")
+                .Replace("{BADGEFIXBG}",   dark ? "#FF3A2A1C" : "#FFFBEADA")
+                .Replace("{BADGEFIXTEXT}", dark ? "#FFE0A45E" : "#FF95560F")
+                .Replace("{BADGEUPDBG}",   dark ? "#FF1E2C46" : "#FFE2ECFA")
+                .Replace("{BADGEUPDTEXT}", dark ? "#FF6FA8E6" : "#FF1A5AA8");
 
             return (ResourceDictionary)XamlReader.Parse(xaml);
         }
@@ -128,6 +134,14 @@ namespace DIIISPL
   <SolidColorBrush x:Key='AccentText' Color='{ACCENTTEXT}'/>
   <SolidColorBrush x:Key='Screen' Color='{SCREEN}'/>
   <SolidColorBrush x:Key='ScreenOff' Color='{SCREENOFF}'/>
+  <!-- Бейджи чейнджлога: свой цвет каждому роду изменения. Пара «фон плюс текст»,
+       а не один цвет: на подложке текст должен читаться в обеих темах. -->
+  <SolidColorBrush x:Key='BadgeNewBg' Color='{BADGENEWBG}'/>
+  <SolidColorBrush x:Key='BadgeNewText' Color='{BADGENEWTEXT}'/>
+  <SolidColorBrush x:Key='BadgeFixBg' Color='{BADGEFIXBG}'/>
+  <SolidColorBrush x:Key='BadgeFixText' Color='{BADGEFIXTEXT}'/>
+  <SolidColorBrush x:Key='BadgeUpdBg' Color='{BADGEUPDBG}'/>
+  <SolidColorBrush x:Key='BadgeUpdText' Color='{BADGEUPDTEXT}'/>
 
   <FontFamily x:Key='UiFont'>Segoe UI Variable Text, Segoe UI</FontFamily>
   <FontFamily x:Key='UiFontDisplay'>Segoe UI Variable Display, Segoe UI</FontFamily>

@@ -135,15 +135,18 @@ jobs:
           }
           Write-Host "Подписан: $($sig.SignerCertificate.Thumbprint)"
 
-      # Описание выпуска собирается здесь, а не в шаге ниже: сверху — раздел
-      # собираемой версии из CHANGELOG.md и CHANGELOG.en.md, под ним — неизменный
-      # рассказ о программе на тех же двух языках. Кнопка «Что нового» из окна
-      # ведёт именно на эту страницу, и первым человек должен увидеть то, за чем
-      # пришёл, а не то, что не менялось с прошлого раза.
+      # Описание выпуска собирается здесь, а не в шаге ниже: страница выпуска —
+      # это то, куда ведёт кнопка «Что нового» из окна программы, и первым человек
+      # должен увидеть то, за чем пришёл.
       #
-      # Нет раздела хотя бы в одном языке — падаем здесь. Выпуск без «что нового»
-      # создался бы молча и позеленел бы, а нашёлся бы только глазами человека,
-      # пришедшего читать, — и переписывать пришлось бы уже опубликованное.
+      # Устройство страницы взято у Helm: одна строка сверху говорит, что это за
+      # выпуск, дальше «Что нового», «Установка и обновление» с контрольной суммой
+      # и подписью, «Что дальше». Список коммитов дописывает GitHub своим
+      # «What's Changed» — это и есть последний раздел.
+      #
+      # Прозу держат файлы .github/release-template.*.md, здесь только подстановки.
+      # Нет раздела чейнджлога хотя бы в одном языке — падаем: выпуск без «что
+      # нового» создался бы молча, а нашёлся бы только глазами человека.
       - name: Что нового
         shell: pwsh
         run: |
@@ -152,7 +155,7 @@ jobs:
             $found = $false
             $lines = New-Object System.Collections.Generic.List[string]
             foreach ($line in (Get-Content $file -Encoding utf8)) {
-              # Заголовок раздела — «## 0.1.3-dev.1 — 2026-08-21»; сверяем первое слово.
+              # Заголовок раздела — «## 0.2.2-dev.1 — 2026-08-27»; сверяем первое слово.
               if ($line -match '^##\s+(\S+)') {
                 if ($found) { break }
                 if ($Matches[1] -eq $version) { $found = $true }
@@ -167,15 +170,46 @@ jobs:
           }
 
           $tag = $env:DIIISPL_TAG
-          $msi = "DIIISPL-$env:DIIISPL_VERSION-$env:DIIISPL_CHANNEL-x64.msi"
-          $aboutRu = (Get-Content '.github/release-about.ru.md' -Raw -Encoding utf8).Replace('{MSI}', $msi).Trim()
-          $aboutEn = (Get-Content '.github/release-about.en.md' -Raw -Encoding utf8).Replace('{MSI}', $msi).Trim()
+          $num = $env:DIIISPL_VERSION
+          $msi = "DIIISPL-$num-$env:DIIISPL_CHANNEL-x64.msi"
 
+          # Сумму и отпечаток берём у самого пакета, а не из того, что мы про него
+          # думаем: страница обещает человеку сверить скачанное, и обещание должно
+          # относиться к тому файлу, который к ней приложен.
+          $sha = (Get-FileHash $msi -Algorithm SHA256).Hash.ToLower()
+          $thumb = (Get-AuthenticodeSignature $msi).SignerCertificate.Thumbprint
+
+          $parts = $num.Split('.')
+          $nextPatch = "{0}.{1}.{2}" -f $parts[0], $parts[1], ([int]$parts[2] + 1)
+          $nextMinor = "{0}.{1}.0"   -f $parts[0], ([int]$parts[1] + 1)
+
+          $ru = Section 'CHANGELOG.md'    $tag
+          $en = Section 'CHANGELOG.en.md' $tag
+
+          # Род выпуска берём из самих строк, а не из номера: 0.2.2 по номеру —
+          # PATCH, а возможностей в нём пять, и номер соврал бы.
+          $hasNew = $ru -match '\*\*NEW\*\*'
+          $early = $env:DIIISPL_EARLY -eq 'true'
+          $kindRu = if ($hasNew) { 'с новыми возможностями' } else { 'с исправлениями' }
+          $kindEn = if ($hasNew) { 'with new features' } else { 'with fixes' }
+          $whatRu = if ($early) { "предварительный выпуск канала Dev, $kindRu" } else { "выпуск $kindRu" }
+          $whatEn = if ($early) { "a Dev channel pre-release, $kindEn" } else { "a release $kindEn" }
+
+          function Fill([string]$path, [string]$changes, [string]$kind) {
+            $t = (Get-Content $path -Raw -Encoding utf8)
+            $t = $t.Replace('{VERSION}', $tag).Replace('{KIND}', $kind).Replace('{CHANGES}', $changes)
+            $t = $t.Replace('{MSI}', $msi).Replace('{SHA256}', $sha).Replace('{THUMBPRINT}', $thumb)
+            $t = $t.Replace('{NEXTPATCH}', $nextPatch).Replace('{NEXTMINOR}', $nextMinor)
+            return $t.TrimEnd()
+          }
+
+          # Английский — целиком под складкой: у Helm страница одноязычная и потому
+          # короткая, а два скелета подряд сделали бы её вдвое длиннее ни за чем.
           $body = @(
-            "## Что нового в $tag", '', (Section 'CHANGELOG.md'    $tag), '',
-            "## What's new in $tag", '', (Section 'CHANGELOG.en.md' $tag), '',
-            '---', '', $aboutRu, '',
-            '---', '', $aboutEn
+            (Fill '.github/release-template.ru.md' $ru $whatRu), '',
+            '<details>', '<summary>English</summary>', '',
+            (Fill '.github/release-template.en.md' $en $whatEn), '',
+            '</details>'
           ) -join "`n"
 
           Set-Content release-body.md $body -Encoding utf8

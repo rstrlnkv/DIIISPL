@@ -172,7 +172,7 @@ namespace DIIISPL
             d["upd.noReleases"] = "no releases yet";
             // Заголовок раздела в описании выпуска — по нему программа находит
             // свой язык. Должен совпадать с тем, что пишет сборщик в тело выпуска.
-            d["upd.notesHeading"] = "What's new in";
+            d["upd.notesHeading"] = "What's new";
             d["upd.moreNotes"] = "and {0} more — open the page";
             d["upd.unreachable"] = "could not reach GitHub";
             d["upd.listUnreadable"] = "could not read the release list";
@@ -510,7 +510,7 @@ namespace DIIISPL
             d["upd.gibberish"] = "GitHub ответил чем-то непонятным";
             d["upd.onlyPre"] = "готовых выпусков пока нет — то, что вышло, помечено предварительным. Такие приходят на канале Dev";
             d["upd.noReleases"] = "выпусков пока нет";
-            d["upd.notesHeading"] = "Что нового в";
+            d["upd.notesHeading"] = "Что нового";
             d["upd.moreNotes"] = "ещё {0} — открыть страницу";
             d["upd.unreachable"] = "не удалось связаться с GitHub";
             d["upd.listUnreadable"] = "не удалось прочитать список выпусков";
