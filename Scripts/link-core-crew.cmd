@@ -25,11 +25,14 @@ if not exist "%CC%\" (
   exit /b 1
 )
 
+rem Ссылок шесть. Двух прежних — `docs` и `.claude\agents` — здесь нет и не
+rem будет: обе вели в пустые каталоги, которые в Core Crew держались одними
+rem заглушками. Роли приходят из ~\.claude\agents, документы лежат в
+rem diiispl-private, а ссылка на пустоту честнее выглядит отсутствующей.
 echo === Документы ===
 call :file "diiispl-private\CLAUDE.md"       "CLAUDE.md"
 call :file "diiispl-private\ARCHITECTURE.md" "ARCHITECTURE.md"
 call :file "diiispl-private\VERSIONING.md"   "VERSIONING.md"
-call :dir  "diiispl-private\docs"            "docs"
 
 echo === Команда ===
 if not exist "%ROOT%\.claude"        mkdir "%ROOT%\.claude"
@@ -38,7 +41,6 @@ if not exist "%ROOT%\.claude-plugin" mkdir "%ROOT%\.claude-plugin"
 rem Файлы знания. Без этой ссылки десять общих ролей читают «файла нет»,
 rem и четыре из них при этом молча останавливаются.
 call :dir  "diiispl-private\crew"            ".claude\crew"
-call :dir  "plugins\diiispl-crew\agents"     ".claude\agents"
 call :dir  "plugins\diiispl-crew"            "plugins\diiispl-crew"
 call :file ".claude-plugin\marketplace.json" ".claude-plugin\marketplace.json"
 
