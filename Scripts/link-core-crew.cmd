@@ -16,12 +16,12 @@ rem Прежде это же делал link-backstage.cmd — из подмод
 rem больше нет: приватная половина переехала в Core Crew 05.09.2026.
 setlocal
 set ROOT=%~dp0..
-set CC=%ROOT%\..\Core-Crew\projects\DIIISPL
+set CC=%ROOT%\..\CoreCrew\projects\DIIISPL
 
 if not exist "%CC%\" (
   echo Нет Core Crew рядом с этим деревом. Ожидается:
   echo   %CC%
-  echo Поставить: git clone https://github.com/rstrlnkv/Core-Crew.git
+  echo Поставить: git clone https://github.com/rstrlnkv/CoreCrew.git
   exit /b 1
 )
 
