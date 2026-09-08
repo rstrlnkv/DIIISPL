@@ -61,3 +61,5 @@ tests/last-run.txt
 
 # канал последней сборки: создаётся build.cmd, нужен только установщику
 /.channel
+.claude/agents
+.claude/crew
