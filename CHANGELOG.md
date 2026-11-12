@@ -14,7 +14,7 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Added
 
-- The About screen shows the full version with its -dev.N suffix and has a Copy button for “version (build)”.
+- The About screen shows the full version with its -dev.N suffix.
 - A Licences page in Dev builds, with the licences of the bundled third-party components.
 
 ### Changed
