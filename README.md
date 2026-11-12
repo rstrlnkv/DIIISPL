@@ -1,102 +1,78 @@
 # DIIISPL
 
-Менеджер раскладок мониторов для Windows 11. Раскладка собирается внутри программы,
-мониторы опознаются по EDID — а не по номеру выхода видеокарты, — и профиль переключается
-горячей клавишей. Вместе с раскладкой переключается HDR, а в сборках Dev ещё и вид
-панели задач.
+A monitor layout manager for Windows 11: build a layout inside the program, switch profiles with a hotkey, and keep HDR (and, in Dev builds, the taskbar look) with the layout.
 
-- [Чем отличается от «Параметров экрана»](#чем-отличается-от-параметров-экрана)
-- [Установка](#установка)
-- [Как пользоваться](#как-пользоваться)
-- [Профиль по мониторам](#профиль-по-мониторам)
-- [HDR](#hdr)
-- [Панель задач](#панель-задач)
-- [Язык](#язык)
-- [Командная строка](#командная-строка)
-- [Файлы](#файлы)
-- [Обновления](#обновления)
-- [Если что-то пошло не так](#если-что-то-пошло-не-так)
-- [Как устроено и как собрать](#как-устроено-и-как-собрать)
-- [Лицензия](#лицензия)
+![Platform: Windows 11 x64](https://img.shields.io/badge/platform-Windows%2011%20x64-0078d4) ![Latest release](https://img.shields.io/github/v/release/rstrlnkv/DIIISPL?include_prereleases) ![Downloads](https://img.shields.io/github/downloads/rstrlnkv/DIIISPL/total) ![Licence: GPL-3.0](https://img.shields.io/badge/licence-GPL--3.0-blue)
 
-## Чем отличается от «Параметров экрана»
+**English** · [Русский](README.ru.md)
+
+Monitors are identified by EDID, not by the number of the graphics-card output, so a profile keeps working when you move a cable to another port.
+
+## Install
+
+Download the `.msi` package from the [releases](https://github.com/rstrlnkv/DIIISPL/releases). It installs like any program: into `C:\Program Files\DIIISPL`, with an entry in the list of installed programs, where you also uninstall it. The installer closes a running copy by itself. Profiles live separately, in `%AppData%\DIIISPL`, and are kept when you reinstall or uninstall.
+
+Windows will show the publisher as unknown and SmartScreen may warn you: the program is signed with a self-made certificate, and its root is not installed on your machine. The program checks updates against the thumbprint of that same certificate and will not install anyone else's package.
+
+Autostart is switched on in the tray icon menu, "Start with Windows".
+
+A silent install:
+
+```
+msiexec /i DIIISPL-<version>-x64.msi INSTALLFOLDER="D:\Programs\DIIISPL" INSTALLSHORTCUT=0 /qb
+```
+
+## Features
+
+| Feature | What it does |
+|---|---|
+| Layout profiles | Stores where each monitor stands, its resolution, refresh rate, rotation, primary and duplicate state, in a profile file |
+| EDID identification | Recognises a monitor by manufacturer, model and serial number, so changing an HDMI or DP port does not lose the layout |
+| Hotkey and tray icon | Switches a profile with a key or from the tray menu |
+| Follow the monitors | When the set of connected screens changes, applies the fitting profile by itself |
+| HDR | HDR is part of a profile and is set after the layout is applied |
+| Taskbar look (Dev builds) | The taskbar look is part of a profile, one per screen state |
+| Command line | Applies, saves, lists and deletes profiles; prints what is connected and how it is identified |
+| Languages | English and Russian built in; another language is added with a text file, without rebuilding |
+| Updates | Checks GitHub releases, installs a package signed with the same certificate |
+
+## How it differs from Windows Display settings
 
 | | Windows | DIIISPL |
 |---|---|---|
-| Кто помнит раскладку | внутренняя база дисплеев | файл профиля в `%AppData%\DIIISPL` |
-| Как опознан монитор | номер выхода видеокарты | EDID: производитель, модель, серийный номер |
-| Смена порта HDMI или DP | монитор становится «новым», раскладка теряется | профиль продолжает работать |
-| Переключение | вручную, мышью | горячая клавиша или значок в трее |
-| Включили или выдернули экран | раскладку чините сами | подходящий профиль встаёт сам |
-| HDR | тумблер на каждый экран, гаснет при смене раскладки | часть профиля |
-| Вид панели задач | один на всю систему | часть профиля, свой на каждое состояние экрана (сборки Dev) |
+| Who remembers the layout | the internal display database | a profile file in `%AppData%\DIIISPL` |
+| How a monitor is identified | the number of the graphics-card output | EDID: manufacturer, model, serial number |
+| An HDMI or DP port changed | the monitor becomes "new", the layout is lost | the profile keeps working |
+| Switching | by hand, with the mouse | a hotkey or the tray icon |
+| A screen was switched on or unplugged | you repair the layout yourself | the fitting profile is applied by itself |
+| HDR | a toggle per screen, switched off when the layout changes | part of the profile |
+| Taskbar look | one for the whole system | part of the profile, one per screen state (Dev builds) |
 
-Монитор опознаётся строкой вроде `GSM:LG ULTRAGEAR+:306NTGY9H903`. Поэтому программа
-не путается там, где путается Windows: у телевизора Samsung идентификатор оборудования
-меняется — `SAM713F` или `SAM7140`, смотря какой режим входа, — а серийный номер в EDID
-остаётся прежним.
+A monitor is identified by a string such as `GSM:LG ULTRAGEAR+:306NTGY9H903`. That is why the program does not get confused where Windows does: the hardware ID of a Samsung TV changes (`SAM713F` or `SAM7140`, depending on the input mode), while the serial number in its EDID stays the same.
 
-## Установка
+## How to use
 
-Пакет `.msi` лежит в [выпусках](https://github.com/rstrlnkv/DIIISPL/releases). Ставится
-как обычная программа: в `C:\Program Files\DIIISPL`, с записью в списке установленных,
-откуда её и удаляют. Работающую копию установщик закрывает сам. Профили лежат отдельно,
-в `%AppData%\DIIISPL`, и переустановку с удалением переживают.
+**Profiles are on the left.** The **+** button creates a profile from the way the monitors stand now; **···** and the right mouse button open the actions: rename, reorder, delete. The dot to the right of a name marks the layout that is in effect right now. `F2` renames, `Alt+↑` and `Alt+↓` reorder.
 
-Windows покажет издателя неизвестным, а SmartScreen может предупредить: программа
-подписана самодельным сертификатом, и его корень на вашей машине не установлен.
-Обновления при этом программа сверяет с отпечатком этого же сертификата и чужой пакет
-не поставит.
+**The canvas is in the centre.** Monitors are dragged with the mouse and snap to each other's edges. Those that are not in the profile sit below the dividing line: drag one above it to add it. Desktops cannot overlap: the program says so at the bottom and does not apply.
 
-Автозапуск включается в меню значка в трее — «Запускать при входе в Windows».
+**The properties of the selected monitor are at the bottom:** whether it is on, resolution, refresh rate, rotation, whether it is primary, duplication, HDR. Only what applies is shown: the refresh rate where a resolution offers a choice, duplication when there is something to duplicate.
 
-Установка без вопросов:
+**Apply** writes the profile and switches to the layout at once; **Save** only writes it. Edits on the canvas and in the properties do not reach the disk by themselves: when you switch to another profile or close the window, the program asks whether to save them.
 
-```
-msiexec /i DIIISPL-0.1.4-dev-x64.msi INSTALLFOLDER="D:\Programs\DIIISPL" INSTALLSHORTCUT=0 /qb
-```
+**Keyboard shortcut:** press the button of that name, then the keys themselves. A single key works only for `F13`–`F24`, `Pause` and `ScrollLock`; any other key needs Ctrl, Alt or Win in the combination.
 
-## Как пользоваться
+The close button does not quit the program but hides it: it stays as an icon in the notification area and the hotkeys keep working. To quit, use **Exit** in the icon menu.
 
-**Слева — профили.** Кнопка **+** создаёт профиль из того, как мониторы стоят сейчас;
-**···** и правая кнопка мыши открывают действия: переименовать, переставить, удалить.
-Точка справа от названия отмечает раскладку, которая стоит прямо сейчас. `F2`
-переименовывает, `Alt+↑` и `Alt+↓` переставляют.
+The look follows the system theme and the Windows accent colour.
 
-**В центре — холст.** Мониторы перетаскиваются мышью и прилипают краями друг к другу.
-Те, что в профиль не входят, лежат под чертой: перетащите наверх, чтобы добавить.
-Наложить рабочие столы друг на друга нельзя — программа скажет об этом внизу
-и применять не станет.
+## Profile by monitors
 
-**Внизу — свойства выбранного монитора:** включён ли он, разрешение, частота, поворот,
-основной ли, дублирование, HDR. Показывается только применимое: частота нужна там, где
-у разрешения есть выбор, дублирование — когда есть с чем дублировать.
+When the set of connected screens changes (you switched on a TV, pulled a cable), the program applies the fitting profile by itself. A profile fits when all its enabled monitors are connected now; of the fitting ones the one that uses more screens is taken, and on a tie the first in the list. If none fits, nothing happens.
 
-**Применить** записывает профиль и сразу включает раскладку, **Сохранить** только
-записывает. Правки на холсте и в свойствах сами на диск не уходят: при переключении
-на другой профиль или закрытии окна программа спросит, сохранять ли их.
+The program announces the switch with a notification at the tray icon, so that screens that rearranged themselves do not seem to act on their own. A layout that you set by hand is not touched: the trigger is a change of the **set** of screens, not a change of the layout.
 
-**Сочетание клавиш** — нажмите кнопку, а затем сами клавиши. Годятся и одиночные
-(`F13`–`F24`, `Pause`, `ScrollLock`), и сочетания с Ctrl, Alt, Shift, Win.
-
-Крестик не закрывает программу, а прячет: она остаётся значком в области уведомлений,
-и горячие клавиши продолжают работать. Совсем выйти — пункт **Выход** в меню значка.
-
-Оформление следует системной теме и акцентному цвету Windows.
-
-## Профиль по мониторам
-
-Изменился набор подключённых экранов — включили телевизор, выдернули кабель, — и программа
-сама применяет подходящий профиль. Подходит тот, все включённые мониторы которого сейчас
-подключены; из подходящих берётся тот, что задействует больше экранов, а при равенстве —
-первый по списку. Не подошёл ни один — не происходит ничего.
-
-О переключении программа говорит подсказкой у значка: экраны, перестроившиеся сами, не
-должны выглядеть самоуправством. Раскладку, которую вы поставили руками, она при этом
-не трогает — поводом служит смена **состава** экранов, а не смена раскладки.
-
-Выключается в меню значка в трее — «Следовать за мониторами». Что программа видит сейчас
-и что из этого следует:
+It is switched off in the tray menu, "Follow the monitors". What the program sees now and what follows from it:
 
 ```
 DIIISPL.exe /auto
@@ -104,103 +80,73 @@ DIIISPL.exe /auto
 
 ## HDR
 
-HDR — часть профиля. Выставляется он после того, как раскладка применена, и сразу всей
-группе дублирования: Windows гасит HDR при любой смене топологии, а если у выходов группы
-он включён по-разному, уводит в SDR обоих.
+HDR is part of a profile. It is set after the layout is applied, and at once for the whole duplicate group: Windows switches HDR off on any change of topology, and if the outputs of a group have it on differently, it sends both to SDR.
 
-**В дублировании HDR не будет.** Выходам, объединённым в клон, Windows расширенный цвет
-не отдаёт вовсе — проверено на связке «монитор плюс телевизор» и на 60 Гц, и на 120.
-Чтобы HDR работал на каждом экране, разведите их врастяжку.
+**There is no HDR in duplicate mode.** Windows gives no extended colour at all to outputs joined into a clone; this was checked on a monitor plus a TV, at 60 Hz and at 120. To have HDR on each screen, extend them instead.
 
-Программа не делает вид, что всё получилось: после применения она перечитывает настоящее
-состояние и, если HDR не удержался, называет причину. Что включено сейчас, покажет
-`DIIISPL.exe /hdr`.
+The program does not pretend that everything worked: after applying, it re-reads the real state and, if HDR did not hold, names the reason. `DIIISPL.exe /hdr` shows what is on now.
 
-## Панель задач
+## Taskbar
 
-> **Только в сборках Dev.** В стабильной этого нет вовсе: ни экрана настроек, ни кода,
-> ни библиотеки оформления — она даже не кладётся в пакет. Возможность опирается
-> на библиотеку, которая работает внутри проводника и живёт там дольше самой программы;
-> пока это не отстоялось, стабильному каналу она не нужна. Настройки, записанные сборкой
-> Dev, стабильная не портит.
+> **Dev builds only.** The stable build has none of it: no settings screen, no code, no styling library; the library is not even put into the package. The feature rests on a library that works inside the Explorer process and lives there longer than the program itself; until that settles, the stable channel does not need it. Settings written by a Dev build are not damaged by the stable one.
 
-Вид панели задач — часть профиля: переключились на «Кино» — панель стала прозрачной,
-вернулись на «Работа» — обычной. Причём вид задаётся не один на профиль, а свой на каждое
-состояние экрана: пустой рабочий стол, открытое окно, окно во весь экран, «Пуск», поиск,
-представление задач, экономия заряда.
+The taskbar look is part of a profile: switch to "Cinema" and the taskbar becomes transparent, return to "Work" and it is ordinary again. The look is set not once per profile but separately for each screen state: an empty desktop, an open window, a full-screen window, Start, search, task view, battery saver.
 
-Кнопка **Панель задач** в шапке окна открывает отдельный экран. Он устроен как «обычный
-вид плюс исключения»: сначала задаётся, как панель выглядит всегда, потом — для каких
-случаев иначе. Изменения видны сразу, на живой панели. Виды: как в системе, цвет без
-прозрачности, цвет с прозрачностью, размытие, акрил; цвет — `AARRGGBB` или короче
-`RRGGBB`. Считается это для каждой панели отдельно, поэтому на разных мониторах вид может
-отличаться: развернули окно на левом экране — левая панель одна, правая другая.
+The **Taskbar** button in the window header opens a separate screen. It is built as "the usual look plus exceptions": first you set how the taskbar always looks, then in which cases it looks different. Changes show at once on the live taskbar. The looks: as in the system, colour without transparency, colour with transparency, blur, acrylic; the colour is `AARRGGBB` or the shorter `RRGGBB`. Each taskbar is worked out separately, so the look can differ between monitors: maximise a window on the left screen and the left taskbar changes while the right one stays as it was.
 
-Случай, оставленный **без особого вида**, в счёт не идёт: панель возьмёт вид следующего
-подходящего случая, а не обычный. Развёрнутое окно — это ведь и открытое окно тоже, так
-что «Окно во весь экран» без своего вида отдаёт панель случаю «Открыто окно».
+A case left **without its own look** is skipped: the taskbar takes the look of the next fitting case, not the usual one. A maximised window is also an open window, so "A window is full screen" without its own look passes the taskbar to the "A window is open" case.
 
-Настроив вид однажды, незачем повторять его в каждом профиле: внизу того же экрана —
-перенос настроек между профилями.
+Once the look is set, there is no need to repeat it in every profile: at the bottom of the same screen there is a transfer of settings between profiles.
 
-## Язык
+## Language
 
-Программа говорит на языке Windows; сменить его можно в окне «О программе». Встроены
-английский и русский.
+The program speaks the language of Windows; you can change it in the About window. English and Russian are built in.
 
-Другой язык добавляется файлом, без пересборки. `DIIISPL.exe /lang cs` пишет образец
-в `%AppData%\DIIISPL\lang\cs.lang` — обычный текст `ключ = значение`, по строке
-на надпись. Строка, оставшаяся английской, ещё не переведена; переведите нужные,
-сохраните в UTF-8, и язык появится в списке. Чего в файле нет, берётся из встроенного
-перевода, так что незаконченный файл ничего не ломает.
+Another language is added with a file, without rebuilding. `DIIISPL.exe /lang cs` writes a template to `%AppData%\DIIISPL\lang\cs.lang`: plain text `key = value`, one line per caption. A line that stayed English is not translated yet; translate the ones you need, save as UTF-8, and the language appears in the list. What the file lacks is taken from the built-in translation, so an unfinished file breaks nothing.
 
-`{0}` и `{1}` — это то, что программа подставляет сама: имя монитора, число, версия.
-Их надо сохранить, но можно переставить, если язык требует другого порядка. Где нужен
-перенос строки, пишется `\n`.
+`{0}` and `{1}` are what the program substitutes itself: a monitor name, a number, a version. Keep them, but you may reorder them if the language needs another order. Where a line break is needed, write `\n`.
 
-## Командная строка
+## Command line
 
 ```
-DIIISPL.exe                 открыть окно менеджера
-DIIISPL.exe /tray           запустить только значком в трее (используется автозапуском)
-DIIISPL.exe /apply "Имя"    применить профиль; /switch — то же самое
-DIIISPL.exe /save "Имя"     записать текущую раскладку в профиль
-DIIISPL.exe /list           список профилей
-DIIISPL.exe /delete "Имя"   удалить профиль
-DIIISPL.exe /monitors       что подключено и как опознано
-DIIISPL.exe /hdr            состояние HDR на каждом выходе
-DIIISPL.exe /state          то же для скриптов: строка на монитор, поля через табуляцию
-DIIISPL.exe /auto           какой профиль подходит мониторам сейчас и что программа сделала бы
-DIIISPL.exe /lang cs        записать образец перевода на язык «cs»
-DIIISPL.exe /help           этот список; то же по /?
+DIIISPL.exe                 open the manager window
+DIIISPL.exe /tray           start as a tray icon only (used by autostart)
+DIIISPL.exe /apply "Name"   apply a profile; /switch is the same
+DIIISPL.exe /save "Name"    write the current layout into a profile
+DIIISPL.exe /list           list the profiles
+DIIISPL.exe /delete "Name"  delete a profile
+DIIISPL.exe /monitors       what is connected and how it is identified
+DIIISPL.exe /hdr            the HDR state on each output
+DIIISPL.exe /state          the same for scripts: a line per monitor, fields separated by tabs
+DIIISPL.exe /auto           which profile fits the monitors now and what the program would do
+DIIISPL.exe /lang cs        write a translation template for the language "cs"
+DIIISPL.exe /help           this list; the same as /?
 ```
 
-Только в сборках Dev:
+Dev builds only:
 
 ```
-DIIISPL.exe /taskbar вид [AARRGGBB] [line]   задать вид панели задач прямо сейчас
-DIIISPL.exe /taskbar-state ["Имя"]           что на экранах и какой вид из этого следует
+DIIISPL.exe /taskbar <look> [AARRGGBB] [line]   set the taskbar look right now
+DIIISPL.exe /taskbar-state ["Name"]             what is on the screens and which look follows from it
 ```
 
-**Не гоняйте переключения подряд.** Перестроение дисплеев — тяжёлая операция в ядре
-графического стека, и плотная очередь таких вызовов способна уронить видеодрайвер: при
-отладке этой программы серия примерно из сорока перестроений привела к синему экрану
-`0x13A KERNEL_MODE_HEAP_CORRUPTION`. Программа держит паузу не меньше 1,2 секунды между
-применениями, общую на все свои копии, — но если вы переключаете раскладки скриптом,
-оставляйте паузы и вы.
+`<look>` is one of `default`, `opaque`, `clear`, `blur`, `acrylic`.
 
-## Файлы
+**Do not fire switches in a row.** Rebuilding displays is a heavy operation in the kernel of the graphics stack, and a dense queue of such calls can bring the video driver down: while debugging this program, a series of about forty rebuilds led to a blue screen `0x13A KERNEL_MODE_HEAP_CORRUPTION`. The program keeps a pause of at least 1.2 seconds between applies, shared by all its copies, but if you switch layouts from a script, leave pauses yourself too.
 
-- профили: `%AppData%\DIIISPL\profiles\*.layout` — обычный текст, можно править руками
-- переводы: `%AppData%\DIIISPL\lang\*.lang` — тоже обычный текст, см. «Язык»
-- настройки программы: `%AppData%\DIIISPL\settings.ini` — канал обновлений, язык
-- автозапуск: `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\DIIISPL`
+## Files
 
-Профиль выглядит так:
+- profiles: `%AppData%\DIIISPL\profiles\*.layout`, plain text that can be edited by hand
+- translations: `%AppData%\DIIISPL\lang\*.lang`, plain text too, see "Language"; a `lang` folder next to the program is read as well, and a file in `%AppData%` wins
+- program settings: `%AppData%\DIIISPL\settings.ini`: update channel, language, the "Follow the monitors" switch and a few small state flags (the last update check, a skipped version, a shown tray hint)
+- error log: `%AppData%\DIIISPL\error.log`, written when the program fails to start
+- autostart: `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\DIIISPL`
+
+A profile looks like this:
 
 ```ini
 [profile]
-name = Кино
+name = Cinema
 hotkey = F17
 order = 2
 
@@ -219,61 +165,56 @@ clone = -1
 hdr = 1
 ```
 
-В сборках Dev к профилю добавляется секция `[taskbar]`: прочерк означает «состояние
-выключено», а `opaque,FF101010,0` читается как «вид, цвет `AARRGGBB`, линия у края».
+In Dev builds a `[taskbar]` section is added to the profile: a dash means "state is off", and `opaque,FF101010,0` reads as "look, colour `AARRGGBB`, edge line".
 
-## Обновления
+## Updates
 
-Программа сама смотрит выпуски на GitHub — раз в сутки, а если не дозвонилась, повторяет
-попытку через час. Найдя новое, она говорит подсказкой у значка в трее; ставится
-обновление на странице «О программе», кнопкой — там же коротким списком показано, что
-нового, так что идти за этим в браузер не нужно. Профили и настройки остаются на месте.
+The program looks at the GitHub releases by itself, once a day, and if it could not connect, it retries in an hour. Having found a new one, it says so with a tip at the tray icon; the update is installed on the About page, with a button, and the same page shows a short list of what is new, so there is no need to go to the browser. Profiles and settings stay in place.
 
-Скачанный пакет должен быть подписан тем же сертификатом, что и сама программа: отпечаток
-зашит в неё, и чужой установщик она не запустит.
+A downloaded package must be signed with the same certificate as the program itself: the thumbprint is built into it, and it will not run anyone else's installer.
 
-Что менялось от версии к версии — кнопка **«Что нового»** на той же странице: она открывает
-всю историю выпусков, лежащую внутри самой программы, на её языке и без сети. Те же записи
-в файлах [CHANGELOG.md](CHANGELOG.md) и [CHANGELOG.ru.md](CHANGELOG.ru.md), и ими же
-встречает страница каждого выпуска на GitHub.
+To see what changed from version to version, press **What’s new** on the same page: it opens the whole release history that lies inside the program, in its language and without a network. The same entries are in [CHANGELOG.md](CHANGELOG.md) and [CHANGELOG.ru.md](CHANGELOG.ru.md), and they also greet you on the page of each release on GitHub.
 
-Каналов два, переключатель там же:
+There are two channels, the switch is on the same page:
 
-| Канал | Что приходит |
+| Channel | What arrives |
 |---|---|
-| Stable | только готовые выпуски |
-| Dev | ещё и предварительные — раньше, вместе с недоделками и с настройками панели задач |
+| Stable | only finished releases |
+| Dev | prereleases too: earlier, with unfinished parts and the taskbar settings |
 
-## Если что-то пошло не так
+## Troubleshooting
 
-- **Раскладка не применилась** — причина будет в строке состояния. Чаще всего монитор
-  из профиля физически выключен: по HDMI выключенный телевизор просто исчезает из системы.
-- **Экран погас после эксперимента** — `Win+P` вернёт картинку, дальше можно применить
-  рабочий профиль.
-- **Сочетание не срабатывает** — `DIIISPL.exe /list` покажет назначенные, а конфликт
-  с чужой программой виден по предупреждению при запуске.
-- **Панель задач не меняется** — менять её умеют только сборки Dev. Проверьте, лежит ли
-  `DIIISPL.ExplorerTAP.dll` рядом с программой, и посмотрите `DIIISPL.exe /taskbar-state`.
-  Если рядом работает TranslucentTB, оформление задают обе программы наперегонки —
-  оставьте одну.
-- **Панель задач осталась с прежним видом** — «Сбросить вид панели задач» в меню значка
-  или кнопка «Сбросить вид» в настройках панели: программа забудет, что уже применено,
-  и покрасит панели заново.
+- **The layout was not applied**: the reason is in the status line. Most often a monitor from the profile is physically off: over HDMI a switched-off TV simply vanishes from the system.
+- **The screen went dark after an experiment**: `Win+P` brings the picture back, then you can apply a working profile.
+- **A hotkey does not work**: `DIIISPL.exe /list` shows the assigned ones, and a conflict with another program shows as a warning at start.
+- **The taskbar does not change**: only Dev builds can change it. Check that `DIIISPL.ExplorerTAP.dll` is next to the program, and look at `DIIISPL.exe /taskbar-state`. If TranslucentTB works next to it, both programs style the taskbar in a race; keep one.
+- **The taskbar kept its old look**: "Reset the taskbar look" in the icon menu or the "Reset the look" button in the taskbar settings: the program forgets what it has applied and paints the taskbars anew.
 
-## Как устроено и как собрать
+## Requirements
 
-Программа собирается одной командой `build.cmd`, и нужен для этого только компилятор C#
-из .NET Framework, который есть в Windows 11 по умолчанию.
+- **System:** Windows 11, x64. The installer is 64-bit and puts the program into `C:\Program Files\DIIISPL`.
+- **Permissions:** installing needs administrator rights (the package installs for all users). The program itself runs as an ordinary user and needs none.
+- **Network:** only the update check, and only the hosts below; nothing else is sent or received. The check can be left to the program (once a day) or started from the About page.
+  - `api.github.com`, HTTPS: the list of releases of `rstrlnkv/DIIISPL`.
+  - The installer file of a release, HTTPS, by the link GitHub gives in the release (`github.com`; GitHub redirects the download to its own storage). Only when you press the update button.
+  - Links in the About window (the project page, the releases page, the author's Telegram) are opened in your browser by a click; the program does not request them itself.
+- **Changes outside its own folders:**
+  - `%AppData%\DIIISPL`: profiles, settings, translations, the error log (see "Files").
+  - `%TEMP%\DIIISPL-update`: the downloaded installer, deleted by the next update.
+  - `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\DIIISPL`: autostart, only if you switch it on in the tray menu; uninstalling the program removes this value.
+  - `HKLM\Software\DIIISPL`: written by the installer, it remembers the install folder and whether the Start menu shortcut was chosen. The installer also creates the Start menu shortcut unless `INSTALLSHORTCUT=0`.
+  - Display configuration: applying a profile changes the layout, resolution, refresh rate, rotation, primary monitor, duplication and HDR state of your monitors (`SetDisplayConfig`).
+  - Global hotkeys: each profile hotkey is registered system-wide, so the key no longer reaches other programs while DIIISPL runs.
+  - Dev channel only: `DIIISPL.ExplorerTAP.dll` is loaded into `explorer.exe` and styles the taskbar from inside it. The stable channel does not carry this library.
 
-Как раскладка применяется на самом деле, почему панель задач приходится оформлять изнутри
-проводника, чем собираются установщик, значок и выпуск, что проверено автотестом и как
-устроен репозиторий — в [INTERNALS.md](INTERNALS.md).
+## Build from source
 
-## Лицензия
+The program is built with one command, `build.cmd`; all it needs is the C# compiler of .NET Framework that Windows 11 has by default. `build.cmd dev` builds the Dev channel.
 
-**GNU General Public License v3 или новее** — см. [LICENSE](LICENSE).
+How a layout is really applied, why the taskbar has to be styled from inside Explorer, what the installer, the icon and the release are built with, what the automatic test covers and how the repository is arranged are in [INTERNALS.md](INTERNALS.md) (in Russian); a short map of the code is in [ARCHITECTURE.md](ARCHITECTURE.md). Vulnerabilities are reported as described in [SECURITY.md](SECURITY.md).
 
-Проект переведён с MIT на GPLv3 сознательно: в него перенесён компонент ExplorerTAP
-из [TranslucentTB](https://github.com/TranslucentTB/TranslucentTB) (© Charles Milette
-и участники), распространяемого под GPLv3, а копилефт требует, чтобы производное
-произведение шло под той же лицензией. Подробности — в [NOTICE.md](NOTICE.md).
+## Licence
+
+**GNU General Public License v3 or later**: see [LICENSE](LICENSE).
+
+The project was moved from MIT to GPLv3 on purpose: it carries the ExplorerTAP component of [TranslucentTB](https://github.com/TranslucentTB/TranslucentTB) (© Charles Milette and contributors), distributed under GPLv3, and copyleft requires a derived work to go under the same licence. Details are in [NOTICE.md](NOTICE.md).
