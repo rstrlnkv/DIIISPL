@@ -10,13 +10,32 @@ rem библиотеку не использует, и класть её в па
 setlocal
 set HERE=%~dp0
 set ROOT=%HERE%..
-set VERSION=0.1.0
-rem На сборщике версию задаёт тег — он и есть источник правды для релиза.
-if defined DIIISPL_VERSION set VERSION=%DIIISPL_VERSION%
-
+rem Default version: the first three parts of AssemblyVersion in AssemblyInfo.cs.
+set VERSION=
+for /f "tokens=2 delims=()" %%A in ('findstr /b /c:"[assembly: AssemblyVersion(" "%ROOT%\AssemblyInfo.cs"') do set VERSION=%%~A
+if defined VERSION for /f "tokens=1-3 delims=." %%a in ("%VERSION%") do set VERSION=%%a.%%b.%%c
+if not defined VERSION (
+  echo Cannot read AssemblyVersion from AssemblyInfo.cs.
+  exit /b 1
+)
 set CHANNEL=%1
-if not defined CHANNEL set CHANNEL=%DIIISPL_CHANNEL%
-if /i "%CHANNEL%"=="dev" (set CHANNEL=dev) else (set CHANNEL=stable)
+rem Values from the environment are read with delayed expansion and checked before
+rem they are ever expanded with percent signs: "set X=%VAR%" would run a "&" in VAR.
+rem On success endlocal hands the checked values to the rest of the script.
+setlocal EnableDelayedExpansion
+rem На сборщике версию задаёт тег — он и есть источник правды для релиза.
+if defined DIIISPL_VERSION set "VERSION=!DIIISPL_VERSION!"
+(set VERSION) 2>nul | findstr /r /x "VERSION=[0-9][0-9.]*" >nul || (
+  echo Refused: the version must be digits and dots only.
+  exit /b 1
+)
+if not defined CHANNEL set "CHANNEL=!DIIISPL_CHANNEL!"
+if not defined CHANNEL set "CHANNEL=stable"
+if /i "!CHANNEL!"=="dev" (set "CHANNEL=dev") else if /i "!CHANNEL!"=="stable" (set "CHANNEL=stable") else (
+  echo Refused: the channel must be dev or stable.
+  exit /b 1
+)
+endlocal & set "VERSION=%VERSION%" & set "CHANNEL=%CHANNEL%"
 echo === Пакет канала %CHANNEL% ===
 
 if not exist "%ROOT%\DIIISPL.exe" (

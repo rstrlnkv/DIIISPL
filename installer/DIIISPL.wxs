@@ -9,12 +9,10 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
      xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
 
-  <!-- Версию задаёт сборка через -dVersion; значение ниже — только для запуска
-       candle вручную. Пока его не было, номер стоял здесь намертво: имя файла
-       менялось по тегу, а ProductVersion внутри пакета оставался прежним —
-       и «Программы и компоненты» показывали бы одну версию вечно. -->
+  <!-- The version comes from the build through -dVersion (build-msi.cmd always passes
+       it); there is no fallback, a stored copy would drift from AssemblyInfo.cs. -->
   <?ifndef Version ?>
-  <?define Version = "0.1.0" ?>
+  <?error candle needs -dVersion=X.Y.Z; run installer\build-msi.cmd ?>
   <?endif ?>
 
   <!--

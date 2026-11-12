@@ -1,5 +1,6 @@
-# Сборка выпуска. Запускается тегом вида v0.1.0 — он же задаёт и версию, и канал:
-# держать их ещё и в файлах значит однажды выпустить 0.1.1 с надписью 0.1.0.
+# Сборка выпуска. Запускается тегом вида v0.1.0 — он же задаёт и версию, и канал.
+# Version files are not patched here: the "Версия" step fails the release when
+# AssemblyInfo.cs or the CHANGELOG headings disagree with the tag.
 #
 # Тег с суффиксом (v0.1.1-dev.1) — сборка Dev: уезжает предварительным выпуском,
 # программа берёт такие только на канале Dev, и только в них есть настройки
@@ -42,12 +43,18 @@ jobs:
 
       - name: Версия
         shell: pwsh
+        # Tag and input text reach the script through env, never spliced into its source.
+        env:
+          GH_REF: ${{ github.ref_name }}
+          GH_INPUT_VERSION: ${{ inputs.version }}
+          GH_EVENT: ${{ github.event_name }}
         run: |
-          $tag = '${{ github.ref_name }}'
-          $version = if ('${{ github.event_name }}' -eq 'workflow_dispatch') { '${{ inputs.version }}' }
+          $tag = $env:GH_REF
+          $version = if ($env:GH_EVENT -eq 'workflow_dispatch') { $env:GH_INPUT_VERSION }
                      else { $tag -replace '^v','' }
+          # Whole version, suffix included: it goes on into GITHUB_ENV and file names.
+          if ($version -notmatch '\A[0-9]+\.[0-9]+\.[0-9]+(-dev\.[0-9]+)?\z') { throw "Непонятная версия: $version" }
           $number = ($version -split '-')[0]          # 0.1.1-dev.1 → 0.1.1
-          if ($number -notmatch '^\d+\.\d+\.\d+$') { throw "Непонятная версия: $version" }
           $early = $version -match '-'
 
           # Тег задаёт и канал. Суффикс — сборка Dev: в ней есть настройки панели
@@ -64,12 +71,18 @@ jobs:
           "DIIISPL_CHANNEL=$channel"                     | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           "DIIISPL_EARLY=$($early.ToString().ToLower())" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
 
-          # версия внутри программы — та же, что в теге
-          $file = 'AssemblyInfo.cs'
-          $text = Get-Content $file -Raw
-          $text = $text -replace 'AssemblyVersion\("[^"]*"\)',     "AssemblyVersion(`"$number.0`")"
-          $text = $text -replace 'AssemblyFileVersion\("[^"]*"\)', "AssemblyFileVersion(`"$number.0`")"
-          Set-Content $file $text -Encoding utf8
+          # The tagged commit must already carry the tag's version (Core
+          # standards/versioning.md rule 7): check it, never patch it here.
+          $asm = Get-Content 'AssemblyInfo.cs' -Raw
+          foreach ($name in 'AssemblyVersion', 'AssemblyFileVersion') {
+            if ($asm -notmatch ($name + '\("(\d+\.\d+\.\d+)\.\d+"\)')) { throw "AssemblyInfo.cs has no $name." }
+            if ($Matches[1] -ne $number) { throw "$name is $($Matches[1]) in AssemblyInfo.cs, the tag says $number." }
+          }
+          foreach ($log in 'CHANGELOG.md', 'CHANGELOG.ru.md') {
+            $head = Get-Content $log -Encoding utf8 | Where-Object { $_ -match '^## \[' } | Select-Object -First 2
+            if (@($head).Count -lt 2 -or $head[0] -notmatch '^## \[Unreleased\]\s*$') { throw "${log}: the first heading must be '## [Unreleased]'." }
+            if ($head[1] -notmatch ('^## \[' + [regex]::Escape($version) + '\] - \d{4}-\d{2}-\d{2}\s*$')) { throw "${log}: the first released heading is '$($head[1])', the tag says $version." }
+          }
           Write-Host "Собираю $version"
 
       # Только для сборок Dev: в стабильной библиотеки нет ни в программе, ни в
