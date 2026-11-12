@@ -31,21 +31,7 @@ installer/sign.thumbprint
 # описание выпуска, собранное сборщиком из CHANGELOG.md и CHANGELOG.en.md
 release-body.md
 
-# Приватное лежит в Core Crew (соседний репозиторий, ..\CoreCrew\projects\DIIISPL),
-# а сюда приходит ссылками: папки — соединением, файлы — жёсткой ссылкой (настоящие
-# символьные на Windows требуют особых прав). Игнорируются именно ссылки, иначе git
-# видел бы одно и то же дважды и предлагал добавить содержимое приватного
-# репозитория в открытый. Ставит и чинит их Scripts\link-core-crew.cmd.
-#
-# До 05.09.2026 приватное лежало подмодулем .backstage; подмодуля больше нет.
-#
-# Косые черты на конце здесь безопасны, в отличие от репозитория с настоящими
-# символьными ссылками: соединение git считает папкой, а жёсткую ссылку — обычным
-# файлом, так что ни то, ни другое из-под этих правил не выскакивает.
-/CLAUDE.md
-/ARCHITECTURE.md
-/VERSIONING.md
-/.claude/
+# local tooling folders (untracked, not part of the product)
 /plugins/
 /.claude-plugin/
 
@@ -61,8 +47,6 @@ tests/last-run.txt
 
 # канал последней сборки: создаётся build.cmd, нужен только установщику
 /.channel
-.claude/agents
-.claude/crew
 # corecrew: internal Claude files and secrets stay out of this repo
 CLAUDE.md
 CLAUDE.local.md
