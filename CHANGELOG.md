@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.2.4-dev.1] - 2026-11-13
+
 ### Added
 
 - The About screen shows the full version with its -dev.N suffix and has a Copy button for “version (build)”.
@@ -14,8 +16,6 @@ All notable changes to this project are documented in this file. The format is b
 ### Changed
 
 - The README is now a short overview, and the user manual has moved to MANUAL.md (MANUAL.ru.md in Russian); the installer also ships MANUAL.md.
-
-## [0.2.4-dev.1] - 2026-08-28
 
 ### Fixed
 
