@@ -106,12 +106,6 @@ namespace DIIISPL
             }
         }
 
-        /// <summary>What the About screen copies: "version (build)".</summary>
-        public static string VersionBuild
-        {
-            get { return DisplayText + " (" + BuildInfo.Number + ")"; }
-        }
-
         // ------------------------------------------------------------------ checking
         /// <summary>
         /// Ask GitHub what is out. Returns the newer release or null if

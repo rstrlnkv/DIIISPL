@@ -6,6 +6,10 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Removed
+
+- The Copy button on the About screen.
+
 ## [0.2.4-dev.1] - 2026-11-13
 
 ### Added

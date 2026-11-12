@@ -79,7 +79,7 @@ namespace DIIISPL
             if (ru <= 0) return;
             string[] parts = { lang.Substring(0, ru), lang.Substring(ru) };
             string[] names = { "En()", "Ru()" };
-            foreach (string key in new[] { "about.copy", "about.copied", "about.licenses", "licenses.title",
+            foreach (string key in new[] { "about.licenses", "licenses.title",
                 "licenses.note", "licenses.missing", "licenses.sameGpl",
                 "licenses.translucentHolder", "licenses.gplOnly" })
                 for (int i = 0; i < 2; i++)

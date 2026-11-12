@@ -340,8 +340,6 @@ namespace DIIISPL
             d["about.langRestartTitle"] = "Switch the language to {0}?";
             d["about.langRestartOk"] = "Switch and restart";
             d["about.langRestartFailed"] = "Could not restart to switch the language — the program stays as it was.";
-            d["about.copy"] = "Copy";
-            d["about.copied"] = "Copied";
             d["about.licenses"] = "Licences";
             d["licenses.title"] = "Third-party licences";
             d["licenses.note"] = "The Dev build bundles the components below. Stable bundles none of them.";
@@ -690,8 +688,6 @@ namespace DIIISPL
             d["about.langRestartTitle"] = "Сменить язык на «{0}»?";
             d["about.langRestartOk"] = "Сменить и перезапустить";
             d["about.langRestartFailed"] = "Не удалось перезапуститься для смены языка — программа осталась прежней.";
-            d["about.copy"] = "Копировать";
-            d["about.copied"] = "Скопировано";
             d["about.licenses"] = "Лицензии";
             d["licenses.title"] = "Лицензии сторонних компонентов";
             d["licenses.note"] = "Сборка Dev включает компоненты ниже. Stable не включает ни одного.";
