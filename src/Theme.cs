@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — a monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Windows;
@@ -10,7 +10,7 @@ using Microsoft.Win32;
 
 namespace DIIISPL
 {
-    /// <summary>Оформление в духе Windows 11: акцент и светлая/тёмная тема берутся из системы.</summary>
+    /// <summary>Windows 11 style: the accent and the light/dark theme come from the system.</summary>
     internal static class Theme
     {
         public static bool IsDark { get { return ReadIsDark(); } }
@@ -79,7 +79,7 @@ namespace DIIISPL
             Color accent = Accent();
             Color white = Colors.White, black = Colors.Black;
 
-            // в тёмной теме системный акцент часто слишком тёмный — подсветляем
+            // in the dark theme the system accent is often too dark — lighten it
             Color accentUi = dark ? Mix(accent, white, Luminance(accent) < 0.35 ? 0.35 : 0.15) : accent;
             Color accentHover = dark ? Mix(accentUi, white, 0.12) : Mix(accentUi, white, 0.12);
             Color accentPress = Mix(accentUi, black, 0.15);
@@ -134,8 +134,8 @@ namespace DIIISPL
   <SolidColorBrush x:Key='AccentText' Color='{ACCENTTEXT}'/>
   <SolidColorBrush x:Key='Screen' Color='{SCREEN}'/>
   <SolidColorBrush x:Key='ScreenOff' Color='{SCREENOFF}'/>
-  <!-- Бейджи чейнджлога: свой цвет каждому роду изменения. Пара «фон плюс текст»,
-       а не один цвет: на подложке текст должен читаться в обеих темах. -->
+  <!-- Changelog badges: each kind of change gets its own colour. A 'background plus text'
+       pair rather than a single colour: the text must stay readable on the backdrop in both themes. -->
   <SolidColorBrush x:Key='BadgeNewBg' Color='{BADGENEWBG}'/>
   <SolidColorBrush x:Key='BadgeNewText' Color='{BADGENEWTEXT}'/>
   <SolidColorBrush x:Key='BadgeFixBg' Color='{BADGEFIXBG}'/>
@@ -182,10 +182,10 @@ namespace DIIISPL
   </Style>
 
   <!--
-    Пунктирную рамку фокуса WPF рисует поверх чужого оформления и выглядит она
-    здесь поломкой: у кнопки «О программе» после щелчка появлялась странная
-    окантовка. Своё состояние наведения и нажатия у кнопок есть, а этой рамке
-    в тёмном окне с закруглениями места нет.
+    WPF draws the dotted focus rectangle over foreign styling and here it looks
+    like a glitch: after a click the 'About' button got a strange outline.
+    The buttons have their own hover and pressed states, and this rectangle
+    has no place in a dark window with rounded corners.
   -->
   <Style x:Key='Btn' TargetType='Button'>
     <Setter Property='FocusVisualStyle' Value='{x:Null}'/>
@@ -410,9 +410,9 @@ namespace DIIISPL
           <Border x:Name='Bd' Background='Transparent' CornerRadius='6' Padding='10,8'>
             <Grid>
               <!--
-                Полоска стоит в отступе строки, а содержимое отодвинуто от неё:
-                прежде между полоской и первой буквой оставалось три точки, и
-                они читались как одно пятно.
+                The strip sits in the row's padding and the content is pushed away from it:
+                before, three dots were left between the strip and the first letter, and
+                they read as a single blob.
               -->
               <Border x:Name='Bar' Width='3' Height='18' CornerRadius='2' HorizontalAlignment='Left'
                       Background='{StaticResource Accent}' Visibility='Collapsed' Margin='-7,0,0,0'/>
@@ -560,7 +560,7 @@ namespace DIIISPL
             <StackPanel IsItemsHost='True'/>
           </Border>
           <ControlTemplate.Triggers>
-            <!-- своё появление: у меню с собственным шаблоном системная анимация не наследуется -->
+            <!-- its own appearance: a menu with a custom template does not inherit the system animation -->
             <Trigger Property='IsOpen' Value='True'>
               <Trigger.EnterActions>
                 <BeginStoryboard>

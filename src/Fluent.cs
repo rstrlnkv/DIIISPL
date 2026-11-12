@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — a monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Windows;
@@ -11,7 +11,7 @@ using Gdi = System.Drawing;
 
 namespace DIIISPL
 {
-    /// <summary>Мелочи, которые делают окно похожим на родное окно Windows 11.</summary>
+    /// <summary>Small touches that make the window look like a native Windows 11 window.</summary>
     internal static class Fluent
     {
         public static void ApplyWindowStyling(Window window)
@@ -24,28 +24,28 @@ namespace DIIISPL
                 int dark = Theme.IsDark ? 1 : 0;
                 Native.DwmSetWindowAttribute(hwnd, Native.DWMWA_USE_IMMERSIVE_DARK_MODE, ref dark, sizeof(int));
 
-                // Mica запрашиваем, но клиентскую область прозрачной не делаем:
-                // иначе сквозь незакрашенные места видно живые окна, а не подложку.
+                // Request Mica but do not make the client area transparent:
+                // otherwise live windows show through unpainted spots instead of the backdrop.
                 int backdrop = Native.DWMSBT_MAINWINDOW;
                 Native.DwmSetWindowAttribute(hwnd, Native.DWMWA_SYSTEMBACKDROP_TYPE, ref backdrop, sizeof(int));
             }
-            catch { /* без Mica окно просто останется однотонным */ }
+            catch { /* without Mica the window just stays a solid colour */ }
         }
 
         /// <summary>
-        /// Значок для трея.
+        /// Tray icon.
         ///
-        /// Берётся из значка самой программы, а не рисуется заново: в нём под каждый
-        /// размер лежит свой кадр, выверенный по сетке точек, — от нарисованного на лету
-        /// значок отличается тем, что не мылится ни в 16 точек, ни в 32 на крупном
-        /// масштабе экрана. Вторая копия значка внутри программы для этого не нужна:
-        /// ресурс Windows, который читает проводник, годится и здесь.
+        /// Taken from the program's own icon rather than redrawn: it holds a frame for each
+        /// size, tuned to the pixel grid, so unlike an icon drawn on the fly it does not blur
+        /// at 16 px or at 32 px on a large display scale. A second copy of the icon inside
+        /// the program is not needed: the Windows resource that Explorer reads works here
+        /// too.
         /// </summary>
         public static Gdi.Icon MakeTrayIcon()
         {
-            Gdi.Size wanted = System.Windows.Forms.SystemInformation.SmallIconSize;   // на 200% масштабе это 32
+            Gdi.Size wanted = System.Windows.Forms.SystemInformation.SmallIconSize;   // at 200% scale this is 32
 
-            // 32512 — номер, под которым компилятор C# кладёт значок программы.
+            // 32512 is the number under which the C# compiler stores the program icon.
             IntPtr handle = Native.LoadImage(Native.GetModuleHandle(null), "#32512",
                                              Native.IMAGE_ICON, wanted.Width, wanted.Height, 0);
             if (handle == IntPtr.Zero) return Gdi.SystemIcons.Application;

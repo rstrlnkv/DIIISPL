@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Text;
@@ -9,22 +9,22 @@ using Microsoft.Win32;
 namespace DIIISPL
 {
     /// <summary>
-    /// Разбор EDID монитора. Даёт устойчивую идентификацию, не зависящую от того,
-    /// в какой порт воткнут кабель и что Windows думает про «номера мониторов».
+    /// Parses a monitor's EDID. Gives a stable identity that does not depend on
+    /// which port the cable is plugged into or what Windows thinks about "monitor numbers".
     /// </summary>
     internal class EdidInfo
     {
-        public string Manufacturer;      // трёхбуквенный PNP-код, напр. GSM
+        public string Manufacturer;      // three-letter PNP code, e.g. GSM
         public ushort ProductCode;
-        public uint SerialNumber;        // числовой серийник из заголовка
-        public string SerialText;        // серийник-строка (дескриптор 0xFF)
-        public string ModelName;         // название модели (дескриптор 0xFC)
+        public uint SerialNumber;        // numeric serial from the header
+        public string SerialText;        // serial as a string (descriptor 0xFF)
+        public string ModelName;         // model name (descriptor 0xFC)
         public int PreferredWidth;
         public int PreferredHeight;
         public int WidthMm;
         public int HeightMm;
 
-        /// <summary>Ключ, по которому монитор узнаётся между перезагрузками и сменой портов.</summary>
+        /// <summary>The key by which a monitor is recognised across reboots and port changes.</summary>
         public string Identity
         {
             get
@@ -45,7 +45,7 @@ namespace DIIISPL
             get { return string.IsNullOrEmpty(ModelName) ? (Manufacturer + " " + ProductCode.ToString("X4")) : ModelName; }
         }
 
-        /// <summary>Читает EDID из реестра по device path вида \\?\DISPLAY#GSM5BBF#5&amp;...&amp;UID4353#{guid}</summary>
+        /// <summary>Reads the EDID from the registry by device path like \\?\DISPLAY#GSM5BBF#5&amp;...&amp;UID4353#{guid}</summary>
         public static EdidInfo FromDevicePath(string monitorDevicePath)
         {
             byte[] edid = ReadEdidBytes(monitorDevicePath);
@@ -104,7 +104,7 @@ namespace DIIISPL
                 }
                 else if (info.PreferredWidth == 0)
                 {
-                    // подробный тайминг: предпочитаемое разрешение
+                    // detailed timing: preferred resolution
                     int hActive = e[off + 2] | ((e[off + 4] & 0xF0) << 4);
                     int vActive = e[off + 5] | ((e[off + 7] & 0xF0) << 4);
                     if (hActive > 0 && vActive > 0) { info.PreferredWidth = hActive; info.PreferredHeight = vActive; }

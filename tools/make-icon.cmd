@@ -1,10 +1,10 @@
 @echo off
-rem Пересобрать значок программы: tools\MakeIcon.cs -> src\DIIISPL.ico
+rem Rebuild the program icon: tools\MakeIcon.cs -> src\DIIISPL.ico
 setlocal
 set NETDIR=%WINDIR%\Microsoft.NET\Framework64\v4.0.30319
 if not exist "%NETDIR%\csc.exe" set NETDIR=%WINDIR%\Microsoft.NET\Framework\v4.0.30319
 if not exist "%NETDIR%\csc.exe" (
-  echo Не найден компилятор C# из .NET Framework.
+  echo C# compiler from .NET Framework not found.
   exit /b 1
 )
 

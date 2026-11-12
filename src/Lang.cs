@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — a monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -8,28 +8,28 @@ using System.Collections.Generic;
 namespace DIIISPL
 {
     /// <summary>
-    /// Словари переводов: по одному на язык.
+    /// Translation dictionaries: one per language.
     ///
-    /// Добавить язык — значит добавить сюда один метод и одну строку в список
-    /// ниже. Ни один из четырёхсот вызовов в программе при этом не меняется:
-    /// они обращаются к именованным членам <see cref="Text"/>, а те берут строку
-    /// из словаря по ключу.
+    /// Adding a language means adding one method here and one line to the list
+    /// below. None of the four hundred calls in the program changes:
+    /// they address the named members of <see cref="Text"/>, and those take a string
+    /// from the dictionary by key.
     ///
-    /// Английский — запасной. Ключ, которого в языке нет, берётся из него, и это
-    /// осознанный размен: неполный перевод показывает английскую строку, а не
-    /// пустое место и не имя ключа. Сколько строк ещё английские, скажет `/lang`.
+    /// English is the fallback. A key the language lacks is taken from it, and this is
+    /// a deliberate trade-off: an incomplete translation shows an English string, not
+    /// a blank spot or the key name. `/lang` tells how many strings are still English.
     ///
-    /// Подстановки — через {0}, {1}: порядок слов в языках разный, и только так
-    /// переводчик может его поменять, не трогая код.
+    /// Substitutions go through {0}, {1}: word order differs between languages, and only this way
+    /// can a translator change it without touching the code.
     /// </summary>
     internal static class Lang
     {
         /// <summary>
-        /// Языки в том порядке, в каком они появятся в окне. Первый — запасной.
+        /// Languages in the order they will appear in the window. The first is the fallback.
         /// </summary>
         public static readonly string[] Codes = { "en", "ru" };
 
-        /// <summary>Название языка на нём самом — так их и подписывают в окнах выбора.</summary>
+        /// <summary>The language name in itself — this is how the picker windows label them.</summary>
         public static string NativeName(string code)
         {
             switch (code)
@@ -53,7 +53,7 @@ namespace DIIISPL
         {
             var d = new Dictionary<string, string>(StringComparer.Ordinal);
 
-            // общее
+            // general
             d["app.tagline"] = "Monitor layouts";
             d["common.cancel"] = "Cancel";
             d["common.save"] = "Save";
@@ -65,7 +65,7 @@ namespace DIIISPL
             d["common.exit"] = "Exit";
             d["common.hz"] = "Hz";
 
-            // окно менеджера
+            // manager window
             d["win.profiles"] = "PROFILES";
             d["win.newProfileTip"] = "New profile from the current layout";
             d["win.profileActionsTip"] = "Rename, reorder, delete";
@@ -76,7 +76,7 @@ namespace DIIISPL
             d["win.monitors"] = "monitors: {0}";
             d["win.key"] = "shortcut {0}";
 
-            // свойства монитора
+            // monitor properties
             d["prop.pick"] = "Select a monitor";
             d["prop.enabled"] = "On";
             d["prop.primary"] = "Primary";
@@ -91,7 +91,7 @@ namespace DIIISPL
             d["hdr.on"] = "Turn on";
             d["hdr.off"] = "Turn off";
 
-            // холст
+            // canvas
             d["canvas.notInProfile"] = "NOT IN PROFILE · DRAG UP";
             d["canvas.notConnected"] = "not connected";
             d["canvas.badgePrimary"] = "Primary";
@@ -100,7 +100,7 @@ namespace DIIISPL
             d["canvas.gap"] = "There is a gap between the monitors — put them edge to edge, or Windows will move them for you.";
             d["canvas.overlap"] = "“{0}” and “{1}” run into each other — move them apart: desktops cannot overlap.";
 
-            // применение
+            // applying
             d["apply.busy"] = "the screens are already being rearranged — wait and try again";
             d["apply.refused"] = "Windows refused the layout: {0}";
             d["apply.partly"] = "Windows accepted the layout only in part: {0}. What is on the screens may differ from the profile — check it and apply again.";
@@ -129,14 +129,14 @@ namespace DIIISPL
             d["hdr.noOnCloned"] = "“{0}”: HDR did not turn on. Windows gives no advanced colour to duplicated outputs: to use HDR, extend the screens instead.";
             d["hdr.noOnPlain"] = "“{0}”: HDR did not turn on. Usually the cable cannot carry it at the chosen mode.";
 
-            // сочетания клавиш
+            // hotkeys
             d["err.hotkeyProblem"] = "{0} — {1}";
             d["combo.empty"] = "empty shortcut";
             d["combo.noKey"] = "no key given in “{0}”";
             d["combo.unknownKey"] = "unknown key “{0}”";
             d["combo.needsModifier"] = "add Ctrl, Alt or Win — otherwise the key stops working in every other program";
 
-            // мониторы и коды системы
+            // monitors and system codes
             d["mon.builtIn"] = "built-in";
             d["mon.digital"] = "digital";
             d["err.noRights"] = "the system did not allow changing the layout";
@@ -146,7 +146,7 @@ namespace DIIISPL
             d["err.impossible"] = "this layout is impossible on this hardware";
             d["err.unexplained"] = "the system gave no reason";
 
-            // трей и запуск
+            // tray and startup
             d["tray.startFailed"] = "Could not start {0}:\n\n{1}\n\nDetails: %AppData%\\{2}\\error.log";
             d["tray.hint"] = "DIIISPL keeps running here: the shortcuts still switch layouts. To quit for good, use “Exit” in this menu.";
             d["tray.newVersion"] = "Version {0} is out. Open “About” to update.";
@@ -166,12 +166,12 @@ namespace DIIISPL
             d["tray.applyDoneMore"] = "Layout “{0}” applied. There is more to read: {1} — open the window.";
             d["tray.applyDone"] = "Layout “{0}” applied.";
 
-            // обновления
+            // updates
             d["upd.gibberish"] = "GitHub answered with something unreadable";
             d["upd.onlyPre"] = "no finished releases yet — what is out is marked pre-release. Those arrive on the Dev channel";
             d["upd.noReleases"] = "no releases yet";
-            // Заголовок раздела в описании выпуска — по нему программа находит
-            // свой язык. Должен совпадать с тем, что пишет сборщик в тело выпуска.
+            // The section heading in the release description — the program uses it to find
+            // its language. Must match what the builder writes into the release body.
             d["upd.notesHeading"] = "What's new";
             d["upd.moreNotes"] = "and {0} more — open the page";
             d["upd.unreachable"] = "could not reach GitHub";
@@ -193,7 +193,7 @@ namespace DIIISPL
             d["upd.days.one"] = "checked {0} day ago";
             d["upd.days.many"] = "checked {0} days ago";
 
-            // окно менеджера — подписи и подсказки
+            // manager window — captions and hints
             d["win.renameTip"] = "Double-click or F2 to rename";
             d["win.primaryTip"] = "The taskbar and new windows live on the primary monitor";
             d["win.turnOnNote"] = "Turn the monitor on to set it up in this profile.";
@@ -236,7 +236,7 @@ namespace DIIISPL
             d["win.comboSet"] = "Shortcut {0} assigned to profile “{1}”.";
             d["win.comboNeedsAutostart"] = " It works while the program is running — turn on “Start with Windows” in the tray menu.";
 
-            // командная строка
+            // command line
             d["cli.unknownCmd"] = "I do not know the command “{0}”. Here is what there is:";
             d["cli.error"] = "Error: {0}";
             d["cli.title"] = "DIIISPL — monitor layouts";
@@ -310,7 +310,7 @@ namespace DIIISPL
             d["cli.lang.left"] = "  Not translated yet: {0}";
             d["cli.lang.howTo"] = "  Translate the values after \"=\", save as UTF-8, and pick the language in About.";
 
-            // «О программе»
+            // "About"
             d["about.tagline"] = "Monitor layouts for Windows 11";
             d["about.version"] = "VERSION";
             d["about.build"] = "BUILD";
@@ -350,7 +350,7 @@ namespace DIIISPL
             d["licenses.translucentHolder"] = "TranslucentTB contributors";
             d["licenses.gplOnly"] = "GPL-3.0 only";
 
-            // панель задач — только в сборках Dev
+            // taskbar — Dev builds only
             d["tb.desktop"] = "Desktop is visible";
             d["tb.visibleWindow"] = "A window is open";
             d["tb.maximized"] = "A window is full screen";
@@ -406,7 +406,7 @@ namespace DIIISPL
             return d;
         }
 
-        // ------------------------------------------------------------------ русский
+        // ------------------------------------------------------------------ Russian
         public static Dictionary<string, string> Ru()
         {
             var d = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -536,9 +536,9 @@ namespace DIIISPL
             d["upd.justNow"] = "проверялось только что";
             d["upd.minutes"] = "проверялось {0} мин назад";
 
-            // Русское склонение после числа. Три формы вместо английских двух —
-            // поэтому ключи с суффиксом, а не «одно или много»: язык, у которого
-            // форм окажется больше, добавит свои и опишет их в своём Plural.
+            // Russian declension after a number. Three forms instead of English two —
+            // hence keys with a suffix, not "one or many": a language that
+            // ends up with more forms will add its own and describe them in its own Plural.
             d["upd.hours.one"] = "проверялось {0} час назад";
             d["upd.hours.few"] = "проверялось {0} часа назад";
             d["upd.hours.many"] = "проверялось {0} часов назад";

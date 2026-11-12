@@ -1,11 +1,11 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — a monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 //
-// Этот модуль работает со вспомогательной библиотекой DIIISPL.ExplorerTAP.dll, основанной
-// на компоненте ExplorerTAP проекта TranslucentTB (https://github.com/TranslucentTB/TranslucentTB),
-// © Charles Milette и участники, GPLv3. Библиотека публикует внутри проводника COM-службу
-// оформления панели задач, а здесь — только вызовы к ней.
+// This module works with the helper library DIIISPL.ExplorerTAP.dll, based
+// on the ExplorerTAP component of the TranslucentTB project (https://github.com/TranslucentTB/TranslucentTB),
+// © Charles Milette and contributors, GPLv3. The library publishes a COM taskbar
+// appearance service inside Explorer, and here there are only calls to it.
 
 using System;
 using System.Collections.Generic;
@@ -13,22 +13,22 @@ using System.Runtime.InteropServices;
 
 namespace DIIISPL
 {
-    /// <summary>Вид панели задач, как его понимает служба оформления.</summary>
+    /// <summary>Taskbar look as the appearance service understands it.</summary>
     internal enum TaskbarLook
     {
-        Default,      // вернуть системный вид
-        Opaque,       // сплошная заливка
-        Clear,        // прозрачная
-        Blur,         // размытие
-        Acrylic       // акрил
+        Default,      // restore the system look
+        Opaque,       // solid fill
+        Clear,        // transparent
+        Blur,         // blur
+        Acrylic       // acrylic
     }
 
     /// <summary>
-    /// Доступ к службе оформления панели задач.
+    /// Access to the taskbar appearance service.
     ///
-    /// Снаружи панель задач Windows 11 не поддаётся: фон рисует её XAML-дерево, и политика
-    /// акцента до него не достаёт. Поэтому оформление задаёт библиотека, работающая внутри
-    /// проводника; сюда она отдаёт COM-интерфейс, а мы дёргаем его методы.
+    /// The Windows 11 taskbar cannot be reached from outside: its XAML tree draws the background, and the accent
+    /// policy does not reach it. So the appearance is set by a library running inside
+    /// Explorer; it hands a COM interface to us here, and we call its methods.
     /// </summary>
     internal static class ExplorerTap
     {
@@ -54,7 +54,7 @@ namespace DIIISPL
         private const int BrushAcrylic = 0;
         private const int BrushSolidColor = 1;
 
-        /// <summary>Возвращать ли панель к системному виду при выходе — только для долгоживущего трея.</summary>
+        /// <summary>Whether to restore the taskbar to the system look on exit — only for the long-lived tray.</summary>
         public static bool RestoreWhenProcessExits;
 
         private static ITaskbarAppearanceService _service;
@@ -78,8 +78,8 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Получить службу, при необходимости подняв её в проводнике. Служба живёт вместе
-        /// с проводником: он перезапустился — связь потеряна, нужно подключаться заново.
+        /// Get the service, raising it inside Explorer if necessary. The service lives along with
+        /// Explorer: it restarted — the link is lost, so we must connect again.
         /// </summary>
         private static ITaskbarAppearanceService Service()
         {
@@ -90,8 +90,8 @@ namespace DIIISPL
 
             try
             {
-                // Сразу после перезапуска проводника первая попытка нередко не дожидается
-                // готовности библиотеки внутри него, поэтому пробуем несколько раз.
+                // Right after Explorer restarts the first attempt often does not wait for the
+                // library inside it to be ready, so we try several times.
                 Guid iid = IID_TaskbarAppearanceService;
                 IntPtr raw = IntPtr.Zero;
                 int hr = 0;
@@ -110,9 +110,9 @@ namespace DIIISPL
                 _service = (ITaskbarAppearanceService)Marshal.GetObjectForIUnknown(raw);
                 Marshal.Release(raw);
 
-                // Просим вернуть панель к системному виду при закрытии DIIISPL — но только если
-                // программа живёт долго. Для однократной команды это самоубийственно:
-                // процесс завершается сразу, и служба тут же откатывает всё, что мы задали.
+                // Ask to restore the taskbar to the system look when DIIISPL closes — but only if
+                // the program is long-lived. For a one-shot command this is suicidal:
+                // the process ends at once, and the service immediately rolls back everything we set.
                 if (RestoreWhenProcessExits)
                 {
                     try { _service.RestoreAllTaskbarsToDefaultWhenProcessDies((uint)System.Diagnostics.Process.GetCurrentProcess().Id); }
@@ -130,7 +130,7 @@ namespace DIIISPL
             }
         }
 
-        /// <summary>Связь с проводником потеряна — при следующем обращении подключимся заново.</summary>
+        /// <summary>The link with Explorer is lost — we will connect again on the next call.</summary>
         public static void Forget()
         {
             _service = null;
@@ -143,19 +143,19 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Панель основного экрана и панели на остальных мониторах.
+        /// The primary screen's taskbar and the taskbars on the other monitors.
         ///
-        /// Ищем окна по классу напрямую, а не перечислением всех окон: пока открыт «Пуск»,
-        /// поиск или представление задач, окна оболочки быстро создаются и уничтожаются,
-        /// EnumWindows обрывается на середине и панели в списке не оказывается вовсе —
-        /// а это ровно те состояния, ради которых всё и затевалось.
+        /// Windows are looked up by class directly, not by enumerating all windows: while "Start",
+        /// search or Task View is open, shell windows are quickly created and destroyed,
+        /// EnumWindows breaks off midway and the taskbar does not end up in the list at all —
+        /// and these are exactly the states the whole thing was started for.
         /// </summary>
         public static List<IntPtr> FindTaskbars()
         {
             var found = new List<IntPtr>();
 
             IntPtr primary = Native.FindWindowEx(IntPtr.Zero, IntPtr.Zero, "Shell_TrayWnd", null);
-            if (primary != IntPtr.Zero) found.Add(primary);                     // основная — первой
+            if (primary != IntPtr.Zero) found.Add(primary);                     // the primary one — first
 
             IntPtr next = IntPtr.Zero;
             while ((next = Native.FindWindowEx(IntPtr.Zero, next, "Shell_SecondaryTrayWnd", null)) != IntPtr.Zero)
@@ -165,8 +165,8 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Служба принимает цвет как ABGR, а хранить настройки удобнее в привычном
-        /// AARRGGBB — переставляем красный с синим.
+        /// The service takes a colour as ABGR, but it is more convenient to store settings in the usual
+        /// AARRGGBB — so we swap red with blue.
         /// </summary>
         private static uint ToAbgr(uint argb)
         {
@@ -174,9 +174,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Разобрать цвет вида AARRGGBB (допустимы «#» и «0x» впереди, а также короткая
-        /// запись RRGGBB — тогда цвет непрозрачный). Отдельный разбор нужен потому, что
-        /// обрезать нули по краям нельзя: «00000000» — вполне законный прозрачный цвет.
+        /// Parse a colour of the form AARRGGBB ("#" and "0x" are allowed in front, as well as the short
+        /// form RRGGBB — then the colour is opaque). A separate parse is needed because
+        /// zeros at the edges must not be trimmed: "00000000" is a perfectly legal transparent colour.
         /// </summary>
         public static bool TryParseColor(string text, out uint color)
         {
@@ -192,7 +192,7 @@ namespace DIIISPL
             return true;
         }
 
-        /// <summary>Задать вид одной панели задач.</summary>
+        /// <summary>Set the look of one taskbar.</summary>
         public static bool ApplyTo(IntPtr bar, TaskbarLook look, uint colorArgb, float blurRadius, bool showLine)
         {
             var service = Service();
@@ -226,12 +226,12 @@ namespace DIIISPL
             catch (Exception)
             {
                 _lastError = Text.TbLostExplorer;
-                _service = null;         // проводник мог перезапуститься
+                _service = null;         // Explorer may have restarted
                 return false;
             }
         }
 
-        /// <summary>Вернуть все панели к системному виду.</summary>
+        /// <summary>Restore all taskbars to the system look.</summary>
         public static void RestoreAll()
         {
             var service = Service();
@@ -241,9 +241,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Задать вид сразу всем панелям задач. Намеренно сделано через ApplyTo, а не своим
-        /// проходом по службе: иначе легко разъезжаются мелочи — раньше здесь терялся перевод
-        /// цвета в ABGR, и одна и та же настройка из окна и из командной строки давала разный цвет.
+        /// Set the look of all taskbars at once. Deliberately done through ApplyTo rather than with its own
+        /// pass over the service: otherwise details easily drift apart — before, the conversion of the
+        /// colour to ABGR was lost here, and the same setting from the window and from the command line gave a different colour.
         /// </summary>
         public static bool ApplyAll(TaskbarLook look, uint colorArgb, float blurRadius, bool showLine)
         {
@@ -256,7 +256,7 @@ namespace DIIISPL
             return all;
         }
 
-        /// <summary>Вернуть панелям системный вид.</summary>
+        /// <summary>Restore the system look to the taskbars.</summary>
         public static void Restore()
         {
             if (_service == null) return;
@@ -264,7 +264,7 @@ namespace DIIISPL
             catch { _service = null; }
         }
 
-        // ---- перевод названий из профиля ----
+        // ---- translation of names from the profile ----
         public static readonly string[] Names = { "default", "opaque", "clear", "blur", "acrylic" };
 
         public static string Describe(string name)

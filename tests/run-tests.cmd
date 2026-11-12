@@ -1,20 +1,20 @@
 @echo off
-rem Автотест раскладок. Он по-настоящему переключает мониторы — около сорока
-rem перестроений подряд, и это самая опасная вещь в дереве: 19.08.2026 такой
-rem прогон увёл машину в BSOD 0x13A KERNEL_MODE_HEAP_CORRUPTION. Пользовательский
-rem код не может испортить кучу ядра сам — это дефект графического драйвера,
-rem но провоцируется он отсюда.
+rem Layout autotest. It really switches monitors, about forty
+rem rebuilds in a row, and it is the most dangerous thing in the tree: on 19.08.2026 such a
+rem run took the machine to a BSOD 0x13A KERNEL_MODE_HEAP_CORRUPTION. User
+rem code cannot corrupt the kernel heap by itself, that is a graphics driver defect,
+rem but it is provoked from here.
 rem
-rem Поэтому запуск требует подтверждения. Раньше файл начинал прогон сразу, и
-rem предупреждение было только комментарием, который читают уже после; а CLAUDE.md
-rem при этом обещал, что массовые прогоны идут «только с явного согласия» —
-rem обещание, под которым в коде не стояло ничего.
+rem So the run requires confirmation. Before, the file started the run at once, and
+rem the warning was only a comment, read afterwards; and CLAUDE.md
+rem promised that mass runs go "only with explicit consent",
+rem a promise with nothing behind it in the code.
 rem
-rem   run-tests.cmd            спросит и остановится, если не ответить
-rem   run-tests.cmd --yes      согласие уже дано, вопроса не будет
+rem   run-tests.cmd            asks, and stops if not answered
+rem   run-tests.cmd --yes      consent already given, no question
 rem
-rem Без ответа прогон не начинается: запущенный не человеком (скриптом, задачей,
-rem агентом) он читает пустой ввод и выходит — это и требуется.
+rem Without an answer the run does not start: when started by something other than a person (a script, a task,
+rem an agent) it reads empty input and exits, which is what is required.
 setlocal enabledelayedexpansion
 
 set AGREED=
@@ -22,21 +22,21 @@ for %%A in (%*) do if /i "%%~A"=="--yes" set AGREED=1
 
 if not defined AGREED (
   echo.
-  echo   Прогон по-настоящему переключит мониторы около сорока раз подряд.
-  echo   Однажды такой прогон уронил машину в синий экран.
-  echo   Сохраните работу.
+  echo   The run will really switch monitors about forty times in a row.
+  echo   Once such a run crashed the machine into a blue screen.
+  echo   Save your work.
   echo.
   set ANSWER=
   set /p ANSWER=  Напечатайте «да» и нажмите Enter, чтобы начать:
   if /i not "!ANSWER!"=="да" (
-    echo   Отменено.
+    echo   Cancelled.
     exit /b 2
   )
 )
 set NETDIR=%WINDIR%\Microsoft.NET\Framework64\v4.0.30319
 if not exist "%NETDIR%\csc.exe" set NETDIR=%WINDIR%\Microsoft.NET\Framework\v4.0.30319
 if not exist "%NETDIR%\csc.exe" (
-  echo Не найден компилятор C# из .NET Framework.
+  echo C# compiler from .NET Framework not found.
   exit /b 1
 )
 
@@ -50,14 +50,14 @@ if not exist "%NETDIR%\csc.exe" (
 if errorlevel 1 exit /b 1
 
 echo.
-echo Прогон займёт около пяти минут, экраны будут переключаться.
-echo Отчёт также пишется в tests\selftest-log.txt
+echo The run takes about five minutes, the screens will be switching.
+echo The report is also written to tests\selftest-log.txt
 echo.
 "%~dp0selftest.exe" --agreed %*
 set CODE=%ERRORLEVEL%
 
-rem Убираем за собой: собранный selftest.exe — это сорок настоящих переключений
-rem мониторов в одном файле. Оставленный лежать, он ждёт двойного щелчка, и
-rem спрашивать согласия будет уже некому. Он же откажется работать без --agreed.
+rem Clean up after ourselves: the built selftest.exe is forty real monitor
+rem switches in one file. Left lying around, it waits for a double click, and
+rem there will be nobody to ask for consent. It also refuses to work without --agreed.
 del "%~dp0selftest.exe" >nul 2>&1
 exit /b %CODE%

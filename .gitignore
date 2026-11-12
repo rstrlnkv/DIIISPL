@@ -1,26 +1,26 @@
-# сборка
+# build
 *.exe
 *.pdb
 *.obj
 
-# логи автотеста. Журнал пишется рядом с selftest.exe, то есть в tests/, но
-# правило без пути закрывает и прежние копии, оставшиеся от запусков из корня.
+# autotest logs. The log is written next to selftest.exe, that is in tests/, but
+# a rule without a path also covers older copies left from runs in the root.
 selftest-log.txt
 tests/selftest.exe
 
-# мусор редакторов и системы
+# editor and system junk
 .vs/
 *.user
 *.suo
 Thumbs.db
 desktop.ini
 
-# нативная часть: результаты сборки и пакеты
+# native part: build output and packages
 *.dll
 native/packages/
 native/nuget.exe
 
-# установщик: скачиваемый набор WiX и результат сборки
+# installer: downloaded WiX toolset and build output
 installer/wix/
 installer/obj/
 installer/LICENSE.rtf
@@ -28,24 +28,24 @@ installer/LICENSE.rtf
 *.wixpdb
 installer/sign.thumbprint
 
-# описание выпуска, собранное сборщиком из CHANGELOG.md и CHANGELOG.ru.md
+# release notes, assembled by the builder from CHANGELOG.md and CHANGELOG.ru.md
 release-body.md
 
 # local tooling folders (untracked, not part of the product)
 /plugins/
 /.claude-plugin/
 
-# сертификат подписи — только на машине владельца ключа
+# signing certificate: only on the key owner's machine
 installer/*.pfx
 installer/*.cer
 
-# номер сборки: создаётся build.cmd при каждой сборке
+# build number: created by build.cmd on every build
 /src/BuildInfo.g.cs
 
-# снимок последнего прогона: перечень мониторов конкретной машины
+# snapshot of the last run: the monitor list of a specific machine
 tests/last-run.txt
 
-# канал последней сборки: создаётся build.cmd, нужен только установщику
+# channel of the last build: created by build.cmd, needed only by the installer
 /.channel
 # corecrew: internal Claude files and secrets stay out of this repo
 CLAUDE.md

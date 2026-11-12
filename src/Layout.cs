@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ using System.Text;
 
 namespace DIIISPL
 {
-    /// <summary>Один монитор внутри профиля. Привязка — по EDID, а не по номеру дисплея Windows.</summary>
+    /// <summary>One monitor within a profile. Bound by EDID, not by the Windows display number.</summary>
     internal class LayoutDisplay
     {
         public string Identity;
@@ -21,8 +21,8 @@ namespace DIIISPL
         public double Hz;
         public uint Rotation = Native.DISPLAYCONFIG_ROTATION_IDENTITY;
         public bool Primary;
-        public int CloneGroup = -1;      // -1 — отдельный рабочий стол, иначе номер группы дублирования
-        public int Hdr = -1;             // -1 не трогать, 0 выключить, 1 включить
+        public int CloneGroup = -1;      // -1 — a separate desktop, otherwise the duplication group number
+        public int Hdr = -1;             // -1 leave alone, 0 turn off, 1 turn on
 
         public LayoutDisplay Clone()
         {
@@ -45,66 +45,66 @@ namespace DIIISPL
         }
     }
 
-    /// <summary>Профиль раскладки: собственный формат, независимый от базы дисплеев Windows.</summary>
+    /// <summary>Layout profile: its own format, independent of the Windows display database.</summary>
     internal class Layout
     {
         public string Name = "";
         public string Hotkey = "";
-        public int Order = 0;                 // порядок в списке, задаётся пользователем
+        public int Order = 0;                 // order in the list, set by the user
 
         /// <summary>
-        /// Годится ли профиль для автоматического выбора по составу экранов.
+        /// Whether the profile is fit for automatic selection by the set of screens.
         ///
-        /// По умолчанию годится: возможность на то и заведена. Но профиль
-        /// бывает и особым — снятый на пробу, отладочный, «как было вчера», —
-        /// и такой не должен вставать сам только потому, что подошёл. Клавишей
-        /// он применяется по-прежнему: исключение касается только выбора без
-        /// участия человека.
+        /// Fit by default: the feature was introduced for that. But a profile
+        /// may also be special — captured as a trial, a debug one, "as it was yesterday" —
+        /// and such a one must not kick in by itself just because it matched. By hotkey
+        /// it is applied as before: the exception concerns only selection without
+        /// a person's involvement.
         /// </summary>
         public bool Auto = true;
         public List<LayoutDisplay> Displays = new List<LayoutDisplay>();
 
 #if DEV
-        public TaskbarSettings Taskbar = new TaskbarSettings();   // вид панели задач по состояниям
+        public TaskbarSettings Taskbar = new TaskbarSettings();   // taskbar look by state
 #endif
 
         /// <summary>
-        /// Секция [taskbar] как она лежит в файле.
+        /// The [taskbar] section as it lies in the file.
         ///
-        /// В стабильной сборке панели задач нет, а профиль ей всё равно читать и
-        /// писать. Без этого списка первое же сохранение выкинуло бы из файла всё,
-        /// чего сборка не знает, — и человек, поработавший в Dev, а потом в Stable,
-        /// молча потерял бы настройки вида панели. Поэтому строки сохраняются как
-        /// есть и возвращаются на место нетронутыми.
+        /// The stable build has no taskbar, yet it must still read and write the profile.
+        /// Without this list the very first save would throw out of the file everything
+        /// the build does not know — and a person who worked in Dev and then in Stable
+        /// would silently lose the taskbar look settings. So the lines are kept as
+        /// they are and returned to their place untouched.
         /// </summary>
         private readonly List<string> _taskbarRaw = new List<string>();
 
         /// <summary>
-        /// Прежний формат: одно поле `taskbar` прямо в секции [profile]. Сборка Dev
-        /// разбирает его и переписывает по-новому, а стабильная не знает и про него —
-        /// значит, обязана вернуть в файл как было. Иначе профиль, записанный старой
-        /// версией, теряет вид панели при первом же сохранении в Stable.
+        /// The old format: a single `taskbar` field right in the [profile] section. The Dev build
+        /// parses it and rewrites it the new way, while the stable one does not know it either —
+        /// so it must return it to the file as it was. Otherwise a profile written by an old
+        /// version loses the taskbar look on the very first save in Stable.
         /// </summary>
         private string _taskbarLegacy;
 
         /// <summary>
-        /// Файл, из которого профиль прочитан. Пусто — профиль ещё нигде не лежит.
+        /// The file the profile was read from. Empty — the profile does not lie anywhere yet.
         ///
-        /// Имя профиля и имя его файла — разные вещи: файл могли скопировать
-        /// руками, и тогда «Copy.layout» содержит «Дом». Удаление и переименование,
-        /// считавшие путь из имени, в этом случае били мимо — и удаляли чужой
-        /// профиль-тёзку, оставляя выбранный на месте. Мимо корзины, без возврата.
+        /// The profile name and its file name are different things: the file may have been copied
+        /// by hand, and then "Copy.layout" contains "Home". Deletion and renaming,
+        /// which derived the path from the name, missed in this case — and deleted someone else's
+        /// namesake profile, leaving the selected one in place. Bypassing the recycle bin, no way back.
         /// </summary>
         public string SourcePath;
 
         /// <summary>
-        /// Налезают ли включённые мониторы друг на друга. Возвращает объяснение
-        /// или null.
+        /// Whether enabled monitors overlap each other. Returns an explanation
+        /// or null.
         ///
-        /// Живёт здесь, а не на холсте, потому что спрашивают об этом двое: окно —
-        /// чтобы не дать применить, и Applier — чтобы не применить то, что пришло
-        /// мимо окна: горячей клавишей, из меню значка, из файла, поправленного
-        /// руками. Windows такую раскладку не примет и расставит экраны по-своему.
+        /// Lives here, not on the canvas, because two parties ask: the window —
+        /// to refuse to apply, and Applier — to refuse to apply what came
+        /// around the window: by hotkey, from the tray icon menu, from a hand-edited
+        /// file. Windows will not accept such a layout and will arrange the screens its own way.
         /// </summary>
         public string OverlapProblem()
         {
@@ -116,7 +116,7 @@ namespace DIIISPL
                 {
                     var a = on[i];
                     var b = on[j];
-                    if (a.CloneGroup >= 0 && a.CloneGroup == b.CloneGroup) continue;   // дубль лежит поверх намеренно
+                    if (a.CloneGroup >= 0 && a.CloneGroup == b.CloneGroup) continue;   // a duplicate lies on top deliberately
                     if (a.X < b.X + b.DesktopWidth && b.X < a.X + a.DesktopWidth &&
                         a.Y < b.Y + b.DesktopHeight && b.Y < a.Y + a.DesktopHeight)
                         return Text.Overlap(a.Name, b.Name);
@@ -125,16 +125,16 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Описывает ли профиль то, что стоит на экранах прямо сейчас. Этим
-        /// отмечается действующая раскладка — точкой в списке и в меню значка.
+        /// Whether the profile describes what is on the screens right now. This is how
+        /// the active layout is marked — with a dot in the list and in the tray icon menu.
         ///
-        /// Сверка строгая: профиль, который просит монитор, а монитора на месте
-        /// нет, действующим не является. Иначе точка загорается сразу у
-        /// нескольких профилей — у «Одного монитора», «Двух» и «Трёх» разом, —
-        /// потому что раскладка из одного экрана вкладывается в каждый из них.
+        /// The check is strict: a profile that asks for a monitor that is not in
+        /// place is not the active one. Otherwise the dot lights at once on
+        /// several profiles — "One monitor", "Two" and "Three" together —
+        /// because a one-screen layout nests inside each of them.
         ///
-        /// HDR не учитываем: его можно переключить мимо программы, и раскладкой
-        /// он не является.
+        /// HDR is not taken into account: it can be switched bypassing the program, and it is not
+        /// part of the layout.
         /// </summary>
         public bool MatchesCurrent(List<MonitorInfo> live)
         {
@@ -142,15 +142,15 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Изменит ли применение профиля хоть что-нибудь. Отвечает на другой
-        /// вопрос, чем <see cref="MatchesCurrent"/>, и потому смотрит мягче:
-        /// монитор, которого нет на месте, применение всё равно пропускает — и
-        /// требовать его присутствия здесь значит требовать невозможного.
+        /// Whether applying the profile would change anything at all. Answers a different
+        /// question than <see cref="MatchesCurrent"/>, and so looks more leniently:
+        /// a monitor that is not in place is skipped by the apply anyway — and
+        /// to require its presence here is to require the impossible.
         ///
-        /// На этом держится быстрый выход в Applier. Пока обе вещи спрашивались
-        /// одним вопросом, он не срабатывал никогда, если хоть один монитор
-        /// профиля был отключён: каждое нажатие уже нажатой горячей клавиши
-        /// перестраивало дисплеи заново.
+        /// The quick exit in Applier rests on this. While both were asked
+        /// as one question, it never fired if even one monitor
+        /// of the profile was disconnected: every press of an already pressed hotkey
+        /// rebuilt the displays again.
         /// </summary>
         public bool ChangesNothing(List<MonitorInfo> live)
         {
@@ -174,27 +174,27 @@ namespace DIIISPL
 
                 MonitorInfo mon;
 
-                // Выдернутый монитор из сверки выпадает: включить его нельзя, и
-                // применение его пропустит.
+                // A pulled-out monitor drops out of the check: it cannot be enabled, and
+                // the apply will skip it.
                 if (!known.TryGetValue(d.Identity, out mon)) continue;
 
-                // А подключённый, но погашенный — не выпадает ни в коем случае.
-                // Это разные вещи, и путать их дорого: телевизор в спящем режиме,
-                // монитор с выключенным питанием, выход, который Windows погасила
-                // после неудачной попытки, — profile обязан их зажечь. Пока оба
-                // случая отсеивались вместе, нажатие горячей клавиши тихо
-                // рапортовало «готово» и не делало ничего: до лестницы попыток,
-                // которая как раз и умеет будить погашенные выходы, дело не
-                // доходило вовсе.
+                // But a connected, blanked one never drops out.
+                // These are different things, and confusing them is costly: a TV in sleep mode,
+                // a monitor with its power off, an output that Windows blanked
+                // after a failed attempt — the profile must light them. While both
+                // cases were filtered out together, a hotkey press quietly
+                // reported "done" and did nothing: it never
+                // got as far as the attempt ladder, which is exactly what can
+                // wake blanked outputs.
                 if (!mon.Active) return false;
 
                 present.Add(d);
             }
 
-            // Строгий вопрос — «это ли стоит на экранах» — требует, чтобы все
-            // заказанные мониторы были на месте. Мягкий — «изменит ли что-нибудь
-            // применение» — не требует: отсутствующий монитор применение всё
-            // равно пропустит.
+            // The strict question — "is this what is on the screens" — requires all the
+            // ordered monitors to be in place. The lenient one — "will applying change anything" —
+            // does not: the apply will skip an absent monitor
+            // anyway.
             if (!ignoreAbsent && wanted != present.Count) return false;
             if (present.Count == 0 || present.Count != active.Count) return false;
 
@@ -222,18 +222,18 @@ namespace DIIISPL
                 }
             }
 
-            // Основной экран обязан совпадать: без этой проверки раскладка из двух
-            // одинаковых мониторов считалась бы совпавшей и с переставленным основным —
-            // позиции-то сверяются относительно него самого.
+            // The primary screen must match: without this check a layout of two
+            // identical monitors would count as matching even with the primary swapped —
+            // positions are compared relative to it itself.
             //
-            // Но сверять надо по группе, а не по каждому выходу. «Основной» здесь
-            // означает «начало координат», а Windows помечает им **каждый** выход,
-            // стоящий в (0,0), — в дубле это сразу оба. Профиль же хранит ровно один:
-            // FromCurrent нормализует, да и переключатель «Основной» в окне ставит один.
-            // Пока сверка шла по каждому выходу, профиль с дублем в начале координат
-            // не совпадал с живой картиной никогда — а значит не работал быстрый выход
-            // выше, и повторное нажатие горячей клавиши каждый раз перестраивало
-            // дисплеи заново, моргая экраном и дёргая HDR.
+            // But the comparison must be per group, not per output. "Primary" here
+            // means "origin of coordinates", and Windows marks **every** output standing
+            // at (0,0) with it — in a duplicate that is both at once. The profile stores exactly one:
+            // FromCurrent normalises, and the "Primary" switch in the window sets one too.
+            // While the comparison went per output, a profile with a duplicate at the origin
+            // never matched the live picture — and so the quick exit above did not work,
+            // and a repeated hotkey press rebuilt the displays again each time,
+            // blinking the screen and jerking HDR.
             LayoutDisplay primary = null;
             foreach (var d in present) if (d.Primary) { primary = d; break; }
 
@@ -241,7 +241,7 @@ namespace DIIISPL
             {
                 if (!active[primary.Identity].Primary) return false;
 
-                // Лишние «основные» допустимы только как спутники той же группы дубля.
+                // Extra "primaries" are allowed only as companions of the same duplicate group.
                 foreach (var d in present)
                 {
                     if (ReferenceEquals(d, primary)) continue;
@@ -250,7 +250,7 @@ namespace DIIISPL
                 }
             }
 
-            // позиции сверяем относительно основного экрана — сам сдвиг значения не имеет
+            // we compare positions relative to the primary screen — the shift itself does not matter
             LayoutDisplay origin = null;
             foreach (var d in present) if (d.Primary) { origin = d; break; }
             if (origin == null) foreach (var d in present) { origin = d; break; }
@@ -258,13 +258,13 @@ namespace DIIISPL
 
             MonitorInfo originMon = active[origin.Identity];
 
-            // Начало координат обязано стоять в (0,0) — там его поставит Submit.
+            // The origin must stand at (0,0) — Submit will put it there.
             //
-            // Без этой проверки сверка была чисто относительной и общего сдвига
-            // не видела вовсе. Измерено: профиль, где основным отмечен выдернутый
-            // сейчас телевизор, считался «применять нечего», хотя применение
-            // перенесло бы начало координат на другой монитор — то есть панель
-            // задач и «Пуск» переехали бы на соседний экран.
+            // Without this check the comparison was purely relative and did not see a common
+            // shift at all. Measured: a profile in which a currently pulled-out
+            // TV is marked primary counted as "nothing to apply", although applying
+            // would have moved the origin to another monitor — that is, the taskbar
+            // and "Start" would have moved to the neighbouring screen.
             if (originMon.X != 0 || originMon.Y != 0) return false;
 
             int dx = originMon.X - origin.X, dy = originMon.Y - origin.Y;
@@ -277,9 +277,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Перенять из старого профиля всё, что не является раскладкой: сочетание
-        /// клавиш, место в списке и вид панели задач. Нужно при пересъёмке раскладки
-        /// поверх существующего профиля — раскладка новая, остальное чужим не бывает.
+        /// Take over from the old profile everything that is not the layout: the key
+        /// combination, the place in the list and the taskbar look. Needed when re-capturing a layout
+        /// over an existing profile — the layout is new, the rest is never foreign.
         /// </summary>
         public void AdoptSettingsFrom(Layout old)
         {
@@ -293,16 +293,16 @@ namespace DIIISPL
             _taskbarRaw.AddRange(old._taskbarRaw);
             _taskbarLegacy = old._taskbarLegacy;
 
-            // И файл, в котором профиль лежит: он тоже «не раскладка». Без этого
-            // пересъёмка профиля, пришедшего из файла с другим именем внутри,
-            // плодила двойника.
+            // And the file the profile lies in: it too is "not the layout". Without this
+            // re-capturing a profile that came from a file with a different name inside
+            // bred a double.
             SourcePath = old.SourcePath;
         }
 
         /// <summary>
-        /// Вернуть содержимое к тому, что лежит в другом профиле. Сам объект при этом
-        /// остаётся тем же: на него ссылается список профилей, и подмена ссылки
-        /// заставила бы список перестраиваться посреди переключения.
+        /// Return the contents to what lies in another profile. The object itself stays
+        /// the same: the profile list refers to it, and swapping the reference
+        /// would make the list rebuild itself in the middle of a switch.
         /// </summary>
         public void RestoreFrom(Layout src)
         {
@@ -345,14 +345,14 @@ namespace DIIISPL
             return copy;
         }
 
-        /// <summary>Собрать профиль из того, что включено прямо сейчас.</summary>
+        /// <summary>Build a profile from what is enabled right now.</summary>
         public static Layout FromCurrent(string name)
         {
             var layout = new Layout();
             layout.Name = name;
 
             var monitors = Monitors.Enumerate();
-            // определяем группы дублирования: одинаковый source id = один рабочий стол на нескольких выходах
+            // we determine duplication groups: the same source id = one desktop on several outputs
             var groupBySource = new Dictionary<string, int>();
             int nextGroup = 0;
 
@@ -368,7 +368,7 @@ namespace DIIISPL
                 d.Primary = m.Active && m.X == 0 && m.Y == 0;
                 d.Hdr = m.HdrSupported ? (m.HdrEnabled ? 1 : 0) : -1;
 
-                // CCD отдаёт режим источника уже в «родной» ориентации панели — переставлять стороны не нужно
+                // CCD gives the source mode already in the panel's "native" orientation — no need to swap the sides
                 d.Width = m.Width;
                 d.Height = m.Height;
 
@@ -381,7 +381,7 @@ namespace DIIISPL
 
                 if (m.Active)
                 {
-                    // один и тот же source id на нескольких выходах = дублирование
+                    // the same source id on several outputs = duplication
                     string key = m.Adapter.Key + "/" + m.SourceId;
                     int g;
                     if (!groupBySource.TryGetValue(key, out g))
@@ -395,7 +395,7 @@ namespace DIIISPL
             }
 
             layout.DropLoneCloneGroups();
-            // основной ровно один: при дублировании в (0,0) стоят сразу несколько выходов
+            // exactly one primary: with duplication several outputs stand at (0,0) at once
             bool primarySeen = false;
             foreach (var d in layout.Displays)
             {
@@ -404,7 +404,7 @@ namespace DIIISPL
                 else primarySeen = true;
             }
 
-            // клоны наследуют позицию группы
+            // clones inherit the group's position
             AssignCloneSourceIds(layout);
             return layout;
         }
@@ -421,13 +421,13 @@ namespace DIIISPL
             }
         }
 
-        // ---------------- файл профиля ----------------
+        // ---------------- profile file ----------------
         public void Save(string file)
         {
             var sb = new StringBuilder();
-            // Служебные файлы программа пишет только по-английски: ключи, секции и
-            // заголовок не зависят от языка окна, и профиль, унесённый на машину
-            // с другим языком, читается там так же.
+            // The program writes service files in English only: keys, sections and
+            // the header do not depend on the window language, and a profile carried to a machine
+            // with another language is read there the same way.
             sb.AppendLine("# DIIISPL monitor layout profile");
             sb.AppendLine("[profile]");
             sb.AppendLine("name = " + Name);
@@ -435,8 +435,8 @@ namespace DIIISPL
             sb.AppendLine("order = " + Order.ToString(CultureInfo.InvariantCulture));
             sb.AppendLine("auto = " + (Auto ? "1" : "0"));
 #if !DEV
-            // Поле прежнего формата возвращаем на место как было: разобрать его
-            // стабильная сборка не умеет, а выбрасывать чужое — не её дело.
+            // We put the old-format field back as it was: the stable build
+            // cannot parse it, and throwing out foreign data is not its business.
             if (!string.IsNullOrEmpty(_taskbarLegacy)) sb.AppendLine("taskbar = " + _taskbarLegacy);
 #endif
             sb.AppendLine();
@@ -444,8 +444,8 @@ namespace DIIISPL
             sb.AppendLine("[taskbar]");
             foreach (string line in Taskbar.Serialize()) sb.AppendLine(line);
 #else
-            // Стабильная сборка про панель задач ничего не знает и потому ничего
-            // о ней не решает: возвращает секцию в файл ровно такой, какой прочла.
+            // The stable build knows nothing about the taskbar and so decides
+            // nothing about it: it returns the section to the file exactly as it read it.
             if (_taskbarRaw.Count > 0)
             {
                 sb.AppendLine("[taskbar]");
@@ -473,14 +473,14 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Записать файл целиком или не тронуть его вовсе.
+        /// Write the file whole or do not touch it at all.
         ///
-        /// `File.WriteAllText` сначала обрезает файл, потом пишет. Если посреди
-        /// записи пропадёт питание или программу снимут, на диске останется
-        /// половина профиля — а `Layout.Load` на обрывке не падает, он просто
-        /// вернёт раскладку без части мониторов, и `Store.LoadAll` покажет её как
-        /// исправную. Пишем рядом и подменяем одним движением: Replace на NTFS
-        /// либо проходит целиком, либо не проходит.
+        /// `File.WriteAllText` first truncates the file, then writes. If in the middle of the
+        /// write the power goes or the program is killed, half a profile stays on disk
+        /// — and `Layout.Load` does not fail on a fragment, it just
+        /// returns a layout without some monitors, and `Store.LoadAll` shows it as
+        /// healthy. We write alongside and swap in one move: Replace on NTFS
+        /// either goes through whole or does not go through.
         /// </summary>
         private static void WriteWhole(string file, string text)
         {
@@ -493,15 +493,15 @@ namespace DIIISPL
                 try
                 {
                     File.WriteAllText(temp, text, encoding);
-                    // Без запасной копии: она осталась бы лежать рядом с профилями.
-                    // Replace без неё — обычная подмена записи в каталоге.
+                    // Without a backup copy: it would be left lying next to the profiles.
+                    // Replace without it is an ordinary swap of a directory entry.
                     File.Replace(temp, file, null);
                 }
                 catch (IOException)
                 {
-                    // Replace не работает через границу тома и на сетевых дисках, где
-                    // папка профилей вполне может оказаться. Тогда пишем как раньше:
-                    // хуже, но лучше, чем не сохранить.
+                    // Replace does not work across a volume boundary and on network drives, where
+                    // the profiles folder may well turn out to be. Then we write as before:
+                    // worse, but better than not saving.
                     File.WriteAllText(file, text, encoding);
                 }
                 catch (UnauthorizedAccessException)
@@ -511,11 +511,11 @@ namespace DIIISPL
             }
             finally
             {
-                // Уборка обязана быть здесь, а не в ветках catch. Прежде она стояла
-                // после запасной записи — и на файле «только для чтения» не
-                // выполнялась вовсе: запасная запись бросала то же самое
-                // исключение, и `.new` оставался лежать навсегда. То есть уборка
-                // не работала ровно на том отказе, ради которого catch и написан.
+                // Cleanup must be here, not in the catch branches. Previously it stood
+                // after the fallback write — and on a read-only file it did not
+                // run at all: the fallback write threw the same
+                // exception, and `.new` stayed lying there forever. That is, cleanup
+                // did not work exactly on the failure for which catch was written.
                 try { if (File.Exists(temp)) File.Delete(temp); }
                 catch { }
             }
@@ -531,29 +531,28 @@ namespace DIIISPL
             {
                 string line = raw.Trim();
 
-                // Секция панели задач запоминается целиком, дословно и раньше всего
-                // остального: сборка, которая её не понимает, обязана вернуть в файл
-                // всё, а не только то, что похоже на знакомое «ключ = значение».
+                // The taskbar section is remembered whole, verbatim and before everything
+                // else: a build that does not understand it must return everything to the file,
+                // not only what looks like the familiar "key = value".
                 //
-                // «Раньше всего» — не мелочь. Прежде захват стоял ниже пропуска
-                // комментариев и пустых строк, и измерено было так: пометки, которыми
-                // человек подписал себе секцию в Dev, после первого же сохранения в
-                // Stable исчезали, а отступы съедались. Запоминаем `raw`, а не
-                // обрезанное: восстановить отступ иначе неоткуда.
+                // "Before everything" is no trifle. Previously the capture stood below the skipping of
+                // comments and blank lines, and it was measured like this: the notes with which
+                // a person labelled the section in Dev vanished after the first save in
+                // Stable, and the indents were eaten. We remember `raw`, not the
+                // trimmed one: there is no other way to restore the indent.
                 if (line.StartsWith("["))
                 {
                     string name = line.Trim('[', ']').ToLowerInvariant();
                     bool known = name == "profile" || name == "display" || name == "taskbar";
 
-                    // Незнакомая строка в скобках внутри секции панели задач —
-                    // это её часть, а не новая секция.
+                    // An unfamiliar line in brackets inside the taskbar section is
+                    // part of it, not a new section.
                     //
-                    // Прежде такая строка делала две вещи разом: сама в список не
-                    // попадала и переводила разбор в выдуманную секцию — то есть
-                    // уносила с собой весь хвост секции, молча. Обещание же в том
-                    // и состоит, что стабильная сборка про формат этой секции не
-                    // знает ничего: любая подсекция, которую заведёт Dev, обязана
-                    // вернуться в файл целиком.
+                    // Previously such a line did two things at once: it did not get into the list itself and it switched parsing
+                    // to an invented section — that is, it carried the whole tail of the section away,
+                    // silently. The promise is precisely that the stable build knows
+                    // nothing about the format of this section: any subsection that Dev introduces must
+                    // return to the file whole.
                     if (!known && section == "taskbar") { layout._taskbarRaw.Add(raw.TrimEnd()); continue; }
 
                     section = name;
@@ -574,10 +573,10 @@ namespace DIIISPL
                     if (key == "name") layout.Name = val;
                     else if (key == "hotkey") layout.Hotkey = val;
                     else if (key == "order") layout.Order = ParseInt(val);
-                    // Поля нет — значит файл написан прежней версией, и профиль
-                    // участвует: до этой возможности участвовали все.
+                    // No field — so the file was written by an old version, and the profile
+                    // takes part: before this feature, all did.
                     else if (key == "auto") layout.Auto = val != "0";
-                    // прежний формат: одно поле на весь профиль
+                    // old format: one field for the whole profile
 #if DEV
                     else if (key == "taskbar") layout.Taskbar.AdoptLegacy(val);
 #else
@@ -615,12 +614,12 @@ namespace DIIISPL
             if (string.IsNullOrEmpty(layout.Name)) layout.Name = Path.GetFileNameWithoutExtension(file);
             layout.SourcePath = file;
 
-            // Хвостовые пустые строки секции срезаем. Пустая строка перед следующей
-            // секцией принадлежит не секции, а разметке файла: Save ставит свою
-            // перед каждым [display], и запомненная нарастала поверх неё. Измерено:
-            // файл прибавлял по строке за каждое сохранение — а сохраняет он и по
-            // кнопке, и внутри «Применить», и при перестановке в списке. Внутренние
-            // пустые строки оставляем: ими человек разделяет свои пометки.
+            // We trim trailing blank lines of the section. A blank line before the next
+            // section belongs not to the section but to the file layout: Save puts its own
+            // before every [display], and the remembered one piled up on top of it. Measured:
+            // the file gained a line on every save — and it saves both on
+            // the button, and inside "Apply", and on reordering in the list. Inner
+            // blank lines are kept: a person separates their notes with them.
             while (layout._taskbarRaw.Count > 0 &&
                    layout._taskbarRaw[layout._taskbarRaw.Count - 1].Length == 0)
                 layout._taskbarRaw.RemoveAt(layout._taskbarRaw.Count - 1);
@@ -634,18 +633,18 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Привести значения к тем, что вообще бывают.
+        /// Bring the values to those that can exist at all.
         ///
-        /// Профили — обычный текст, и README прямо зовёт править их блокнотом.
-        /// Значит в файл попадают опечатки: «rotation = 7», «hz = -60», «width =
-        /// 0», два раздела с одним и тем же монитором. Программа такое переживала
-        /// по-разному: поворот превращался в невозможный, и Windows отвергала
-        /// раскладку целиком; отрицательная частота уезжала в заявку драйверу;
-        /// второй раздел с тем же монитором давал два разных состояния одного
-        /// экрана, и какое победит, зависело от порядка перебора.
+        /// Profiles are plain text, and the README directly invites editing them in Notepad.
+        /// So typos get into the file: "rotation = 7", "hz = -60", "width =
+        /// 0", two sections with the same monitor. The program survived these
+        /// differently: rotation became impossible, and Windows rejected
+        /// the whole layout; a negative frequency went into the driver request;
+        /// a second section with the same monitor gave two different states of one
+        /// screen, and which won depended on the enumeration order.
         ///
-        /// Чиним молча и в сторону «как будто не задано»: человек, правивший файл
-        /// руками, увидит в окне честное состояние и поправит его там.
+        /// We fix silently and toward "as if not set": a person who edited the file
+        /// by hand will see the honest state in the window and correct it there.
         /// </summary>
         private void Normalize()
         {
@@ -654,25 +653,25 @@ namespace DIIISPL
 
             foreach (LayoutDisplay d in Displays)
             {
-                // Поворот бывает только четырёх видов; всё прочее — «как обычно».
+                // Rotation comes in only four kinds; everything else is "as usual".
                 if (d.Rotation < 1 || d.Rotation > 4) d.Rotation = 1;
 
-                // Размер и частота: ноль означает «не задано», и Applier подставит
-                // то, что монитор умеет. Отрицательное значение не означает ничего.
+                // Size and frequency: zero means "not set", and Applier will substitute
+                // what the monitor can do. A negative value means nothing.
                 if (d.Width < 0) d.Width = 0;
                 if (d.Height < 0) d.Height = 0;
                 if (d.Hz < 0 || d.Hz > 1000) d.Hz = 0;
 
-                // HDR: «не трогать», «выключить», «включить».
+                // HDR: "leave alone", "turn off", "turn on".
                 if (d.Hdr < -1 || d.Hdr > 1) d.Hdr = -1;
 
-                // Номер группы дублирования — либо -1, либо неотрицательный.
+                // Duplication group number — either -1 or non-negative.
                 if (d.CloneGroup < -1) d.CloneGroup = -1;
 
                 if (string.IsNullOrEmpty(d.Identity)) continue;
 
-                // Один монитор — одно состояние. Побеждает последний: так правка
-                // руками работает как обычно, дописал ниже — оно и в силе.
+                // One monitor — one state. The last wins: this way a hand edit
+                // works as usual, what is appended below is in force.
                 LayoutDisplay before;
                 if (seen.TryGetValue(d.Identity, out before)) keep.Remove(before);
                 seen[d.Identity] = d;
@@ -687,12 +686,12 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Группа дублирования из одного монитора — не дублирование.
+        /// A duplication group of one monitor is not duplication.
         ///
-        /// Такое остаётся в профилях, записанных прежними версиями: выход выбывал
-        /// из группы, а номер у соседа сохранялся, и одинокий монитор потом всю жизнь
-        /// ходил с меткой «Дубль». Чистится и при чтении файла, и при снятии раскладки
-        /// с системы — иначе достаточно одного старого профиля, чтобы метка вернулась.
+        /// This remains in profiles written by old versions: an output dropped out
+        /// of the group while the neighbour kept the number, and the lone monitor then walked all its life
+        /// with a "Duplicate" label. It is cleaned both on reading the file and on capturing a layout
+        /// from the system — otherwise a single old profile is enough for the label to return.
         /// </summary>
         public void DropLoneCloneGroups()
         {

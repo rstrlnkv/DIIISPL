@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — a monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -10,10 +10,10 @@ using System.IO;
 namespace DIIISPL
 {
     /// <summary>
-    /// Настройки самой программы — те, что не принадлежат ни одному профилю: канал
-    /// обновлений, время последней проверки, отложенная версия. Лежат рядом с профилями
-    /// обычным текстом, потому что и профили лежат так: одна папка, один формат,
-    /// и всё это можно прочитать и поправить блокнотом.
+    /// The program's own settings — those that belong to no profile: the update
+    /// channel, the time of the last check, the postponed version. They sit next to the profiles
+    /// as plain text, because the profiles are stored that way too: one folder, one format,
+    /// and all of it can be read and edited with Notepad.
     /// </summary>
     internal static class Settings
     {
@@ -23,10 +23,10 @@ namespace DIIISPL
         private static Dictionary<string, string> _values;
 
         /// <summary>
-        /// Настройки читает и пишет не один поток: проверка обновлений уходит в
-        /// пул и оттуда ставит время последней проверки, пока окно рядом читает
-        /// канал. Dictionary такого не выдерживает — чтение во время дописывания
-        /// может не найти существующий ключ, а может и зациклиться внутри.
+        /// The settings are read and written by more than one thread: the update check goes to
+        /// the pool and from there sets the last-check time while the window next to it reads
+        /// the channel. Dictionary does not survive that — a read during an append
+        /// may miss an existing key, or even loop forever inside.
         /// </summary>
         private static readonly object Lock = new object();
 
@@ -35,14 +35,14 @@ namespace DIIISPL
             get { return Path.Combine(Store.DataDir, "settings.ini"); }
         }
 
-        /// <summary>Канал обновлений: Stable или Dev.</summary>
+        /// <summary>Update channel: Stable or Dev.</summary>
         public static string Channel
         {
             get { string v = Get("channel"); return v == Dev ? Dev : Stable; }
             set { Set("channel", value == Dev ? Dev : Stable); }
         }
 
-        /// <summary>Когда в последний раз спрашивали GitHub. Пусто — не спрашивали ни разу.</summary>
+        /// <summary>When GitHub was last asked. Empty — never asked.</summary>
         public static DateTime? LastCheck
         {
             get
@@ -62,10 +62,10 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Показывали ли уже подсказку «программа осталась в трее». Один раз за всё
-        /// время: крестик прячет окно, а не закрывает программу, и молча это
-        /// читается как «закрыл» — дальше человек либо удивляется, что «закрытая»
-        /// программа переключает экраны, либо ищет выход и не находит.
+        /// Whether the "the program stays in the tray" hint has been shown. Once for all
+        /// time: the cross hides the window rather than closing the program, and without a word this
+        /// reads as "closed" — then the person either wonders why a "closed"
+        /// program switches displays, or looks for the exit and cannot find it.
         /// </summary>
         public static bool TrayHintShown
         {
@@ -74,9 +74,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Язык окна: «auto», «ru» или «en». По умолчанию auto — язык Windows.
-        /// Хранится здесь, а не выводится каждый раз из системы, потому что выбор
-        /// человека надо помнить: английская Windows не повод отбирать русский.
+        /// Window language: "auto", "ru" or "en". Default is auto — the Windows language.
+        /// Stored here rather than derived from the system every time, because the person's
+        /// choice must be remembered: an English Windows is no reason to take Russian away.
         /// </summary>
         public static string Language
         {
@@ -87,21 +87,21 @@ namespace DIIISPL
             }
             set
             {
-                // Проверять код по списку здесь нельзя: языковой файл может
-                // появиться позже, и запомненный выбор не должен от этого пропасть.
-                // Несуществующий язык всё равно превратится в запасной при чтении.
+                // Validating the code against a list is not possible here: a language file may
+                // appear later, and a remembered choice must not vanish because of it.
+                // A nonexistent language turns into the fallback on read anyway.
                 Set("language", value == Text.Auto ? "" : value);
             }
         }
 
         /// <summary>
-        /// Переключать ли профиль самому, когда меняется состав мониторов.
-        /// По умолчанию включено: ради этого возможность и заводилась, и
-        /// человек не должен искать настройку, чтобы получить главное.
+        /// Whether to switch the profile by itself when the set of monitors changes.
+        /// On by default: that is what the feature was added for, and
+        /// the person should not have to hunt for a setting to get the main thing.
         ///
-        /// Хранится наоборот — ключ пишется только при отказе. Так значение
-        /// по умолчанию живёт в одном месте, в коде, а не ещё и в файле,
-        /// который мог быть написан прежней версией.
+        /// Stored inverted — the key is written only on refusal. That way the default
+        /// lives in one place, in the code, and not also in a file
+        /// that an earlier version may have written.
         /// </summary>
         public static bool AutoSwitch
         {
@@ -109,14 +109,14 @@ namespace DIIISPL
             set { Set("autoswitch", value ? "" : "0"); }
         }
 
-        /// <summary>Версия, от которой отказались: про неё больше не напоминаем.</summary>
+        /// <summary>The version that was declined: it is no longer reminded about.</summary>
         public static string SkippedVersion
         {
             get { return Get("skip"); }
             set { Set("skip", value); }
         }
 
-        // ------------------------------------------------------------------ чтение и запись
+        // ------------------------------------------------------------------ reading and writing
         private static string Get(string key)
         {
             lock (Lock)
@@ -139,22 +139,22 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Каким файл был, когда мы его читали. По этой паре видно, что его
-        /// переписали мимо нас.
+        /// What the file was like when we read it. This pair shows that it
+        /// was rewritten behind our back.
         /// </summary>
         private static DateTime _stamp;
         private static long _size = -1;
 
         private static void Load()
         {
-            // Звать только под замком.
+            // Call only under the lock.
             //
-            // Перечитываем, если файл на диске изменился. Прежде настройки
-            // читались один раз за запуск, и это значило две неприятности сразу:
-            // правка блокнотом при работающей программе не подхватывалась и
-            // затиралась первой же записью, а вторая копия — `DIIISPL.exe /apply`
-            // из планировщика или ярлыка — писала своё, и окно, ничего об этом не
-            // зная, возвращало старое.
+            // Re-read if the file on disk has changed. Settings used to
+            // be read once per launch, which meant two troubles at once:
+            // an edit in Notepad while the program ran was not picked up and
+            // was wiped by the very first write, and a second copy — `DIIISPL.exe /apply`
+            // from the scheduler or a shortcut — wrote its own, and the window, knowing
+            // nothing of it, put the old one back.
             DateTime stamp = DateTime.MinValue;
             long size = -1;
             try
@@ -162,7 +162,7 @@ namespace DIIISPL
                 var info = new FileInfo(FilePath);
                 if (info.Exists) { stamp = info.LastWriteTimeUtc; size = info.Length; }
             }
-            catch { /* не спросить — считаем, что не менялся */ }
+            catch { /* cannot ask — assume unchanged */ }
 
             if (_values != null && stamp == _stamp && size == _size) return;
 
@@ -182,7 +182,7 @@ namespace DIIISPL
                         values[line.Substring(0, eq).Trim()] = line.Substring(eq + 1).Trim();
                     }
             }
-            catch { /* нечитаемый файл — начинаем с пустых настроек */ }
+            catch { /* unreadable file — start with empty settings */ }
             _values = values;
         }
 
@@ -191,16 +191,16 @@ namespace DIIISPL
             try
             {
                 var lines = new List<string>();
-                lines.Add("# DIIISPL settings");   // служебный файл — только по-английски
+                lines.Add("# DIIISPL settings");   // service file — English only
                 foreach (var kv in _values) lines.Add(kv.Key + " = " + kv.Value);
                 File.WriteAllLines(FilePath, lines.ToArray(), System.Text.Encoding.UTF8);
 
-                // Запомнить файл таким, каким мы его оставили: иначе следующее же
-                // чтение сочтёт свою собственную запись чужой правкой.
+                // Remember the file as we left it: otherwise the very next
+                // read would take our own write for someone else's edit.
                 var info = new FileInfo(FilePath);
                 if (info.Exists) { _stamp = info.LastWriteTimeUtc; _size = info.Length; }
             }
-            catch { /* некуда записать — настройки проживут до выхода из программы */ }
+            catch { /* nowhere to write — the settings will live until the program exits */ }
         }
     }
 }

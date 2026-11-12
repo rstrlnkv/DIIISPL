@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -12,13 +12,13 @@ using System.Windows.Media;
 namespace DIIISPL
 {
     /// <summary>
-    /// Вид панели задач в профиле.
+    /// Taskbar look in a profile.
     ///
-    /// Устроено как «обычный вид плюс исключения»: сначала задаётся, как панель
-    /// выглядит всегда, а потом — для каких случаев вид другой. Прежний экран
-    /// показывал семь равноправных строк с четырьмя полями в каждой; из двадцати
-    /// восьми полей смысл имели два-три, а остальные приходилось глазами
-    /// пропускать.
+    /// Built as "normal look plus exceptions": first set how the bar
+    /// looks always, then for which cases the look differs. The previous screen
+    /// showed seven equal rows with four fields each; of the twenty-eight
+    /// fields only two or three mattered, and the rest had to be
+    /// skipped by eye.
     /// </summary>
     internal class TaskbarWindow : Window
     {
@@ -28,7 +28,7 @@ namespace DIIISPL
         private readonly TextBlock _hint = new TextBlock();
         private bool _updating;
 
-        /// <summary>Случаи, когда вид отличается от обычного, — в порядке проверки.</summary>
+        /// <summary>Cases where the look differs from normal — in the order they are checked.</summary>
         private static readonly TaskbarState[] Special =
         {
             TaskbarState.BatterySaver, TaskbarState.TaskViewOpened, TaskbarState.SearchOpened,
@@ -82,8 +82,8 @@ namespace DIIISPL
             _hint.TextTrimming = TextTrimming.CharacterEllipsis;
             bottom.Children.Add(_hint);
 
-            // Две кнопки в одной колонке: «Сбросить» слева от «Готово», чтобы
-            // главная кнопка осталась там, где её ищут глазами, — у самого края.
+            // Two buttons in one column: "Reset" to the left of "Done", so that
+            // the main button stays where the eye looks for it — at the very edge.
             var buttons = new StackPanel();
             buttons.Orientation = Orientation.Horizontal;
             Grid.SetColumn(buttons, 1);
@@ -112,7 +112,7 @@ namespace DIIISPL
             return root;
         }
 
-        // ---------------------------------------------------------------- содержимое
+        // ---------------------------------------------------------------- content
         private void Rebuild()
         {
             _updating = true;
@@ -126,7 +126,7 @@ namespace DIIISPL
             UpdateHint();
         }
 
-        /// <summary>Обычный вид: он же запасной, когда ни один особый случай не подошёл.</summary>
+        /// <summary>Normal look: also the fallback when no special case applies.</summary>
         private UIElement BaseCard()
         {
             TaskbarAppearance look = _settings[TaskbarState.Desktop];
@@ -139,8 +139,8 @@ namespace DIIISPL
                 }
                 else
                 {
-                    // Выключаем всё разом: иначе «не задавать вид» означало бы, что
-                    // особые случаи продолжают срабатывать сами по себе.
+                    // Turn everything off at once: otherwise "do not set a look" would mean
+                    // the special cases keep firing on their own.
                     foreach (TaskbarState s in TaskbarSettings.Order) _settings[s].Enabled = false;
                 }
                 Rebuild();
@@ -161,15 +161,15 @@ namespace DIIISPL
                 Ui.Row(Text.TbWinLine, Text.TbWinLineHint,
                        Switch(look.ShowLine, delegate(bool on)
                        {
-                           // Только обычный вид: у каждого особого случая линия своя.
-                           // Прежде этот переключатель ставил её всем разом, и случай,
-                           // которому линия не нужна, отменить её не мог.
+                           // Normal look only: each special case has its own line.
+                           // This switch used to set it for all of them at once, and a case
+                           // that needs no line could not cancel it.
                            _settings[TaskbarState.Desktop].ShowLine = on;
                            Preview();
                        }), 60));
         }
 
-        /// <summary>Случаи, когда вид отличается от обычного.</summary>
+        /// <summary>Cases where the look differs from normal.</summary>
         private UIElement SpecialCard()
         {
             var rows = new List<UIElement>();
@@ -185,7 +185,7 @@ namespace DIIISPL
                 rows.ToArray());
         }
 
-        /// <summary>Выбор вида для особого случая плюс цвет, если он что-то значит.</summary>
+        /// <summary>Look choice for a special case plus a colour, if it means anything.</summary>
         private UIElement StateControls(TaskbarAppearance look)
         {
             var panel = new Grid();
@@ -202,8 +202,8 @@ namespace DIIISPL
             Grid.SetColumn(color, 1);
             panel.Children.Add(color);
 
-            // Линия у края — своя у каждого случая. Подпись ей взять негде,
-            // поэтому объясняет подсказка: три управления в строке и так тесно.
+            // The edge line is separate for each case. There is no room for a label,
+            // so a tooltip explains it: three controls in a row are tight enough.
             UIElement line = Switch(look.ShowLine, delegate(bool on)
             {
                 look.ShowLine = on;
@@ -217,7 +217,7 @@ namespace DIIISPL
             return panel;
         }
 
-        /// <summary>Цвет обычного вида отдельной строкой — там для него есть место.</summary>
+        /// <summary>Normal-look colour on its own row — there is room for it there.</summary>
         private UIElement ColorRow(TaskbarAppearance look)
         {
             if (!UsesColor(look.Accent)) return null;
@@ -235,8 +235,8 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Пояснение только там, где название не говорит всего. Остальным случаям
-        /// подписи не нужны: «Открыт поиск» и без пояснения «открыт поиск» понятно.
+        /// Explanation only where the name does not say everything. Other cases
+        /// need no captions: "Search open" is self-explanatory.
         /// </summary>
         private static string HintFor(TaskbarState state)
         {
@@ -245,8 +245,8 @@ namespace DIIISPL
             return null;
         }
 
-        // ---------------------------------------------------------------- элементы
-        /// <summary>Выбор вида. Для особых случаев первый пункт — «как обычно».</summary>
+        // ---------------------------------------------------------------- elements
+        /// <summary>Look choice. For special cases the first item is "as usual".</summary>
         private ComboBox AccentBox(TaskbarAppearance look, bool allowInherit)
         {
             var box = new ComboBox();
@@ -270,13 +270,13 @@ namespace DIIISPL
                 if (value == null) look.Enabled = false;
                 else { look.Enabled = true; look.Accent = value; }
 
-                Rebuild();      // от вида зависит, нужен ли цвет
+                Rebuild();      // whether a colour is needed depends on the look
                 Preview();
             };
             return box;
         }
 
-        /// <summary>Цвет: образец рядом с полем, чтобы не разбирать цифры в уме.</summary>
+        /// <summary>Colour: a swatch next to the field, so the digits need not be parsed in the head.</summary>
         private UIElement ColorField(TaskbarAppearance look)
         {
             var panel = new StackPanel();
@@ -312,7 +312,7 @@ namespace DIIISPL
             return panel;
         }
 
-        /// <summary>Образец цвета: полупрозрачный показываем поверх клетчатой подложки.</summary>
+        /// <summary>Colour swatch: a translucent one is shown over a checkerboard backdrop.</summary>
         private static Brush Paint(uint argb)
         {
             var color = Color.FromArgb((byte)(argb >> 24), (byte)(argb >> 16),
@@ -352,7 +352,7 @@ namespace DIIISPL
             return box;
         }
 
-        // ---------------------------------------------------------------- перенос
+        // ---------------------------------------------------------------- transfer
         private UIElement TransferCard()
         {
             var others = new List<Layout>();
@@ -419,8 +419,8 @@ namespace DIIISPL
                 Store.Save(l);
             }
 
-            // Свой профиль закрепляем тоже: остальные уже записаны на диск, и если этот
-            // останется только в памяти, «ко всем» обернётся «ко всем, кроме этого».
+            // We pin our own profile too: the others are already written to disk, and if this one
+            // stays only in memory, "to all" turns into "to all but this one".
             var mine = Store.LoadByName(_profileName);
             if (mine != null)
             {
@@ -432,8 +432,8 @@ namespace DIIISPL
             _hint.Text = Text.TbWinWrittenAll(others.Count + (mine != null ? 1 : 0));
         }
 
-        // ---------------------------------------------------------------- прочее
-        /// <summary>Показать изменения сразу — настройки без предпросмотра выбирать вслепую.</summary>
+        // ---------------------------------------------------------------- misc
+        /// <summary>Show changes right away — choosing settings without a preview is choosing blind.</summary>
         private void Preview()
         {
             if (!ExplorerTap.Available) return;

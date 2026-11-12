@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -12,18 +12,18 @@ using System.Windows.Media;
 namespace DIIISPL
 {
     /// <summary>
-    /// Что менялось от версии к версии — вся история, лежащая внутри программы.
+    /// What changed from version to version — the whole history, kept inside the program.
     ///
-    /// Прежде кнопка «Что нового» уводила в браузер, на страницу выпусков. Это
-    /// работало ровно до того случая, ради которого кнопка и нужна: у копии,
-    /// которая новее последнего выпуска — или собрана на своей машине, — читать
-    /// там было нечего. Теперь читать нечего только если чейнджлог не попал
-    /// в сборку.
+    /// Before, the 'What's new' button led to the browser, to the releases page. That
+    /// worked right up to the case the button exists for: a copy that is newer than
+    /// the latest release — or built on one's own machine — had nothing to read
+    /// there. Now there is nothing to read only if the changelog did not make it
+    /// into the build.
     ///
-    /// Вид: номер версии и дата одной строкой, ниже — изменения, у каждого свой
-    /// бейдж слева. Бейдж вынесен в отдельную колонку, а не приклеен к тексту:
-    /// так род изменения виден с одного взгляда, до чтения, и глаз находит
-    /// нужное, пробегая список сверху вниз.
+    /// Layout: version number and date on one line, the changes below, each with its own
+    /// badge on the left. The badge sits in a separate column, not glued to the text:
+    /// so the kind of change is seen at a glance, before reading, and the eye finds
+    /// what it needs while running down the list.
     /// </summary>
     internal class ChangelogWindow : Window
     {
@@ -86,7 +86,7 @@ namespace DIIISPL
             return scroll;
         }
 
-        /// <summary>Номер версии и дата одной строкой: номер крупно, дата рядом и тише.</summary>
+        /// <summary>Version number and date on one line: number large, date beside it and quieter.</summary>
         private static UIElement Head(ChangelogEntry entry, bool yours, bool first)
         {
             var row = new StackPanel();
@@ -116,7 +116,7 @@ namespace DIIISPL
             return row;
         }
 
-        /// <summary>Одно изменение: бейдж в своей колонке, текст обтекает справа.</summary>
+        /// <summary>One change: badge in its own column, text wraps to the right.</summary>
         private static UIElement Row(ChangelogLine line)
         {
             var grid = new Grid();
@@ -182,9 +182,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Дата в файле записана как «2026-08-27» — так её не спутает ни один
-        /// читатель и ни одна страна. В окне показываем словами, как принято
-        /// в языке окна; не разобрали — оставляем как есть.
+        /// The date in the file is written as '2026-08-27' — no reader in any country can
+        /// misread it. In the window we show it in words, as the window's language does it;
+        /// if it does not parse, we leave it as is.
         /// </summary>
         private static string Pretty(string iso)
         {

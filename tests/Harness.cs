@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -8,8 +8,8 @@ using System.Collections.Generic;
 namespace DIIISPL
 {
     /// <summary>
-    /// Автотест раскладок: строит схему, применяет её и сверяет фактическое состояние
-    /// дисплеев с заявленным. Собирается вместе с боевыми исходниками программы.
+    /// Layout autotest: builds a layout, applies it and checks the actual state
+    /// of the displays against the declared one. Built together with the program's production sources.
     /// </summary>
     internal static class Harness
     {
@@ -17,11 +17,11 @@ namespace DIIISPL
         {
             public string Name;
             public Layout Layout;
-            public bool Twice;             // применить дважды (проверка идемпотентности)
-            public string ExpectWarning;   // ожидаемая подстрока в предупреждении
+            public bool Twice;             // apply twice (idempotency check)
+            public string ExpectWarning;   // expected substring in the warning
         }
 
-        // Пишем в файл по ходу дела: если система снова упадёт, отчёт до момента падения уцелеет.
+        // Write to a file as we go: if the system crashes again, the report up to the crash survives.
         private static System.IO.StreamWriter _log;
         private const int PauseBetweenCasesMs = 4000;
 
@@ -74,7 +74,7 @@ namespace DIIISPL
             return l;
         }
 
-        // ---- ожидаемое состояние: основной экран обязан стоять в (0,0) ----
+        // ---- expected state: the primary screen must sit at (0,0) ----
         private static void Normalize(Layout l)
         {
             LayoutDisplay primary = null;
@@ -101,42 +101,42 @@ namespace DIIISPL
 
                 if (!d.Enabled)
                 {
-                    if (known && mon.Active) problems.Add(d.Name + ": должен быть выключен, но включён");
+                    if (known && mon.Active) problems.Add(d.Name + ": should be off but is on");
                     continue;
                 }
-                if (!known) { problems.Add(d.Name + ": пропал из перечисления"); continue; }
-                if (!mon.Active) { problems.Add(d.Name + ": не включился"); continue; }
+                if (!known) { problems.Add(d.Name + ": vanished from enumeration"); continue; }
+                if (!mon.Active) { problems.Add(d.Name + ": did not turn on"); continue; }
 
                 if (mon.Width != d.Width || mon.Height != d.Height)
-                    problems.Add(d.Name + ": режим " + mon.Width + "x" + mon.Height +
-                                 " вместо " + d.Width + "x" + d.Height);
+                    problems.Add(d.Name + ": mode " + mon.Width + "x" + mon.Height +
+                                 " instead of " + d.Width + "x" + d.Height);
                 if (mon.X != d.X || mon.Y != d.Y)
-                    problems.Add(d.Name + ": позиция " + mon.X + "," + mon.Y + " вместо " + d.X + "," + d.Y);
+                    problems.Add(d.Name + ": position " + mon.X + "," + mon.Y + " instead of " + d.X + "," + d.Y);
                 if (d.Hz > 0 && Math.Abs(mon.Hz - d.Hz) > 1.5)
-                    problems.Add(d.Name + ": частота " + mon.Hz.ToString("0.##") + " вместо " + d.Hz.ToString("0.##"));
+                    problems.Add(d.Name + ": refresh rate " + mon.Hz.ToString("0.##") + " instead of " + d.Hz.ToString("0.##"));
                 if (mon.Rotation != d.Rotation)
-                    problems.Add(d.Name + ": поворот " + mon.Rotation + " вместо " + d.Rotation);
+                    problems.Add(d.Name + ": rotation " + mon.Rotation + " instead of " + d.Rotation);
 
                 if (d.CloneGroup >= 0)
                 {
                     uint src;
                     if (!groupSource.TryGetValue(d.CloneGroup, out src)) groupSource[d.CloneGroup] = mon.SourceId;
-                    else if (src != mon.SourceId) problems.Add(d.Name + ": не в дубле (разные источники)");
+                    else if (src != mon.SourceId) problems.Add(d.Name + ": not cloned (different sources)");
                 }
                 else
                 {
                     if (singleSources.Contains(mon.SourceId))
-                        problems.Add(d.Name + ": делит источник с другим экраном, хотя должен быть отдельным");
+                        problems.Add(d.Name + ": shares a source with another screen though it should be separate");
                     singleSources.Add(mon.SourceId);
                 }
 
-                // HDR проверяем только там, где он в принципе доступен
+                // check HDR only where it is available at all
                 if (d.Hdr >= 0 && d.CloneGroup < 0 && mon.HdrSupported)
                 {
                     bool want = d.Hdr == 1;
                     if (mon.HdrEnabled != want)
-                        problems.Add(d.Name + ": HDR " + (mon.HdrEnabled ? "включён" : "выключен") +
-                                     ", ожидалось " + (want ? "включён" : "выключен"));
+                        problems.Add(d.Name + ": HDR " + (mon.HdrEnabled ? "on" : "off") +
+                                     ", expected " + (want ? "on" : "off"));
                 }
             }
             return problems;
@@ -149,83 +149,83 @@ namespace DIIISPL
                 var c = new Case(); c.Name = name; c.Layout = l; cases.Add(c);
             };
 
-            // --- одиночные ---
-            add("одиночный: LG 4K 144", Make("t", Main_(Hz(D(L, true), 144)), D(M, false), D(T, false)));
-            add("одиночный: Mi 4K 60", Make("t", D(L, false), Main_(D(M, true)), D(T, false)));
-            add("одиночный: ТВ 4K 120", Make("t", D(L, false), D(M, false), Main_(Hz(D(T, true), 120))));
+            // --- single ---
+            add("single: LG 4K 144", Make("t", Main_(Hz(D(L, true), 144)), D(M, false), D(T, false)));
+            add("single: Mi 4K 60", Make("t", D(L, false), Main_(D(M, true)), D(T, false)));
+            add("single: TV 4K 120", Make("t", D(L, false), D(M, false), Main_(Hz(D(T, true), 120))));
 
-            // --- пары врастяжку ---
-            add("пара врастяжку: LG + Mi", Make("t",
+            // --- extended pairs ---
+            add("extended pair: LG + Mi", Make("t",
                 Main_(Hz(D(L, true), 144)), At(D(M, true), 3840, 0), D(T, false)));
-            add("пара врастяжку: LG + ТВ", Make("t",
+            add("extended pair: LG + TV", Make("t",
                 Main_(Hz(D(L, true), 120)), D(M, false), At(Hz(D(T, true), 120), 3840, 0)));
-            add("пара врастяжку: Mi + ТВ", Make("t",
+            add("extended pair: Mi + TV", Make("t",
                 D(L, false), Main_(D(M, true)), At(Hz(D(T, true), 60), 3840, 0)));
 
-            // --- пары дублированием ---
-            add("дубль: LG = Mi", Make("t",
+            // --- cloned pairs ---
+            add("clone: LG = Mi", Make("t",
                 Clone(Main_(D(L, true)), 0), Clone(D(M, true), 0), D(T, false)));
-            add("дубль: LG = ТВ", Make("t",
+            add("clone: LG = TV", Make("t",
                 Clone(Main_(Hz(D(L, true), 120)), 0), D(M, false), Clone(Hz(D(T, true), 120), 0)));
-            add("дубль: Mi = ТВ", Make("t",
+            add("clone: Mi = TV", Make("t",
                 D(L, false), Clone(Main_(D(M, true)), 0), Clone(D(T, true), 0)));
 
-            // --- тройки ---
-            add("три врастяжку: LG | Mi | ТВ", Make("t",
+            // --- triples ---
+            add("three extended: LG | Mi | TV", Make("t",
                 Main_(Hz(D(L, true), 144)), At(D(M, true), 3840, 0), At(Hz(D(T, true), 120), 7680, 0)));
-            add("три врастяжку, основной в середине", Make("t",
+            add("three extended, primary in the middle", Make("t",
                 At(Hz(D(L, true), 144), -3840, 0), Main_(D(M, true)), At(Hz(D(T, true), 120), 3840, 0)));
-            add("дубль LG=ТВ + Mi сбоку", Make("t",
+            add("clone LG=TV + Mi on the side", Make("t",
                 Clone(Main_(Hz(D(L, true), 120)), 0), At(D(M, true), 3840, 0), Clone(Hz(D(T, true), 120), 0)));
-            add("дубль LG=Mi + ТВ сбоку", Make("t",
+            add("clone LG=Mi + TV on the side", Make("t",
                 Clone(Main_(D(L, true)), 0), Clone(D(M, true), 0), At(Hz(D(T, true), 120), 3840, 0)));
-            add("дубль Mi=ТВ + LG сбоку", Make("t",
+            add("clone Mi=TV + LG on the side", Make("t",
                 Main_(Hz(D(L, true), 144)), Clone(At(D(M, true), 3840, 0), 0), Clone(At(D(T, true), 3840, 0), 0)));
-            add("все три в дубль", Make("t",
+            add("all three cloned", Make("t",
                 Clone(Main_(D(L, true)), 0), Clone(D(M, true), 0), Clone(D(T, true), 0)));
 
-            // --- геометрия ---
-            add("вертикальный стек: LG сверху, Mi снизу", Make("t",
+            // --- geometry ---
+            add("vertical stack: LG on top, Mi below", Make("t",
                 Main_(Hz(D(L, true), 144)), At(D(M, true), 0, 2160), D(T, false)));
-            add("экран слева от основного", Make("t",
+            add("screen left of the primary", Make("t",
                 Main_(Hz(D(L, true), 144)), At(D(M, true), -3840, 0), D(T, false)));
-            add("уголок: Mi справа сверху", Make("t",
+            add("corner: Mi top right", Make("t",
                 Main_(Hz(D(L, true), 144)), At(D(M, true), 3840, -2160), D(T, false)));
 
-            // --- режимы ---
-            add("пониженное разрешение LG 2560x1440", Make("t",
+            // --- modes ---
+            add("reduced resolution LG 2560x1440", Make("t",
                 Main_(Res(Hz(D(L, true), 60), 2560, 1440)), D(M, false), D(T, false)));
-            add("смешанные частоты: LG 144 + Mi 60", Make("t",
+            add("mixed refresh rates: LG 144 + Mi 60", Make("t",
                 Main_(Hz(D(L, true), 144)), At(D(M, true), 3840, 0), D(T, false)));
-            add("поворот 90° на Mi", Make("t",
+            add("rotation 90° on Mi", Make("t",
                 Main_(Hz(D(L, true), 144)), At(Rot(D(M, true), Native.DISPLAYCONFIG_ROTATION_ROTATE90), 3840, 0), D(T, false)));
-            add("поворот 270° на Mi", Make("t",
+            add("rotation 270° on Mi", Make("t",
                 Main_(Hz(D(L, true), 144)), At(Rot(D(M, true), Native.DISPLAYCONFIG_ROTATION_ROTATE270), 3840, 0), D(T, false)));
 
-            // --- основной экран ---
-            add("основной: ТВ", Make("t",
+            // --- primary screen ---
+            add("primary: TV", Make("t",
                 At(Hz(D(L, true), 120), 3840, 0), D(M, false), Main_(Hz(D(T, true), 120))));
-            add("основной: Mi", Make("t",
+            add("primary: Mi", Make("t",
                 At(Hz(D(L, true), 144), 3840, 0), Main_(D(M, true)), D(T, false)));
 
             // --- HDR ---
-            add("HDR включён на LG", Make("t",
+            add("HDR on for LG", Make("t",
                 Hdr(Main_(Hz(D(L, true), 144)), 1), D(M, false), D(T, false)));
-            add("HDR выключен на LG", Make("t",
+            add("HDR off for LG", Make("t",
                 Hdr(Main_(Hz(D(L, true), 144)), 0), D(M, false), D(T, false)));
-            add("HDR на всех трёх врастяжку", Make("t",
+            add("HDR on all three extended", Make("t",
                 Hdr(Main_(Hz(D(L, true), 120)), 1), Hdr(At(D(M, true), 3840, 0), 1), Hdr(At(Hz(D(T, true), 120), 7680, 0), 1)));
 
             var hdrClone = new Case();
-            hdrClone.Name = "HDR в дубле (ожидается отказ Windows)";
+            hdrClone.Name = "HDR in a clone (Windows is expected to refuse)";
             hdrClone.Layout = Make("t",
                 Hdr(Clone(Main_(Hz(D(L, true), 120)), 0), 1), D(M, false), Hdr(Clone(Hz(D(T, true), 120), 0), 1));
             hdrClone.ExpectWarning = "дублировании";
             cases.Add(hdrClone);
 
-            // --- устойчивость ---
+            // --- robustness ---
             var twice = new Case();
-            twice.Name = "повторное применение того же профиля";
+            twice.Name = "applying the same profile again";
             twice.Layout = Make("t", Main_(Hz(D(L, true), 144)), At(D(M, true), 3840, 0), D(T, false));
             twice.Twice = true;
             cases.Add(twice);
@@ -233,8 +233,8 @@ namespace DIIISPL
             var ghost = new Case();
             var fake = D(T, true);
             fake.Identity = "XXX:НетТакого:000000";
-            fake.Name = "Отсутствующий монитор";
-            ghost.Name = "профиль с неподключённым монитором";
+            fake.Name = "Missing monitor";
+            ghost.Name = "profile with a disconnected monitor";
             ghost.Layout = Make("t", Main_(Hz(D(L, true), 144)), D(M, false), At(fake, 3840, 0));
             ghost.ExpectWarning = "не подключён";
             cases.Add(ghost);
@@ -244,17 +244,17 @@ namespace DIIISPL
 
         private static int Main(string[] args)
         {
-            // Согласие спрашивает run-tests.cmd, он же передаёт сюда --agreed.
-            // Сам по себе selftest.exe не должен делать ничего: файл остаётся
-            // лежать в папке после прогона, и двойной щелчок по нему запускал бы
-            // сорок настоящих переключений мониторов, ни о чём не спросив.
+            // run-tests.cmd asks for consent and passes --agreed here.
+            // On its own selftest.exe must do nothing: the file stays
+            // in the folder after the run, and a double click on it would start
+            // forty real monitor switches without asking anything.
             bool agreed = false;
             foreach (string a in args) if (a == "--agreed") agreed = true;
             if (!agreed)
             {
                 WL("");
-                WL("  Напрямую этот файл не запускают: прогон переключает мониторы");
-                WL("  около сорока раз подряд. Запускайте run-tests.cmd — он спросит.");
+                WL("  This file is not run directly: the run switches monitors");
+                WL("  about forty times in a row. Run run-tests.cmd, it will ask.");
                 return 2;
             }
 
@@ -262,8 +262,8 @@ namespace DIIISPL
             MonitorInfo L = Find(live, "LG"), M = Find(live, "Mi"), T = Find(live, "Q80A");
             if (L == null || M == null || T == null)
             {
-                WL("Нужны все три монитора. Найдено: " + live.Count);
-                foreach (var m in live) WL("  " + m.Name + " — " + (m.Active ? "включён" : "выключен"));
+                WL("All three monitors are required. Found: " + live.Count);
+                foreach (var m in live) WL("  " + m.Name + " — " + (m.Active ? "on" : "off"));
                 return 1;
             }
 
@@ -271,11 +271,11 @@ namespace DIIISPL
             int pass = 0, fail = 0;
             var failed = new List<string>();
             WL("");
-            WL("Проверок: " + cases.Count);
+            WL("Checks: " + cases.Count);
             WL("");
 
-            // Рядом с собой, а не в текущем каталоге: запуск из другой папки уносил
-            // отчёт туда, а run-tests.cmd при этом обещал tests\selftest-log.txt.
+            // Next to itself, not in the current directory: running from another folder carried
+            // the report off there, while run-tests.cmd promised tests\selftest-log.txt.
             string logPath = System.IO.Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory, "selftest-log.txt");
             _log = new System.IO.StreamWriter(logPath, false, new System.Text.UTF8Encoding(true));
@@ -293,60 +293,60 @@ namespace DIIISPL
                 var res = Applier.Apply(c.Layout);
                 if (c.Twice) res = Applier.Apply(c.Layout);
                 System.Threading.Thread.Sleep(900);
-                // пауза между схемами: не даём драйверу захлебнуться чередой перестроек
+                // pause between layouts: do not let the driver choke on a run of rebuilds
 
                 var problems = new List<string>();
-                if (!res.Success) problems.Add("не применилось: " + res.Error);
+                if (!res.Success) problems.Add("did not apply: " + res.Error);
 
                 var expected = c.Layout.DeepCopy();
                 Normalize(expected);
                 if (c.ExpectWarning != null)
                 {
-                    // ожидаемая проблема: экран из заявки заведомо недоступен
+                    // expected problem: a screen from the request is known to be unavailable
                     bool found = false;
                     foreach (string w in res.Warnings)
                         if (w.IndexOf(c.ExpectWarning, StringComparison.OrdinalIgnoreCase) >= 0) found = true;
-                    if (!found) problems.Add("не было ожидаемого предупреждения про «" + c.ExpectWarning + "»");
+                    if (!found) problems.Add("expected warning about '" + c.ExpectWarning + "' was not raised");
                     foreach (var d in expected.Displays)
-                        if (d.Name == "Отсутствующий монитор" || (d.CloneGroup >= 0 && d.Hdr == 1)) d.Hdr = -1;
-                    if (c.Name.StartsWith("профиль с неподключённым"))
+                        if (d.Name == "Missing monitor" || (d.CloneGroup >= 0 && d.Hdr == 1)) d.Hdr = -1;
+                    if (c.Name.StartsWith("profile with a disconnected"))
                         foreach (var d in expected.Displays)
-                            if (d.Name == "Отсутствующий монитор") d.Enabled = false;
+                            if (d.Name == "Missing monitor") d.Enabled = false;
                 }
                 problems.AddRange(Check(expected));
 
                 if (problems.Count == 0) { WL("OK"); pass++; }
                 else
                 {
-                    WL("СБОЙ");
+                    WL("FAIL");
                     foreach (string p in problems) WL("        · " + p);
-                    foreach (string w in res.Warnings) WL("        [пред] " + w);
+                    foreach (string w in res.Warnings) WL("        [warn] " + w);
                     foreach (var m in Monitors.Enumerate())
-                        WL("        [факт] " + m.Name + " " + (m.Active ? "вкл" : "выкл") +
+                        WL("        [actual] " + m.Name + " " + (m.Active ? "on" : "off") +
                             " " + m.Width + "x" + m.Height + " @" + m.X + "," + m.Y +
-                            " " + m.Hz.ToString("0.##") + "Гц rot=" + m.Rotation + " src=" + m.SourceId +
+                            " " + m.Hz.ToString("0.##") + "Hz rot=" + m.Rotation + " src=" + m.SourceId +
                             " hdr=" + (m.HdrSupported ? (m.HdrEnabled ? "on" : "off") : "na"));
                     fail++;
                     failed.Add(c.Name);
                 }
 
-                // пауза между схемами: не даём графическому стеку захлебнуться чередой перестроек
+                // pause between layouts: do not let the graphics stack choke on a run of rebuilds
                 System.Threading.Thread.Sleep(PauseBetweenCasesMs);
             }
 
             WL("");
-            WL("Итог: " + pass + " из " + cases.Count + " успешно, сбоев " + fail);
+            WL("Result: " + pass + " of " + cases.Count + " passed, failures " + fail);
             if (fail > 0)
             {
-                WL("Не прошли:");
+                WL("Failed:");
                 foreach (string f in failed) WL("  · " + f);
             }
 
-            // возвращаем рабочее состояние: три экрана врастяжку
+            // restore the working state: three screens extended
             var restore = Make("restore", Main_(Hz(D(L, true), 144)), At(D(M, true), 3840, 0), At(Hz(D(T, true), 120), 7680, 0));
             Applier.Apply(restore);
             WL("");
-            WL("Раскладка возвращена: три экрана врастяжку.");
+            WL("Layout restored: three screens extended.");
             return fail == 0 ? 0 : 1;
         }
     }

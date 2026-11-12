@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — a monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -10,10 +10,10 @@ using System.Text;
 namespace DIIISPL
 {
     /// <summary>
-    /// Следит за тем, что происходит на каждом экране, и держит вид панели задач
-    /// в согласии с профилем: развернули окно — один вид, свернули всё — другой,
-    /// открыли «Пуск» — третий. Состояние считается для каждой панели отдельно,
-    /// поэтому на разных мониторах вид может отличаться.
+    /// Watches what happens on each screen and keeps the taskbar look
+    /// in line with the profile: a window maximized — one look, everything minimized — another,
+    /// "Start" opened — a third. The state is computed for each taskbar separately,
+    /// so the look can differ between monitors.
     /// </summary>
     internal static class TaskbarWatcher
     {
@@ -22,19 +22,19 @@ namespace DIIISPL
         private static readonly Dictionary<IntPtr, string> _appliedPerBar = new Dictionary<IntPtr, string>();
 
         /// <summary>
-        /// Память о применённом правится из двух потоков: Tick крутится на потоке
-        /// окна, а ResetCache зовёт применение раскладки — из потока пула. Прежде
-        /// оба ходили в один Dictionary без защиты, и это не теория: запись,
-        /// начатая до сброса, переживала его. Наблюдатель потом видел «этой панели
-        /// такой вид уже применён» и пропускал настоящую покраску — панель
-        /// оставалась с видом от прежней раскладки.
+        /// The memory of what has been applied is edited from two threads: Tick runs on the
+        /// window thread, while ResetCache is called by the layout application — from a pool thread. Before,
+        /// both went to one unprotected Dictionary, and this is not theory: a write
+        /// begun before a reset survived it. The watcher then saw "this taskbar
+        /// already has this look applied" and skipped the real repaint — the taskbar
+        /// kept the look from the previous layout.
         /// </summary>
         private static readonly object Lock = new object();
 
-        /// <summary>Отложенный сброс: панели пересоздаются не сразу, см. ResetSoon.</summary>
+        /// <summary>Deferred reset: taskbars are not recreated at once, see ResetSoon.</summary>
         private static System.Windows.Threading.DispatcherTimer _settle;
 
-        /// <summary>Задать настройки текущего профиля и начать следить.</summary>
+        /// <summary>Set the current profile's settings and start watching.</summary>
         public static void Use(TaskbarSettings settings)
         {
             ResetCache();
@@ -49,12 +49,12 @@ namespace DIIISPL
 
             if (_timer == null)
             {
-                // Таймер привязываем к диспетчеру окна, а не к тому потоку, где
-                // случился первый вызов. Применение раскладки теперь работает в
-                // потоке пула, а там диспетчер никто не крутит: созданный оттуда
-                // таймер рождается мёртвым и не оживает до перезапуска — измерено,
-                // ноль тиков за 700 мс при интервале 50. Наблюдатель существует
-                // ровно потому, что панели пересоздаются, и молчащий он бесполезен.
+                // Bind the timer to the window's dispatcher, not to the thread where
+                // the first call happened. Layout application now runs on a
+                // pool thread, where nobody pumps a dispatcher: a timer created from there
+                // is born dead and does not revive until restart — measured:
+                // zero ticks in 700 ms at an interval of 50. The watcher exists
+                // precisely because taskbars get recreated, and a silent one is useless.
                 _timer = new System.Windows.Threading.DispatcherTimer(
                     System.Windows.Threading.DispatcherPriority.Normal,
                     System.Windows.Application.Current != null
@@ -73,9 +73,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Полный сброс: и связь со службой в проводнике, и память о том, что уже применено.
-        /// Обязателен при смене раскладки — панели задач пересоздаются, прежние окна
-        /// исчезают, и всё, что мы про них помнили, становится ложью.
+        /// Full reset: both the link to the service in Explorer and the memory of what is already applied.
+        /// Required when the layout changes — taskbars are recreated, the old windows
+        /// vanish, and everything we remembered about them becomes a lie.
         /// </summary>
         public static void ResetCache()
         {
@@ -92,17 +92,17 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Ещё один сброс, когда панели улягутся.
+        /// One more reset, once the taskbars settle.
         ///
-        /// Сброс при применении раскладки происходит сразу после SetDisplayConfig,
-        /// а панели задач Windows пересоздаёт погодя. Между этими мгновениями
-        /// наблюдатель успевает посмотреть на прежние окна и запомнить про них
-        /// неправду — замок от этого не спасает, он спасает только от порчи самой
-        /// памяти. Поэтому спустя полторы секунды память чистится ещё раз, уже
-        /// на потоке окна, где переплестись с Tick она не может.
+        /// The reset on layout application happens right after SetDisplayConfig,
+        /// while Windows recreates the taskbars a bit later. In between,
+        /// the watcher manages to look at the old windows and remember something
+        /// false about them — the lock does not save from this, it only protects against corruption of the
+        /// memory itself. So after a second and a half the memory is cleared once more, on
+        /// the window thread, where it cannot interleave with Tick.
         ///
-        /// Из командной строки диспетчера нет и следить некому — тогда и
-        /// откладывать нечего.
+        /// From the command line there is no dispatcher and nobody to watch — so
+        /// there is nothing to defer.
         /// </summary>
         public static void ResetSoon()
         {
@@ -138,10 +138,10 @@ namespace DIIISPL
                 var state = Evaluate(monitor, battery, start, search, taskView);
 
                 var look = _settings[state];
-                // Запасного «взять обычный вид» здесь нет намеренно: Evaluate
-                // возвращает только включённые случаи. Случай без особого вида
-                // означает не «выглядеть как обычно», а «не рассматривать» —
-                // вид тогда берётся от следующего подходящего, и он уже выбран.
+                // There is deliberately no "take the usual look" fallback here: Evaluate
+                // returns only the enabled cases. A case without a special look
+                // means not "look as usual" but "do not consider" —
+                // the look is then taken from the next matching one, which is already chosen.
 
                 string signature = state + "|" + look.Serialize();
                 string applied;
@@ -155,7 +155,7 @@ namespace DIIISPL
             }
         }
 
-        /// <summary>Что программа видит прямо сейчас — для проверки настроек.</summary>
+        /// <summary>What the program sees right now — for checking the settings.</summary>
         public static string Report(TaskbarSettings settings)
         {
             var sb = new StringBuilder();
@@ -204,12 +204,12 @@ namespace DIIISPL
             return TaskbarState.Desktop;
         }
 
-        // ---------------------------------------------------------------- окна
+        // ---------------------------------------------------------------- windows
         /// <summary>
-        /// Есть ли на этом мониторе окно (любое или только развёрнутое).
+        /// Whether this monitor has a window (any, or only a maximized one).
         ///
-        /// Перечисление окон может оборваться, если во время обхода какое-то окно закрылось;
-        /// тогда «ничего не нашли» — не ответ, а неудача, и попытку надо повторить.
+        /// Window enumeration can break off if some window closed during the walk;
+        /// then "found nothing" is not an answer but a failure, and the attempt must be repeated.
         /// </summary>
         private static bool HasWindow(IntPtr monitor, bool maximizedOnly)
         {
@@ -221,7 +221,7 @@ namespace DIIISPL
             return false;
         }
 
-        /// <summary>Возвращает false, если обход оборвался и ответу верить нельзя.</summary>
+        /// <summary>Returns false if the walk broke off and the answer cannot be trusted.</summary>
         private static bool TryFindWindow(IntPtr monitor, bool maximizedOnly, out bool found)
         {
             bool hit = false;
@@ -233,7 +233,7 @@ namespace DIIISPL
                 if (!IsWindowVisible(hwnd) || IsIconic(hwnd)) return true;
                 if (MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST) != monitor) return true;
 
-                // окна-невидимки: служебные, «залакированные» оболочкой, нулевого размера
+                // invisible windows: service ones, "cloaked" by the shell, of zero size
                 int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
                 if ((exStyle & WS_EX_TOOLWINDOW) != 0) return true;
                 if (IsCloaked(hwnd)) return true;
@@ -257,16 +257,16 @@ namespace DIIISPL
             }, IntPtr.Zero);
 
             found = hit;
-            return hit || ok;         // нашли — ответ есть; дошли до конца — «нет» тоже ответ
+            return hit || ok;         // found — there is an answer; reached the end — "no" is an answer too
         }
 
         /// <summary>
-        /// Есть ли у названного процесса открытое окно этого класса.
+        /// Whether the named process has an open window of this class.
         ///
-        /// Окно в фокусе для этого не годится: на нынешних сборках Windows 11 «Пуск» отдаёт
-        /// фокус окну SearchHost, и по фокусу «Пуск» с поиском неразличимы. Зато открытый
-        /// «Пуск» — это видимое окно StartMenuExperienceHost во всю ширину экрана, а поиск
-        /// сам по себе — только окно SearchHost.
+        /// The focused window will not do: on current Windows 11 builds "Start" hands
+        /// focus to the SearchHost window, so by focus "Start" and search are indistinguishable. But an open
+        /// "Start" is a visible StartMenuExperienceHost window across the full screen width, while search
+        /// on its own is just a SearchHost window.
         /// </summary>
         private static bool HasShellWindow(string className, string processName)
         {
@@ -297,13 +297,13 @@ namespace DIIISPL
             return HasShellWindow("Windows.UI.Core.CoreWindow", "StartMenuExperienceHost");
         }
 
-        /// <summary>Поиск сам по себе: окно SearchHost есть, а «Пуска» над ним нет.</summary>
+        /// <summary>Search on its own: a SearchHost window exists, with no "Start" above it.</summary>
         private static bool SearchOpened()
         {
             return HasShellWindow("Windows.UI.Core.CoreWindow", "SearchHost") && !StartOpened();
         }
 
-        /// <summary>Представление задач — отдельное окно проводника, а не CoreWindow.</summary>
+        /// <summary>Task View is a separate Explorer window, not a CoreWindow.</summary>
         private static bool TaskViewOpened()
         {
             return HasShellWindow("XamlExplorerHostIslandWindow", "explorer");

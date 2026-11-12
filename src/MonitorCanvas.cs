@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ using System.Windows.Media;
 
 namespace DIIISPL
 {
-    /// <summary>Холст раскладки: мониторы перетаскиваются мышью и прилипают друг к другу.</summary>
+    /// <summary>Layout canvas: monitors are dragged with the mouse and snap to each other.</summary>
     internal class MonitorCanvas : Canvas
     {
         public Layout Layout;
@@ -22,8 +22,8 @@ namespace DIIISPL
         public event Action LayoutChanged;
 
         /// <summary>
-        /// Монитор из нижнего ряда перетащили в раскладку. Координаты ему уже проставлены —
-        /// остаётся включить его в профиле.
+        /// A monitor from the bottom row was dragged into the layout. Its coordinates are already set —
+        /// all that is left is to enable it in the profile.
         /// </summary>
         public event Action DropRequested;
 
@@ -35,24 +35,24 @@ namespace DIIISPL
         private Point _dragStart;
         private readonly Dictionary<LayoutDisplay, Point> _dragOrigin = new Dictionary<LayoutDisplay, Point>();
         private bool _moved;
-        private bool _fromDock;      // тащат монитор из нижнего ряда, а не по раскладке
-        private Point _grab;         // за какую точку карточки взялись
+        private bool _fromDock;      // a monitor is being dragged from the bottom row, not within the layout
+        private Point _grab;         // the point of the card that was grabbed
 
         public MonitorCanvas()
         {
             Background = Brushes.Transparent;
             ClipToBounds = true;
             SizeChanged += delegate { Relayout(); };
-            // Щелчок мимо карточек ничего не снимает. Прежде он оставлял холст
-            // без выбранного, и панель свойств внизу превращалась в ряд серых
-            // полей с надписью «Выберите монитор» — состояние, в котором окно
-            // ничего не показывает и ничего не даёт сделать.
+            // A click past the cards clears nothing. It used to leave the canvas
+            // with nothing selected, and the properties panel below turned into a row of grey
+            // fields captioned "Select a monitor" — a state in which the window
+            // shows nothing and lets you do nothing.
         }
 
         /// <summary>
-        /// Выбранным всегда должен быть кто-то: панели свойств иначе нечего
-        /// показывать. Зовётся при каждой перестройке — профиль мог смениться,
-        /// монитор мог выпасть из списка, а ссылка на него осталась бы висеть.
+        /// Someone must always be selected: otherwise the properties panel has nothing
+        /// to show. Called on every rebuild — the profile may have changed, the
+        /// monitor may have dropped out of the list, and the reference would be left dangling.
         /// </summary>
         private bool EnsureSelection()
         {
@@ -78,7 +78,7 @@ namespace DIIISPL
             bool changed = EnsureSelection();
             if (Layout == null) { if (changed) Raise(SelectionChanged); return; }
 
-            // Полоса разрывается подписью: два отрезка по бокам и текст между ними.
+            // The strip is broken by a caption: two segments at the sides and the text between them.
             foreach (Border line in new[] { _dockLineLeft, _dockLineRight })
             {
                 line.Height = 1;
@@ -98,8 +98,8 @@ namespace DIIISPL
             }
             Relayout();
 
-            // После перестройки, а не до: обработчик пойдёт читать свойства
-            // выбранного, и карточки к тому времени должны стоять на местах.
+            // After the rebuild, not before: the handler will go read the properties of
+            // the selected one, and the cards must already be in place by then.
             if (changed) Raise(SelectionChanged);
         }
 
@@ -166,8 +166,8 @@ namespace DIIISPL
             if (d.Enabled && d.Primary) badges.Children.Add(Badge(Text.BadgePrimary, true));
             if (d.Enabled && d.CloneGroup >= 0) badges.Children.Add(Badge(Text.BadgeClone, false));
             if (d.Enabled && d.Hdr == 1 && d.CloneGroup < 0) badges.Children.Add(Badge("HDR", false));
-            // Метки «нет сигнала» здесь нет: строкой выше уже написано «не подключён»,
-            // и повторять то же самое другими словами в одной карточке незачем.
+            // No "no signal" label here: the line above already says "not connected",
+            // and repeating the same thing in other words in one card is pointless.
 
             card.Background = (Brush)FindResource(d.Enabled ? "Screen" : "ScreenOff");
             card.Opacity = d.Enabled ? 1.0 : 0.55;
@@ -190,7 +190,7 @@ namespace DIIISPL
             return b;
         }
 
-        /// <summary>Пересчитать масштаб и разложить карточки.</summary>
+        /// <summary>Recompute the scale and lay out the cards.</summary>
         public void Relayout()
         {
             if (Layout == null || Layout.Displays.Count == 0) return;
@@ -227,14 +227,14 @@ namespace DIIISPL
                 _offY = pad + (areaH - pad * 2 - h * _scale) / 2 - minY * _scale;
             }
 
-            // Выключенные складываем в отдельный ряд внизу — иначе они прячутся под
-            // включёнными. Ряд по центру, над ним черта и заголовок: так видно, что это
-            // не часть раскладки, а запас.
+            // Disabled ones go in a separate row at the bottom — otherwise they hide under
+            // the enabled ones. The row is centred, with a line and a heading above it: so it is clear that this is
+            // not part of the layout but a reserve.
             _dockSlots.Clear();
             double y = ActualHeight - DockHeight - 14;
             _dockTop = y - 44;
 
-            // Подпись посередине, полоса — двумя отрезками по её краям.
+            // The caption in the middle, the strip as two segments at its edges.
             _dockLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             double textW = _dockLabel.DesiredSize.Width;
             double textH = _dockLabel.DesiredSize.Height;
@@ -275,7 +275,7 @@ namespace DIIISPL
         private readonly Border _dockLineLeft = new Border();
         private readonly Border _dockLineRight = new Border();
 
-        /// <summary>Обновить позиции и оформление без пересоздания.</summary>
+        /// <summary>Update positions and styling without recreating.</summary>
         public void Refresh()
         {
             if (Layout == null) return;
@@ -308,7 +308,7 @@ namespace DIIISPL
             }
         }
 
-        /// <summary>Клоны рисуем стопкой со сдвигом, чтобы было видно, что их несколько.</summary>
+        /// <summary>Clones are drawn as an offset stack, so it is visible that there are several.</summary>
         private double CloneOffset(LayoutDisplay d)
         {
             int index = 0;
@@ -320,7 +320,7 @@ namespace DIIISPL
             return index * 10;
         }
 
-        // ---------------- перетаскивание ----------------
+        // ---------------- dragging ----------------
         private void CardMouseDown(object sender, MouseButtonEventArgs e)
         {
             var card = (Border)sender;
@@ -357,8 +357,8 @@ namespace DIIISPL
             if (!_moved && Math.Abs(p.X - _dragStart.X) < 3 && Math.Abs(p.Y - _dragStart.Y) < 3) return;
             _moved = true;
 
-            // Монитор из нижнего ряда просто едет за курсором: в раскладке его ещё нет,
-            // и пересчитывать координаты рабочего стола пока не из чего.
+            // A monitor from the bottom row simply follows the cursor: it is not in the layout yet,
+            // and there is nothing yet to recompute desktop coordinates from.
             if (_fromDock)
             {
                 Border dragged = (Border)sender;
@@ -395,8 +395,8 @@ namespace DIIISPL
                 Point p = e.GetPosition(this);
                 if (p.Y < _dockTop)
                 {
-                    // Бросили выше черты — монитор входит в раскладку. Ставим его туда,
-                    // куда бросили, и подтягиваем к краям соседей, как при обычном перетаскивании.
+                    // Dropped above the line — the monitor enters the layout. We put it where
+                    // it was dropped and pull it to the neighbours' edges, as in ordinary dragging.
                     var d = _drag;
                     int nx = (int)Math.Round((p.X - _grab.X - _offX) / _scale);
                     int ny = (int)Math.Round((p.Y - _grab.Y - _offY) / _scale);
@@ -408,7 +408,7 @@ namespace DIIISPL
                     Raise(DropRequested);
                     return;
                 }
-                Relayout();     // бросили в том же ряду — карточка возвращается на место
+                Relayout();     // dropped in the same row — the card returns to its place
             }
             else if (_drag != null && _moved)
             {
@@ -421,7 +421,7 @@ namespace DIIISPL
             _fromDock = false;
         }
 
-        /// <summary>Прилипание к краям соседей — как в параметрах экрана Windows, только честнее.</summary>
+        /// <summary>Snapping to neighbours' edges — like Windows display settings, only fairer.</summary>
         private void Snap(LayoutDisplay d, ref int nx, ref int ny)
         {
             double threshold = 18 / Math.Max(_scale, 0.0001);
@@ -434,11 +434,11 @@ namespace DIIISPL
                 if (MovesWith(d, o) || !o.Enabled) continue;
                 int ox = o.X, oy = o.Y, ow = o.DesktopWidth, oh = o.DesktopHeight;
 
-                TrySnap(ref bestX, ref snapX, nx, ox + ow, threshold);      // справа от соседа
-                TrySnap(ref bestX, ref snapX, nx, ox - w, threshold);       // слева от соседа
-                TrySnap(ref bestX, ref snapX, nx, ox, threshold);           // выравнивание по левому краю
-                TrySnap(ref bestX, ref snapX, nx, ox + ow - w, threshold);  // по правому краю
-                TrySnap(ref bestX, ref snapX, nx, ox + (ow - w) / 2, threshold); // по центру
+                TrySnap(ref bestX, ref snapX, nx, ox + ow, threshold);      // right of the neighbour
+                TrySnap(ref bestX, ref snapX, nx, ox - w, threshold);       // left of the neighbour
+                TrySnap(ref bestX, ref snapX, nx, ox, threshold);           // left-edge alignment
+                TrySnap(ref bestX, ref snapX, nx, ox + ow - w, threshold);  // right-edge alignment
+                TrySnap(ref bestX, ref snapX, nx, ox + (ow - w) / 2, threshold); // centre alignment
 
                 TrySnap(ref bestY, ref snapY, ny, oy + oh, threshold);
                 TrySnap(ref bestY, ref snapY, ny, oy - h, threshold);
@@ -455,7 +455,7 @@ namespace DIIISPL
             if (dist <= threshold && dist < best) { best = dist; result = candidate; }
         }
 
-        /// <summary>Основной монитор всегда в (0,0) — этого требует Windows.</summary>
+        /// <summary>The primary monitor is always at (0,0) — Windows requires it.</summary>
         public void Normalize()
         {
             if (Layout == null) return;
@@ -470,7 +470,7 @@ namespace DIIISPL
             foreach (var d in Layout.Displays) { d.X += dx; d.Y += dy; }
         }
 
-        /// <summary>Проверка на разрывы: рабочий стол должен быть единым.</summary>
+        /// <summary>Gap check: the desktop must be contiguous.</summary>
         public string Validate()
         {
             var enabled = new List<LayoutDisplay>();
@@ -503,15 +503,15 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Налезают ли мониторы друг на друга. Единственное, чего Windows точно
-        /// не примет: она расставит экраны по-своему, а профиль останется с
-        /// невозможными координатами — и точка «применён сейчас» у него не
-        /// загорится никогда.
+        /// Whether monitors overlap each other. The one thing Windows definitely
+        /// will not accept: it would arrange the screens its own way, and the profile would stay with
+        /// impossible coordinates — and its "applied now" dot would
+        /// never light up.
         ///
-        /// Проверялось это только при включении монитора переключателем, а
-        /// перетаскивание мышью проходило мимо. Отдельно от Validate — потому
-        /// что применение на этом надо останавливать, а на разрыве между
-        /// мониторами не надо: разрыв Windows закрывает сама.
+        /// This was checked only when a monitor was enabled with the switch, and
+        /// dragging with the mouse bypassed it. Separate from Validate — because
+        /// applying must stop on this, but must not on a gap between
+        /// monitors: Windows closes a gap by itself.
         /// </summary>
         public string OverlapProblem()
         {
@@ -525,7 +525,7 @@ namespace DIIISPL
             int bx1 = b.X, by1 = b.Y, bx2 = b.X + b.DesktopWidth, by2 = b.Y + b.DesktopHeight;
             bool overlapX = ax1 < bx2 && bx1 < ax2;
             bool overlapY = ay1 < by2 && by1 < ay2;
-            if (overlapX && overlapY) return true;                 // перекрываются
+            if (overlapX && overlapY) return true;                 // overlapping
             if (overlapX && (ay2 == by1 || by2 == ay1)) return true;
             if (overlapY && (ax2 == bx1 || bx2 == ax1)) return true;
             return false;

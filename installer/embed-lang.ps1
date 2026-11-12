@@ -1,22 +1,22 @@
-﻿# DIIISPL — менеджер раскладок мониторов для Windows.
+﻿# DIIISPL — monitor layout manager for Windows.
 # Copyright (C) 2026 r.strlnkv
-# Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+# Free software under the GNU General Public License v3 or later; see LICENSE.
 #
-# Положить перевод внутрь пакета.
+# Put a translation inside the package.
 #
-# Языков у установщика может быть сколько угодно, а файл для скачивания должен
-# остаться один: два файла на выбор — это вопрос там, где его быть не должно.
-# Windows Installer умеет хранить переводы внутри пакета отдельными потоками,
-# по потоку на язык; имя потока — числовой код языка, и по нему же перевод
-# выбирается при установке.
+# The installer can have any number of languages, but the file to download must
+# stay single: two files to choose from is a question where there should be none.
+# Windows Installer can keep translations inside the package as separate streams,
+# one stream per language; the stream name is the numeric language code, and the translation
+# is picked by it at install time.
 #
-# То же самое делает WiSubStg.vbs из Windows SDK. Своя копия здесь потому, что
-# путь к SDK на сборщике зависит от его версии, а ошибка «нет такого файла»
-# всплыла бы только в день выпуска.
+# WiSubStg.vbs from the Windows SDK does the same. This is our own copy because
+# the SDK path on the build server depends on its version, and a "no such file" error
+# would only surface on release day.
 
 param(
   [Parameter(Mandatory = $true)][string]$Msi,
-  # Пары «код языка = файл перевода», например 1049=obj\ru-ru.mst
+  # Pairs "language code = translation file", for example 1049=obj\ru-ru.mst
   [Parameter(Mandatory = $true)][string[]]$Transform
 )
 
@@ -24,7 +24,7 @@ $ErrorActionPreference = 'Stop'
 
 $installer = New-Object -ComObject WindowsInstaller.Installer
 
-# msiOpenDatabaseModeTransact = 1: правки видны только после Commit.
+# msiOpenDatabaseModeTransact = 1: changes are visible only after Commit.
 $db = $installer.GetType().InvokeMember(
   'OpenDatabase', 'InvokeMethod', $null, $installer, @($Msi, 1))
 
@@ -35,10 +35,10 @@ try {
 
   foreach ($pair in $Transform) {
     $eq = $pair.IndexOf('=')
-    if ($eq -lt 1) { throw "Нужна пара «код=файл», а не «$pair»." }
+    if ($eq -lt 1) { throw "Expected a code=file pair, not '$pair'." }
     $name = $pair.Substring(0, $eq).Trim()
     $file = $pair.Substring($eq + 1).Trim()
-    if (-not (Test-Path $file)) { throw "Нет файла перевода: $file" }
+    if (-not (Test-Path $file)) { throw "Translation file not found: $file" }
     $file = (Resolve-Path $file).Path
 
     $rec = $installer.GetType().InvokeMember(
@@ -46,18 +46,18 @@ try {
     $rec.GetType().InvokeMember('StringData', 'SetProperty', $null, $rec, @(1, $name))
     $rec.GetType().InvokeMember('SetStream', 'InvokeMethod', $null, $rec, @(2, $file))
 
-    # msiViewModifyAssign = 3: заменить строку с таким именем или добавить новую.
-    # Пересборка пакета не должна плодить потоки-двойники.
+    # msiViewModifyAssign = 3: replace the row with this name or add a new one.
+    # Rebuilding the package must not breed duplicate streams.
     $view.GetType().InvokeMember('Modify', 'InvokeMethod', $null, $view, @(3, $rec))
-    Write-Host ("  перевод {0} — внутри пакета" -f $name)
+    Write-Host ("  translation {0} is inside the package" -f $name)
   }
 
   $view.GetType().InvokeMember('Close', 'InvokeMethod', $null, $view, $null)
 
-  # Список языков пакета. Пока в нём один код, потоки с переводами лежат внутри
-  # мёртвым грузом: Windows Installer ищет перевод только среди объявленных
-  # языков. Собирается пакет по-прежнему одноязычным — иначе проверки при сборке
-  # требуют переводов, которых на тот момент ещё нет.
+  # The package language list. While it holds one code, the translation streams lie inside
+  # as dead weight: Windows Installer looks for a translation only among the declared
+  # languages. The package is still built single-language, otherwise the build-time checks
+  # demand translations that do not exist yet.
   $si = $db.GetType().InvokeMember('SummaryInformation', 'GetProperty', $null, $db, @(1))
   $template = $si.GetType().InvokeMember('Property', 'GetProperty', $null, $si, @(7))
 
@@ -75,15 +75,15 @@ try {
   $updated = $platform + ';' + ($langs -join ',')
   $si.GetType().InvokeMember('Property', 'SetProperty', $null, $si, @(7, $updated))
   $si.GetType().InvokeMember('Persist', 'InvokeMethod', $null, $si, $null)
-  Write-Host ("  языки пакета: {0}" -f $updated)
+  Write-Host ("  package languages: {0}" -f $updated)
 
   $db.GetType().InvokeMember('Commit', 'InvokeMethod', $null, $db, $null)
 }
 finally {
   [Runtime.InteropServices.Marshal]::ReleaseComObject($db) | Out-Null
   [Runtime.InteropServices.Marshal]::ReleaseComObject($installer) | Out-Null
-  # Пакет остаётся открытым, пока сборщик мусора не доберётся до COM-объектов,
-  # а следующим шагом его подписывают — и подпись упирается в занятый файл.
+  # The package stays open until the garbage collector gets to the COM objects,
+  # and the next step signs it, so the signature hits a locked file.
   [GC]::Collect()
   [GC]::WaitForPendingFinalizers()
 }

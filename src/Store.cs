@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — a monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -12,7 +12,7 @@ namespace DIIISPL
     {
         public const string AppFolder = "DIIISPL";
 
-        /// <summary>Как программа называлась раньше — оттуда переносятся профили.</summary>
+        /// <summary>What the program was called before — profiles are migrated from there.</summary>
         private const string OldAppFolder = "DIIIX";
 
         private static bool _adoptTried;
@@ -25,11 +25,11 @@ namespace DIIISPL
                 string d = Path.Combine(root, AppFolder);
                 if (!Directory.Exists(d)) Directory.CreateDirectory(d);
 
-                // Перенос пробуем раз за запуск, а не «один раз в жизни». Прежде
-                // признаком служило отсутствие новой папки — а её создавали строкой
-                // выше, до переноса: одна занятая копия обрывала цикл, и повторить
-                // было уже нечем. Измерено: из четырёх профилей переносился один,
-                // и второй запуск ничего не добавлял.
+                // The migration is tried once per launch, not "once in a lifetime". It used to
+                // be keyed on the absence of the new folder — yet that was created by the line
+                // above, before the migration: one busy copy broke the loop, and there was
+                // nothing left to retry with. Measured: of four profiles one was migrated,
+                // and a second launch added nothing.
                 if (!_adoptTried)
                 {
                     _adoptTried = true;
@@ -40,9 +40,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Забрать профили из папки прежнего имени. Копируем, а не переносим: если что-то
-        /// пойдёт не так, прежние файлы останутся на месте, и терять будет нечего.
-        /// Делается один раз — как только в новой папке появился первый профиль.
+        /// Take the profiles from the folder with the former name. We copy rather than move: if something
+        /// goes wrong, the former files stay in place and there is nothing to lose.
+        /// Done once — as soon as the first profile appears in the new folder.
         /// </summary>
         private static void AdoptOldFolder(string from, string to)
         {
@@ -50,7 +50,7 @@ namespace DIIISPL
             {
                 if (!Directory.Exists(from)) return;
 
-                // Уже перенесли — второй раз незачем.
+                // Already migrated — no need a second time.
                 string here = Path.Combine(to, "profiles");
                 if (Directory.Exists(here) && Directory.GetFiles(here, "*.layout").Length > 0) return;
 
@@ -60,21 +60,21 @@ namespace DIIISPL
                     if (!Directory.Exists(target)) Directory.CreateDirectory(target);
                     foreach (string file in Directory.GetFiles(dir))
                     {
-                        // Перехват вокруг каждого файла, а не вокруг всего переноса:
-                        // один занятый файл не должен уносить с собой остальные.
+                        // Catch around each file, not around the whole migration:
+                        // one busy file must not take the rest down with it.
                         try { File.Copy(file, Path.Combine(target, Path.GetFileName(file)), true); }
                         catch { }
                     }
                 }
                 foreach (string file in Directory.GetFiles(from))
                 {
-                    // журнал ошибок прежней версии переносить незачем
+                    // no need to migrate the previous version's error log
                     if (string.Equals(Path.GetFileName(file), "error.log", StringComparison.OrdinalIgnoreCase)) continue;
                     try { File.Copy(file, Path.Combine(to, Path.GetFileName(file)), true); }
                     catch { }
                 }
             }
-            catch { /* не смогли — прежние файлы остались на месте, вернуть их можно руками */ }
+            catch { /* could not — the former files stayed in place, they can be restored by hand */ }
         }
 
         public static string ProfilesDir
@@ -98,13 +98,13 @@ namespace DIIISPL
             string s = new string(chars).Trim();
             if (s.Length == 0) return "profile";
 
-            // Имена устройств DOS уводим в сторону — но не потому, что «CON.layout»
-            // создать нельзя: измерено, что можно. Windows 11 отдаёт такой файл как
-            // обычный, он читается и попадает в перечисление. Причина проще: этих
-            // имён избегает почти всё, что работает с файлами, — архиваторы,
-            // облачные папки, старые утилиты, — и профиль с именем «CON» рискует
-            // не пережить копирования на другую машину. Имя профиля внутри файла
-            // при этом остаётся тем, которое выбрал человек.
+            // DOS device names are steered aside — but not because "CON.layout"
+            // cannot be created: measured, it can. Windows 11 serves such a file as
+            // an ordinary one, it reads and shows up in enumeration. The reason is simpler: almost
+            // everything that works with files avoids these names — archivers,
+            // cloud folders, old utilities — and a profile named "CON" risks
+            // not surviving a copy to another machine. The profile name inside the file
+            // stays what the person chose.
             if (IsReservedName(s)) return "_" + s;
             return s;
         }
@@ -124,11 +124,11 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Занято ли имя другим профилем. Возвращает его имя или null.
+        /// Whether the name is taken by another profile. Returns its name or null.
         ///
-        /// Сравниваем не только имена, но и файлы, в которые они лягут: «Дом/Работа»
-        /// и «Дом_Работа» — разные имена и один и тот же «Дом_Работа.layout».
-        /// Сохранение второго молча затирало первый.
+        /// We compare not only names but the files they would land in: "Home/Work"
+        /// and "Home_Work" are different names and one and the same "Home_Work.layout".
+        /// Saving the second silently overwrote the first.
         /// </summary>
         public static string NameInUse(string name, string exceptName)
         {
@@ -147,11 +147,11 @@ namespace DIIISPL
                 if (string.Equals(Sanitize(l.Name), file, StringComparison.OrdinalIgnoreCase)) return l.Name;
             }
 
-            // Имя внутри файла и имя самого файла — разные вещи, и профили задуманы
-            // переносимыми: файл могли скопировать руками, и тогда «Дом.layout»
-            // содержит имя «Работа». Сверка только по именам изнутри этого не видит,
-            // а Save всё равно ляжет в «Дом.layout» и затрёт его. Поэтому спрашиваем
-            // и сам каталог.
+            // The name inside the file and the name of the file itself are different things, and profiles are meant
+            // to be portable: the file may have been copied by hand, and then "Home.layout"
+            // holds the name "Work". Checking only by names from inside does not see this,
+            // while Save will still land in "Home.layout" and overwrite it. So we ask
+            // the directory too.
             try
             {
                 string target = PathFor(name);
@@ -162,7 +162,7 @@ namespace DIIISPL
                         return Path.GetFileNameWithoutExtension(target);
                 }
             }
-            catch { /* каталог недоступен — тогда и столкновения не проверить */ }
+            catch { /* directory unavailable — then collisions cannot be checked either */ }
             return null;
         }
 
@@ -172,9 +172,9 @@ namespace DIIISPL
             foreach (string f in Directory.GetFiles(ProfilesDir, "*.layout"))
             {
                 try { list.Add(Layout.Load(f)); }
-                catch { /* битый файл просто не показываем */ }
+                catch { /* a broken file is simply not shown */ }
             }
-            // порядок задаёт пользователь; профили без порядка (старые файлы) идут следом по алфавиту
+            // the order is set by the user; profiles without an order (old files) follow alphabetically
             list.Sort(delegate(Layout a, Layout b)
             {
                 if (a.Order != b.Order) return a.Order.CompareTo(b.Order);
@@ -183,7 +183,7 @@ namespace DIIISPL
             return list;
         }
 
-        /// <summary>Пронумеровать профили по текущему положению в списке и записать на диск.</summary>
+        /// <summary>Number the profiles by their current position in the list and write to disk.</summary>
         public static void SaveOrder(List<Layout> ordered)
         {
             for (int i = 0; i < ordered.Count; i++)
@@ -202,11 +202,11 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Записать профиль туда, откуда он прочитан. Прежде путь всегда считался
-        /// из имени — и профиль, пришедший из файла с другим именем внутри, при
-        /// первом же «Сохранить» уезжал в новый файл: старый оставался двойником
-        /// со старой раскладкой, а если файл нового имени был занят чужим
-        /// профилем, тот затирался целиком.
+        /// Write the profile to where it was read from. It used to always compute the path
+        /// from the name — and a profile that came from a file with a different name inside, on
+        /// the very first "Save" moved to a new file: the old one stayed as a twin
+        /// with the old layout, and if the file of the new name was taken by someone else's
+        /// profile, that one was overwritten entirely.
         /// </summary>
         public static void Save(Layout layout)
         {
@@ -216,10 +216,10 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Убрать профиль. Путь берём тот, из которого он прочитан, а не тот, что
-        /// следует из имени: имя внутри файла и имя самого файла могут разойтись,
-        /// и тогда удаление по имени било мимо — сносило чужого тёзку, а выбранный
-        /// оставляло на месте. Мимо корзины, вернуть нечего.
+        /// Remove the profile. We take the path it was read from, not the one that
+        /// follows from the name: the name inside the file and the file's own name may diverge,
+        /// and then deletion by name missed — it removed a namesake and left the chosen
+        /// one in place. Bypasses the recycle bin, nothing to bring back.
         /// </summary>
         public static void Delete(Layout layout)
         {
@@ -228,40 +228,40 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Записать профиль, а прежний файл убрать — но только после того, как
-        /// новый лёг на диск.
+        /// Write the profile and remove the former file — but only after the
+        /// new one has landed on disk.
         ///
-        /// Прежде порядок был обратным: сначала `File.Delete`, потом `Save`. Если
-        /// запись не удавалась — а не удаться ей есть от чего: слишком длинное
-        /// имя перебирает предел пути в 260 знаков, кончилось место, файл занят —
-        /// от профиля не оставалось ни нового, ни старого. Пропадала вся
-        /// раскладка целиком, вместе с сочетанием клавиш.
+        /// The order used to be the reverse: `File.Delete` first, then `Save`. If
+        /// the write failed — and there is plenty to fail it: a too long
+        /// name exceeds the 260-character path limit, out of space, file busy —
+        /// the profile was left with neither new nor old. The whole layout
+        /// vanished, along with the key combination.
         /// </summary>
         public static void Rename(string oldName, Layout layout)
         {
-            // Имя не менялось — это обычное сохранение, и уезжать из своего файла
-            // профилю незачем.
+            // The name did not change — this is an ordinary save, and the profile has
+            // no reason to move out of its file.
             if (string.Equals(oldName, layout.Name, StringComparison.Ordinal)) { Save(layout); return; }
 
             string oldPath = !string.IsNullOrEmpty(layout.SourcePath) ? layout.SourcePath : PathFor(oldName);
             string newPath = PathFor(layout.Name);
 
-            // Новое имя дало тот же файл — переносить нечего.
+            // The new name gave the same file — nothing to move.
             if (string.Equals(oldPath, newPath, StringComparison.OrdinalIgnoreCase)) { Save(layout); return; }
 
-            // Сначала пишем новый файл, потом убираем старый: обратный порядок
-            // на неудачной записи не оставлял ни того, ни другого.
+            // First write the new file, then remove the old: the reverse order
+            // on a failed write left neither of them.
             layout.SourcePath = newPath;
             layout.Save(newPath);
 
             try { if (File.Exists(oldPath)) File.Delete(oldPath); }
-            catch { /* не удалился — останется лишний файл, но профиль цел */ }
+            catch { /* not deleted — a stray file stays, but the profile is intact */ }
         }
 
         public static string UniqueName(string baseName)
         {
-            // Список читаем один раз: перебор ста имён со чтением всех файлов на
-            // каждом шаге — это сотня обходов папки ради одного нового профиля.
+            // The list is read once: going through a hundred names, reading all the files at
+            // each step — is a hundred folder walks for one new profile.
             var all = LoadAll();
             if (NameInUse(all, baseName, null) == null) return baseName;
             for (int i = 2; i < 100; i++)

@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -25,10 +25,10 @@ namespace DIIISPL
     {
         public event Action ProfilesChanged;
 
-        /// <summary>Сказать то, что не поместилось бы в спрятанное окно. Слушает трей.</summary>
+        /// <summary>Say what would not fit in a hidden window. The tray listens.</summary>
         public event Action<string, bool> ApplyReported;
 
-        /// <summary>Окно ушло в трей. Слушает трей — ему есть чем об этом сказать.</summary>
+        /// <summary>The window went to the tray. The tray listens — it has something to say about it.</summary>
         public event Action HiddenToTray;
 
         private readonly ListBox _profileList = new ListBox();
@@ -38,12 +38,12 @@ namespace DIIISPL
         private readonly Button _hotkeyButton = new Button();
         private Button _moreButton;
 #if DEV
-        private readonly Button _taskbarButton = new Button();   // только в сборках Dev
-        // Экран с полосой у нижнего края — это и есть панель задач. Прежде
-        // здесь стоял «TVMonitor»: монитор на подставке, в программе, где
-        // монитор значит монитор.
+        private readonly Button _taskbarButton = new Button();   // Dev builds only
+        // The screen with a strip at its bottom edge is the taskbar. This used to be
+        // "TVMonitor" here: a monitor on a stand, in a program where
+        // a monitor means a monitor.
         private const string TaskbarGlyph = "\uE90E";
-        // Шапка и ряд кнопок — чтобы померить, помещается ли подпись словами.
+        // Header and button row — to measure whether the caption fits in words.
         private Grid _headerGrid;
         private StackPanel _headerActions;
 #endif
@@ -92,15 +92,15 @@ namespace DIIISPL
             Content = BuildUi();
 
 #if DEV
-            // Ширина окна решает, словами подписана кнопка панели задач или числом.
+            // The window width decides whether the taskbar button is captioned in words or with a number.
             SizeChanged += delegate { UpdateTaskbarButton(); };
 #endif
 
             SourceInitialized += delegate { Fluent.ApplyWindowStyling(this); };
             PreviewKeyDown += OnPreviewKeyDown;
 
-            // Ушли из окна — вышли и из захвата сочетания: иначе окно остаётся
-            // глухим к клавиатуре, а вернувшись, человек об этом не знает.
+            // Leaving the window also leaves shortcut capture: otherwise the window stays
+            // deaf to the keyboard, and on returning the person does not know it.
             Deactivated += delegate
             {
                 if (!_capturingHotkey) return;
@@ -110,25 +110,25 @@ namespace DIIISPL
             };
             Closing += delegate(object s, System.ComponentModel.CancelEventArgs e)
             {
-                e.Cancel = true;                  // окно не закрывается, а прячется в трей
+                e.Cancel = true;                  // the window is not closed but hidden in the tray
 
-                // Набранное имя принимаем, а не выбрасываем: человек его набрал,
-                // и молча терять это при закрытии окна не за что. Делаем до
-                // вопроса о сохранении — иначе имя в него не попадёт.
+                // We accept the typed name rather than throw it away: the person typed it,
+                // and silently losing it on window close is not justified. Done before
+                // the save question — otherwise the name would not make it into it.
                 if (_renaming) CommitRename(true, true);
                 if (_dirty && !AskToSave()) return;
 
-                // Незавершённые режимы окно с собой в трей не уносит: иначе при
-                // следующем открытии поверх заголовка висит поле ввода со старым
-                // именем или окно молча ждёт нажатия клавиши для сочетания.
+                // Unfinished modes are not carried into the tray with the window: otherwise on
+                // the next open an input box with the old name hangs over the title,
+                // or the window silently waits for a key press for a shortcut.
                 CancelRename();
                 _capturingHotkey = false;
                 Hide();
 
-                // Крестик прячет окно, а не закрывает программу. Молча это читается
-                // как «закрыл»: дальше человек либо удивляется, что «закрытая»
-                // программа переключает экраны, либо ищет выход и не находит —
-                // «Выход» есть только в меню значка, о котором ещё надо догадаться.
+                // The cross hides the window rather than closing the program. Silently, this reads
+                // as "closed": then the person either wonders why a "closed"
+                // program switches screens, or looks for the exit and cannot find it —
+                // "Exit" is only in the icon menu, which one still has to guess exists.
                 Raise(HiddenToTray);
             };
 
@@ -155,18 +155,18 @@ namespace DIIISPL
             Grid.SetColumn(main, 1);
             body.Children.Add(main);
 
-            // Полоса внизу появляется, только когда есть что сказать, — иначе внизу окна
-            // оставалась бы пустая ступенька.
+            // The bottom strip appears only when there is something to say — otherwise the bottom of the window
+            // would keep an empty step.
             _statusBar.Padding = new Thickness(20, 8, 20, 12);
             _statusBar.Visibility = Visibility.Collapsed;
             _status.Style = (Style)Application.Current.Resources["Caption"];
-            // Перенос, а не многоточие: после применения сюда попадают все
-            // предупреждения разом, и в одну строку они не помещались — человек
-            // видел «Раскладка применена» и обрезанное начало того, что пошло не
-            // так. Читать их негде: подсказки и прокрутки у полосы нет.
+            // Wrapping, not an ellipsis: after applying, all the
+            // warnings land here at once and did not fit in one line — the person
+            // saw "Layout applied" and the truncated start of whatever went
+            // wrong. There is nowhere to read them: the strip has no tooltip or scrolling.
             _status.TextWrapping = TextWrapping.Wrap;
-            // Выше четырёх строк полоса не растёт, а всё, что не поместилось,
-            // лежит в подсказке: обрезать молча — то же многоточие, только хуже.
+            // The strip does not grow above four lines, and whatever does not fit
+            // goes into the tooltip: truncating silently is the same ellipsis, only worse.
             _status.MaxHeight = 72;
             _statusBar.Child = _status;
             Grid.SetRow(_statusBar, 1);
@@ -179,13 +179,13 @@ namespace DIIISPL
         {
             var panel = new Grid();
             panel.Margin = new Thickness(12, 8, 6, 12);
-            panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });   // название
-            panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });   // шапка списка
-            panel.RowDefinitions.Add(new RowDefinition());                              // список
-            panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });   // «О программе»
+            panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });   // title
+            panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });   // list header
+            panel.RowDefinitions.Add(new RowDefinition());                              // list
+            panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });   // "About"
 
-            // Название программы над списком — как в окне MagicKeys: сначала кто это,
-            // потом уже содержимое.
+            // The program name above the list — as in the MagicKeys window: first who this is,
+            // then the content.
             var top = new StackPanel();
             top.Margin = new Thickness(10, 6, 10, 14);
 
@@ -202,12 +202,12 @@ namespace DIIISPL
 
             panel.Children.Add(top);
 
-            // Создание профиля и действия над ним — в шапке списка, рядом с его
-            // заголовком: они относятся к списку, а не к окну целиком.
+            // Profile creation and actions on it are in the list header, next to its
+            // title: they belong to the list, not to the window as a whole.
             //
-            // Шапка лежит отдельным рядом сетки, а не внутри блока с названием: у того
-            // свой отступ справа, и кнопки оказывались левее правого края списка.
-            // Здесь правый край общий со строками списка, и всё стоит по одной линии.
+            // The header is a separate grid row, not inside the title block: that one
+            // has its own right margin, and the buttons ended up left of the list's right edge.
+            // Here the right edge is shared with the list rows, and everything stands on one line.
             var headerRow = new Grid();
             headerRow.Margin = new Thickness(10, 0, 0, 6);
             Grid.SetRow(headerRow, 1);
@@ -229,9 +229,9 @@ namespace DIIISPL
             headerButtons.Children.Add(newButton);
 
             var moreButton = SmallButton("···", Text.ProfileActionsTip);
-            // Без профиля эта кнопка и «Сочетание клавиш» на нажатие не отвечали
-            // ничем: ни действия, ни объяснения. Соседние «Сохранить» и «Применить»
-            // в этом состоянии честно погашены — образец уже был.
+            // Without a profile this button and "Shortcut" answered a press with
+            // nothing: no action, no explanation. The neighbouring "Save" and "Apply"
+            // are honestly greyed out in this state — there was a model already.
             moreButton.IsEnabled = false;
             _moreButton = moreButton;
             moreButton.Margin = new Thickness(2, 0, 0, 0);
@@ -263,9 +263,9 @@ namespace DIIISPL
             Grid.SetRow(_profileList, 2);
             panel.Children.Add(_profileList);
 
-            // «О программе» — строкой того же вида, что и профили выше: в MagicKeys
-            // это такой же пункт списка, и глазу привычнее видеть здесь строку, а не
-            // кнопку другой формы.
+            // "About" — a row of the same kind as the profiles above: in MagicKeys
+            // it is the same kind of list item, and the eye is more used to seeing a row here than a
+            // button of another shape.
             var about = new Button();
             about.Style = (Style)Application.Current.Resources["BtnSubtle"];
             about.Content = Text.About;
@@ -281,7 +281,7 @@ namespace DIIISPL
             return panel;
         }
 
-        /// <summary>Квадратная кнопка на одну-две буквы — для шапки списка.</summary>
+        /// <summary>A square button for one or two letters — for the list header.</summary>
         private static Button SmallButton(string caption, string tip)
         {
             var b = new Button();
@@ -321,7 +321,7 @@ namespace DIIISPL
             grid.RowDefinitions.Add(new RowDefinition());
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-            // --- шапка ---
+            // --- header ---
             var header = new Grid();
             header.Margin = new Thickness(4, 0, 0, 14);
             header.ColumnDefinitions.Add(new ColumnDefinition());
@@ -330,8 +330,8 @@ namespace DIIISPL
             _headerGrid = header;
 #endif
 
-            // Название по умолчанию — обычный заголовок. Правка включается двойным щелчком,
-            // клавишей F2 или пунктом «Переименовать» в списке слева.
+            // By default the name is an ordinary heading. Editing is switched on by double-click,
+            // the F2 key or the "Rename" item in the list on the left.
             var nameStack = new Grid();
             nameStack.HorizontalAlignment = HorizontalAlignment.Left;
 
@@ -339,12 +339,12 @@ namespace DIIISPL
             _nameText.FontSize = 24;
             _nameText.VerticalAlignment = VerticalAlignment.Center;
             _nameText.Margin = new Thickness(2, 0, 0, 0);
-            // Сжиматься название должно сильнее, чем кажется разумным. Ряд кнопок
-            // справа растёт по своему содержимому, и при узком окне — особенно в
-            // сборках Dev, где кнопок на одну больше, — сумма перестаёт помещаться:
-            // раньше при 240 сетка вылезала за край и кнопки уезжали за границу
-            // окна. Название под многоточием читается хуже, но остаётся на месте
-            // и целиком видно в списке слева.
+            // The name must shrink more than seems reasonable. The button row
+            // on the right grows with its content, and in a narrow window — especially in
+            // Dev builds, which have one more button — the sum stops fitting:
+            // at 240 the grid used to stick out past the edge and the buttons went beyond the
+            // window border. A name under an ellipsis reads worse, but stays in place
+            // and is fully visible in the list on the left.
             _nameText.MinWidth = 120;
             _nameText.TextTrimming = TextTrimming.CharacterEllipsis;
             _nameText.Cursor = Cursors.IBeam;
@@ -360,7 +360,7 @@ namespace DIIISPL
             _nameBox.FontWeight = FontWeights.SemiBold;
             _nameBox.Height = 42;
             _nameBox.MinWidth = 320;
-            _nameBox.MaxLength = 80;      // длиннее — и путь к файлу перешагнёт предел в 260 знаков
+            _nameBox.MaxLength = 80;      // longer — and the file path would exceed the 260-character limit
             _nameBox.Visibility = Visibility.Collapsed;
             _nameBox.KeyDown += delegate(object s, KeyEventArgs e)
             {
@@ -370,8 +370,8 @@ namespace DIIISPL
             _nameBox.LostFocus += delegate { if (_renaming) CommitRename(true, true); };
             nameStack.Children.Add(_nameBox);
 
-            // Под названием — строка о том, что в профиле: сколько мониторов и какая
-            // клавиша. Так заголовок отвечает не только «что это», но и «что внутри».
+            // Under the name is a line about what is in the profile: how many monitors and which
+            // key. So the heading answers not only "what is this" but also "what is inside".
             var titleBlock = new StackPanel();
             titleBlock.VerticalAlignment = VerticalAlignment.Center;
             titleBlock.Children.Add(nameStack);
@@ -390,7 +390,7 @@ namespace DIIISPL
 #endif
 
 #if DEV
-            // вид панели задач — свойство профиля, а не монитора, поэтому здесь
+            // the taskbar look is a property of the profile, not of a monitor, so here
             _taskbarButton.Style = (Style)Application.Current.Resources["Btn"];
             _taskbarButton.Height = 42;
             _taskbarButton.Margin = new Thickness(0, 0, 8, 0);
@@ -420,7 +420,7 @@ namespace DIIISPL
             header.Children.Add(actions);
             grid.Children.Add(header);
 
-            // --- холст ---
+            // --- canvas ---
             var canvasCard = new Border();
             canvasCard.Style = (Style)Application.Current.Resources["Card"];
             canvasCard.Margin = new Thickness(4, 0, 0, 14);
@@ -435,7 +435,7 @@ namespace DIIISPL
             Grid.SetRow(canvasCard, 1);
             grid.Children.Add(canvasCard);
 
-            // --- свойства выбранного монитора ---
+            // --- properties of the selected monitor ---
             _propsPanel.Style = (Style)Application.Current.Resources["Card"];
             _propsPanel.Margin = new Thickness(4, 0, 0, 8);
             _propsPanel.Padding = new Thickness(18, 14, 18, 16);
@@ -447,19 +447,19 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Свойства выбранного монитора.
+        /// Properties of the selected monitor.
         ///
-        /// Поля не прибиты к сетке, а собираются под конкретный монитор: у выключенного
-        /// настраивать нечего, у выхода в дублировании HDR невозможен, а частоту
-        /// незачем спрашивать, если она у разрешения одна. Показывать всё всегда —
-        /// значит заставлять глазами отсеивать неприменимое.
+        /// The fields are not nailed to the grid but assembled for the particular monitor: a disabled one
+        /// has nothing to configure, a duplicated output cannot do HDR, and there is no
+        /// point asking for a refresh rate if the resolution has only one. Showing everything always
+        /// means making the eye filter out what does not apply.
         /// </summary>
         private UIElement BuildProperties()
         {
             var outer = new StackPanel();
 
-            // Название слева, «Основной» — справа в той же строке: это свойство самого
-            // монитора в раскладке, а не настройка режима, и рядом с именем ему уместнее.
+            // The name on the left, "Primary" on the right in the same row: it is a property of the
+            // monitor in the layout, not a mode setting, and fits better next to the name.
             var titleRow = new Grid();
             titleRow.Margin = new Thickness(0, 0, 0, 12);
             titleRow.ColumnDefinitions.Add(new ColumnDefinition());
@@ -544,14 +544,14 @@ namespace DIIISPL
             return sp;
         }
 
-        /// <summary>Оставить в строке свойств только то, что к этому монитору применимо.</summary>
+        /// <summary>Keep in the properties row only what applies to this monitor.</summary>
         private void ShowFields(params UIElement[] fields)
         {
             while (_fieldsRow.Children.Count > 1) _fieldsRow.Children.RemoveAt(1);
             foreach (UIElement f in fields) if (f != null) _fieldsRow.Children.Add(f);
         }
 
-        // ---------------------------------------------------------------- данные
+        // ---------------------------------------------------------------- data
         public void ReloadLive()
         {
             _live.Clear();
@@ -560,27 +560,27 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Перечитать список, оставшись на том же профиле и не тронув несохранённое.
+        /// Re-read the list, staying on the same profile and leaving unsaved changes alone.
         ///
-        /// Зовётся, когда список надо освежить не по просьбе человека: сменилась
-        /// картинка экранов, окно достали из трея. Прежде обе точки звали
-        /// `ReloadProfiles(null)`, а это значит «выбрать первый»: человек ничего
-        /// не делал, а выделение прыгало на чужой профиль. С несохранённой правкой
-        /// выходило хуже — на ровном месте появлялся вопрос «Сохранить правки?».
+        /// Called when the list must be refreshed not at the person's request: the
+        /// screen picture changed, the window was brought back from the tray. Both places used to call
+        /// `ReloadProfiles(null)`, which means "select the first": the person did
+        /// nothing, and the selection jumped to someone else's profile. With an unsaved edit
+        /// it was worse — a "Save changes?" question appeared out of nowhere.
         /// </summary>
         public void RefreshProfiles()
         {
-            // Пока идёт перестроение, список не трогаем вовсе: смену картинки
-            // экранов вызывает само перестроение, а перечитывание списка гасит
-            // и надпись «Перестраиваю экраны…», и признак занятости кнопки.
+            // While a rebuild is in progress, we do not touch the list at all: the screen picture change
+            // is caused by the rebuild itself, and re-reading the list wipes out
+            // both the "Rebuilding screens…" caption and the button's busy flag.
             if (ApplyBusy.Active) return;
 
             if (_dirty)
             {
-                // Несохранённое чужими руками не трогаем — но только несохранённое.
-                // Только что подключённый монитор попадает в раскладку лишь здесь,
-                // и без этого вызова он не появлялся ни в профиле, ни в нижнем ряду
-                // до перехода на другой профиль и обратно.
+                // We do not touch the unsaved by someone else's hands — but only the unsaved.
+                // A just-connected monitor gets into the layout only here,
+                // and without this call it appeared neither in the profile nor in the bottom row
+                // until switching to another profile and back.
                 if (_current != null)
                 {
                     SyncLayoutWithLive(_current);
@@ -643,7 +643,7 @@ namespace DIIISPL
                 name.TextTrimming = TextTrimming.CharacterEllipsis;
                 titleRow.Children.Add(name);
 
-                // действующая раскладка помечена точкой акцентного цвета справа от названия
+                // the active layout is marked with an accent-colour dot to the right of the name
                 var dot = new System.Windows.Shapes.Ellipse();
                 dot.Width = 7; dot.Height = 7;
                 dot.Margin = new Thickness(8, 1, 0, 0);
@@ -665,9 +665,9 @@ namespace DIIISPL
                     : (l.Hotkey + "   ·   " + Text.MonitorsCount(on));
                 sp.Children.Add(sub);
 
-                // Строки «применена сейчас» здесь нет намеренно: точка у названия
-                // говорит то же самое, а от неё строки списка перестают быть одной
-                // высоты и список начинает прыгать при переключении.
+                // There is deliberately no "applied now" row here: the dot by the name
+                // says the same thing, and with it the list rows stop being the same
+                // height and the list starts jumping on switching.
 
                 item.Content = sp;
                 item.ContextMenu = BuildProfileMenu(l);
@@ -678,16 +678,16 @@ namespace DIIISPL
             _updating = false;
         }
 
-        /// <summary>Правка списка профилей: переименовать, переставить, удалить.</summary>
+        /// <summary>Editing the profile list: rename, reorder, delete.</summary>
         private ContextMenu BuildProfileMenu(Layout layout)
         {
             var menu = new ContextMenu();
             menu.Style = (Style)Application.Current.Resources["FlyoutMenu"];
 
-            // Ответ SelectProfile читаем обязательно: если человек передумал в
-            // вопросе о несохранённом, перехода не было, и «текущий» — прежний
-            // профиль. Прежде пункт молча переименовывал и удалял не ту строку,
-            // по которой щёлкнули.
+            // The SelectProfile answer must be read: if the person changed their mind in
+            // the unsaved-changes question, there was no switch, and "current" is the previous
+            // profile. The item used to silently rename and delete not the row
+            // that was clicked.
             menu.Items.Add(MenuAction(Text.Rename, "F2", delegate
             {
                 if (!SelectProfile(layout)) return;
@@ -696,10 +696,10 @@ namespace DIIISPL
             menu.Items.Add(MenuAction(Text.MoveUp, "Alt+↑", delegate { MoveProfile(layout, -1); }));
             menu.Items.Add(MenuAction(Text.MoveDown, "Alt+↓", delegate { MoveProfile(layout, +1); }));
 
-            // Исключение из автоматики — тоже свойство профиля, поэтому живёт
-            // рядом с переименованием и порядком, а не в общих настройках.
-            // Галка ставится вручную, а не IsCheckable: щёлкнув, человек должен
-            // увидеть, что вышло, только после записи на диск.
+            // Exclusion from automation is also a profile property, so it lives
+            // next to rename and order, not in the general settings.
+            // The tick is set by hand, not via IsCheckable: after a click the person must
+            // see the result only after the write to disk.
             var pick = new MenuItem();
             pick.Style = (Style)Application.Current.Resources["FlyoutMenuItem"];
             pick.Header = Text.AutoPick;
@@ -720,11 +720,11 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Включить или исключить профиль из автоматического выбора.
+        /// Include or exclude a profile from automatic selection.
         ///
-        /// Пишем сразу на диск, как это делают сочетание клавиш и порядок:
-        /// решение принято щелчком, и держать его в памяти до «Сохранить»
-        /// значило бы потерять при закрытии окна.
+        /// Written to disk at once, as the shortcut and the order are:
+        /// the decision is made by a click, and keeping it in memory until "Save"
+        /// would mean losing it when the window closes.
         /// </summary>
         private void ToggleAutoPick(Layout layout)
         {
@@ -756,9 +756,9 @@ namespace DIIISPL
             Store.SaveOrder(_profiles);
             RefreshProfileList();
 
-            // Выделение остаётся на том профиле, который открыт, а не прыгает на
-            // переставленный. Прежде из меню чужой строки список подсвечивал одно,
-            // а заголовок, холст и «Сохранить» относились к другому.
+            // The selection stays on the profile that is open rather than jumping to the
+            // moved one. Before, from another row's menu the list highlighted one thing,
+            // while the header, canvas and "Save" referred to another.
             SelectListItemFor(_current);
             Raise(ProfilesChanged);
         }
@@ -772,31 +772,31 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Перейти на профиль. Ложь означает «не перешли»: человек передумал в
-        /// вопросе о несохранённом. Ответ обязаны читать все, кто зовёт: следом
-        /// за переходом обычно идёт действие над «текущим» профилем, и если
-        /// переход не состоялся, действие достанется прежнему. Так пункт
-        /// «Переименовать» в меню чужой строки переименовывал не ту.
+        /// Switch to a profile. False means "did not switch": the person changed their mind in
+        /// the unsaved-changes question. Every caller must read the answer: a switch is
+        /// usually followed by an action on the "current" profile, and if the
+        /// switch did not happen, the action goes to the previous one. That is how the
+        /// "Rename" item in another row's menu renamed the wrong one.
         /// </summary>
         private bool SelectProfile(Layout layout)
         {
-            // Переходить некуда — значит и делать нечего.
+            // Nowhere to switch — so nothing to do.
             //
-            // Прежде эта ветка проваливалась дальше и сбрасывала `_dirty` вместе
-            // с `_currentOriginalName`. Пока имя уходило на диск сразу, вреда не
-            // было; теперь имя — правка в памяти, и сброс отрывал её от файла.
-            // Пункты меню открытого профиля зовут именно `SelectProfile(_current)`:
-            // после «Переименовать» окно показывало новое имя и утверждало, что
-            // сохранять нечего, а профиль на диске оставался прежним — правка
-            // пропадала молча или, наоборот, плодила второй файл.
+            // This branch used to fall through and reset `_dirty` along with
+            // `_currentOriginalName`. While the name went to disk at once, no harm
+            // was done; now the name is an in-memory edit, and the reset cut it off from the file.
+            // The open profile's menu items call exactly `SelectProfile(_current)`:
+            // after "Rename" the window showed the new name and claimed
+            // there was nothing to save, while the profile on disk stayed the old one — the edit
+            // vanished silently or, conversely, spawned a second file.
             if (ReferenceEquals(layout, _current)) return true;
 
-            // Раньше правки сохранялись молча при любом переключении — так профиль можно было
-            // перезаписать, сам того не заметив. Теперь решение всегда за пользователем.
+            // Edits used to be saved silently on any switch — so a profile could be
+            // overwritten without noticing. Now the decision is always the user's.
             if (_dirty && _current != null)
             {
-                // Передумали — возвращаем выделение на прежний профиль, иначе
-                // список показывал бы один, а на холсте остался бы другой.
+                // Changed their mind — return the selection to the previous profile, otherwise
+                // the list would show one and the canvas would keep another.
                 if (!AskToSave()) { SelectListItemFor(_current); return false; }
             }
             _current = layout;
@@ -804,8 +804,8 @@ namespace DIIISPL
             _dirty = false;
             SyncLayoutWithLive(_current);
             _canvas.Layout = _current;
-            // Кого выбрать, решает сам холст: он же следит, чтобы выбранный был
-            // всегда — иначе панель свойств внизу оставалась бы пустой.
+            // Which one to select is decided by the canvas itself: it also ensures that a selected one
+            // always exists — otherwise the properties panel below would stay empty.
             _canvas.Rebuild();
             UpdateHeader();
             UpdateProperties();
@@ -814,7 +814,7 @@ namespace DIIISPL
             return true;
         }
 
-        /// <summary>Добавляет в профиль мониторы, которых в нём ещё нет (подключили новый — он сразу виден).</summary>
+        /// <summary>Adds to the profile the monitors it does not yet have (a new one was connected — it is visible at once).</summary>
         private void SyncLayoutWithLive(Layout layout)
         {
             foreach (var kv in _live)
@@ -835,11 +835,11 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Поставить монитор вплотную справа от раскладки.
+        /// Place a monitor flush to the right of the layout.
         ///
-        /// Считаем только по включённым: у выключенных в профиле остаются координаты
-        /// с тех времён, когда они были в раскладке, и по ним место находилось далеко
-        /// правее — между мониторами оставался разрыв на пустом месте.
+        /// We count only the enabled ones: disabled ones in the profile keep coordinates
+        /// from when they were in the layout, and by them the place was found far
+        /// to the right — leaving a gap between monitors in empty space.
         /// </summary>
         private void PlaceRightOfAll(Layout layout, LayoutDisplay d)
         {
@@ -853,7 +853,7 @@ namespace DIIISPL
             d.Y = 0;
         }
 
-        // ---------------------------------------------------------------- действия
+        // ---------------------------------------------------------------- actions
         private void NewFromCurrent()
         {
             ReloadLive();
@@ -862,9 +862,9 @@ namespace DIIISPL
             ReloadProfiles(layout.Name);
             Raise(ProfilesChanged);
             UpdateStatus(Text.ProfileCreated);
-            // Просить переименовать и не открыть поле — значит просить впустую:
-            // прежде фокус отдавали спрятанному _nameBox, курсор не появлялся
-            // нигде, и набранное уходило в никуда.
+            // Asking to rename and not opening the field is asking in vain:
+            // focus used to go to the hidden _nameBox, the cursor appeared
+            // nowhere, and the typed text went nowhere.
             BeginRename();
         }
 
@@ -883,56 +883,56 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Спросить про несохранённое перед выходом из программы. Ложь — человек
-        /// передумал, выходить нельзя. Зовётся из меню значка в трее: там выход
-        /// идёт мимо закрытия окна.
+        /// Ask about unsaved changes before exiting the program. False — the person
+        /// changed their mind, exit is not allowed. Called from the tray icon menu: there exit
+        /// bypasses window close.
         /// </summary>
         public bool AskBeforeClosing()
         {
             if (!_dirty) return true;
-            if (!IsVisible) Show();       // спрашивать о профиле, которого не видно, нечестно
+            if (!IsVisible) Show();       // asking about a profile that cannot be seen is dishonest
             return AskToSave();
         }
 
         /// <summary>
-        /// Спросить про несохранённые правки — молча перезаписывать профиль нельзя.
-        /// Возвращает, можно ли продолжать начатое: Esc означает «я передумал»,
-        /// и тогда ни переключаться на другой профиль, ни прятать окно не надо.
+        /// Ask about unsaved edits — silently overwriting a profile is not allowed.
+        /// Returns whether to proceed with what was started: Esc means "I changed my mind",
+        /// and then neither switching to another profile nor hiding the window is needed.
         /// </summary>
         private bool AskToSave()
         {
             if (_current == null || !_dirty) return true;
-            // Вторая кнопка называется «Не сохранять», а не «Отмена». Диалог
-            // появляется при закрытии окна и при переходе на другой профиль — там
-            // «Отмена» читается как «остаться и ничего не менять», а делала она
-            // ровно обратное: молча выбрасывала правки.
+            // The second button is called "Don't save", not "Cancel". The dialog
+            // appears on window close and on switching to another profile — there
+            // "Cancel" reads as "stay and change nothing", while it did
+            // exactly the opposite: silently discarded the edits.
             var dialog = new ConfirmDialog(Text.SaveTitle(_current.Name), Text.SaveBody, Text.Save, Text.DontSave);
             dialog.Owner = IsVisible ? this : null;
 
             bool? answer = dialog.ShowDialog();
-            if (answer == null) return false;            // Esc — остаёмся как были
+            if (answer == null) return false;            // Esc — we stay as we were
             if (answer == true) SaveCurrent(false);
             else DiscardEdits();
             return true;
         }
 
         /// <summary>
-        /// Вернуть профиль к тому, что лежит на диске.
+        /// Return the profile to what is on disk.
         ///
-        /// Гасить один флаг было мало: правка оставалась в объекте, и программа
-        /// считала, что сохранять нечего, показывая при этом изменённое. А кнопка
-        /// «Применить» начинается с `SaveCurrent`, то есть **записала бы выброшенную
-        /// правку на диск и повернула настоящий монитор**. Выбросить — значит
-        /// перечитать, а не забыть.
+        /// Clearing one flag was not enough: the edit stayed in the object, and the program
+        /// thought there was nothing to save while showing the changed one. And the
+        /// "Apply" button starts with `SaveCurrent`, i.e. it **would have written the discarded
+        /// edit to disk and rotated the real monitor**. Discarding means
+        /// re-reading, not forgetting.
         /// </summary>
         private void DiscardEdits()
         {
             _dirty = false;
             if (_current == null) return;
 
-            // Читаем свой файл, а не первого попавшегося тёзку по имени: имя внутри
-            // файла и имя самого файла могут разойтись, и тогда «Не сохранять»
-            // вернуло бы содержимое чужого профиля.
+            // We read our own file, not the first namesake by name: the name inside
+            // the file and the file's own name can diverge, and then "Don't save"
+            // would return the contents of someone else's profile.
             Layout fresh = null;
             try
             {
@@ -941,12 +941,12 @@ namespace DIIISPL
             }
             catch { }
             if (fresh == null) fresh = Store.LoadByName(_currentOriginalName);
-            if (fresh == null) return;   // на диске его ещё нет — возвращать не к чему
+            if (fresh == null) return;   // it is not on disk yet — nothing to return to
 
             _current.RestoreFrom(fresh);
             _canvas.Rebuild();
-            // Список тоже: имя он держит простым текстом, набранным при последней
-            // перестройке, — без этого в строке оставалось бы выброшенное имя.
+            // The list too: it holds the name as plain text typed at the last
+            // rebuild — without this the discarded name would remain in the row.
             RefreshProfileList();
             SelectListItemFor(_current);
             UpdateHeader();
@@ -967,32 +967,32 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Применить раскладку. Работа идёт в стороннем потоке, а не здесь.
+        /// Apply the layout. The work runs in a background thread, not here.
         ///
-        /// Прежде `Applier.Apply` вызывался прямо в потоке окна, а внутри — паузы
-        /// на секунды и запасные попытки: окно замирало, Windows вешала на
-        /// заголовок «Не отвечает», и никакого «применяю…» при этом не было.
-        /// Человек решал, что промазал мимо кнопки, и жал ещё раз-другой —
-        /// нажатия копились и после разморозки перестраивали дисплеи подряд.
-        /// Это ровно та нагрузка, от которой 19.08.2026 машина ушла в синий
-        /// экран, и единственной защитой от неё оставался затвор в 1,2 с.
+        /// `Applier.Apply` used to be called right in the window thread, and inside it are pauses
+        /// of seconds and retries: the window froze, Windows hung
+        /// "Not responding" on the title, and there was no "applying…" at all.
+        /// The person decided they had missed the button and pressed again once or twice —
+        /// the presses piled up and after the thaw rebuilt the displays back to back.
+        /// That is exactly the load from which on 19.08.2026 the machine went into a blue
+        /// screen, and the only protection against it was a 1.2 s latch.
         /// </summary>
         private void ApplyCurrent()
         {
             if (_current == null) return;
 
-            // Наложенную раскладку Windows не примет — она расставит экраны
-            // по-своему, а профиль останется с невозможными координатами. Прежде
-            // про наложение только писали внизу, а применяли всё равно.
+            // Windows will not accept an overlapping layout — it would arrange the screens
+            // its own way, and the profile would stay with impossible coordinates. Before,
+            // overlap was only reported at the bottom, but applied anyway.
             //
-            // Проверка стоит до признака занятости: занимать его ради отказа
-            // незачем, а выход отсюда без освобождения погасил бы кнопку навсегда.
+            // The check goes before the busy flag: taking it for a refusal
+            // is pointless, and leaving here without releasing it would grey out the button forever.
             string overlap = _canvas.OverlapProblem();
             if (overlap != null) { UpdateStatus(overlap); return; }
 
-            // Признак занятости спрашиваем до записи на диск: иначе на «подождите»
-            // профиль уже сохранён и признак несохранённого погашен, хотя фраза
-            // обещает, что ничего не случилось.
+            // We ask for the busy flag before writing to disk: otherwise on "wait"
+            // the profile is already saved and the unsaved flag cleared, although the phrase
+            // promises that nothing happened.
             if (!ApplyBusy.Begin())
             {
                 UpdateStatus(Text.BusyWait);
@@ -1001,13 +1001,13 @@ namespace DIIISPL
 
             SaveCurrent(false);
 
-            // В поток уходит копия, а не живой профиль. Окно больше не заперто:
-            // пока перестроение идёт, человек может двигать мониторы, а
-            // «Не сохранять» вызывает Displays.Clear() — прямо под руками у
-            // Applier, который этот же список перебирает. В лучшем случае на
-            // экраны уехала бы раскладка, которой нет ни на диске, ни на холсте;
-            // в худшем — исключение в потоке пула, где его никто не ловит, то
-            // есть тихая смерть процесса посреди перестроения дисплеев.
+            // A copy goes to the thread, not the live profile. The window is no longer locked:
+            // while the rebuild runs, the person can move monitors, and
+            // "Don't save" calls Displays.Clear() — right under the hands of
+            // Applier, which iterates this same list. At best a layout
+            // that is neither on disk nor on the canvas would go to the screens;
+            // at worst, an exception in a pool thread, where nobody catches it, i.e.
+            // a silent process death in the middle of rebuilding the displays.
             Layout layout = _current.DeepCopy();
             _applyButton.IsEnabled = false;
             UpdateStatus(Text.Rebuilding);
@@ -1015,9 +1015,9 @@ namespace DIIISPL
             System.Threading.ThreadPool.QueueUserWorkItem(delegate
             {
                 ApplyResult result;
-                // Перехват обязателен: это поток пула, и вылетевшее отсюда
-                // исключение уносит весь процесс — вместе со значком в трее и
-                // горячими клавишами, посреди перестроения дисплеев.
+                // The catch is mandatory: this is a pool thread, and an exception escaping from here
+                // takes down the whole process — with the tray icon and the
+                // hotkeys, in the middle of rebuilding the displays.
                 try { result = Applier.Apply(layout); }
                 catch (Exception ex)
                 {
@@ -1034,22 +1034,22 @@ namespace DIIISPL
                     _canvas.Refresh();
                     RefreshProfileList();
 
-                    // Спрятанное окно результат не покажет: полоса внизу останется
-                    // в невидимом окне, а следующее открытие начнётся с чистой.
-                    // Поэтому там, где сказать некому, зовём того, у кого есть трей.
+                    // A hidden window will not show the result: the bottom strip would stay
+                    // in the invisible window, and the next open would start clean.
+                    // So where there is no one to tell, we call the one who has the tray.
                     var parts = new List<string>();
-                    // Имя профиля в строке обязательно: пока шло перестроение, человек
-                    // мог перейти на другой профиль, и «Раскладка применена» относилась
-                    // бы к тому, которого на экране уже нет.
+                    // The profile name in the line is mandatory: while the rebuild ran, the person
+                    // could have moved to another profile, and "Layout applied" would refer
+                    // to one that is no longer on screen.
                     if (result.Success) parts.Add(Text.ApplyDone(layout.Name));
                     else parts.Add(Text.ApplyFailedShort(layout.Name, result.Error));
                     foreach (string w in result.Warnings) parts.Add(w);
                     string text = string.Join("  ", parts.ToArray());
                     UpdateStatus(text);
 
-                    // В подсказку трея — только первое предложение и счёт остальных:
-                    // она живёт несколько секунд, обрезается на 255 знаках и молча,
-                    // а весь набор предупреждений за 255 уходит легко.
+                    // In the tray tooltip — only the first sentence and the count of the rest:
+                    // it lives a few seconds, is truncated silently at 255 characters,
+                    // and the whole set of warnings exceeds 255 easily.
                     if (!IsVisible)
                     {
                         string brief = parts[0];
@@ -1067,8 +1067,8 @@ namespace DIIISPL
             if (a != null) a(text, alarming);
         }
 
-        // ---------------------------------------------------------------- свойства
-        // ---------------------------------------------------------------- переименование
+        // ---------------------------------------------------------------- properties
+        // ---------------------------------------------------------------- renaming
         private void BeginRename()
         {
             if (_current == null) return;
@@ -1093,13 +1093,13 @@ namespace DIIISPL
                 string name = _nameBox.Text.Trim();
                 if (name.Length > 0 && name != _current.Name)
                 {
-                    // Имя, уже занятое другим профилем, не берём. Прежде брали:
-                    // Store.Rename удалял свой файл и писал поверх чужого — тёзка
-                    // исчезал молча, вместе со всей раскладкой.
+                    // A name already taken by another profile is not accepted. It used to be:
+                    // Store.Rename deleted its own file and wrote over someone else's — the namesake
+                    // vanished silently, along with its whole layout.
                     //
-                    // Поле при этом остаётся открытым: закрыть его и потерять
-                    // набранное — значит заставить набирать всё заново, и уже
-                    // не видя перед собой того, что не подошло.
+                    // The field stays open: closing it and losing
+                    // what was typed means making the person type it all again, and
+                    // no longer seeing what did not fit.
                     string clash = Store.NameInUse(name, _currentOriginalName);
                     if (clash != null)
                     {
@@ -1107,19 +1107,19 @@ namespace DIIISPL
                             ? Text.NameUnchanged(clash)
                             : Text.NameTaken(clash));
 
-                        // Фокус возвращаем только если правку подтвердили сами —
-                        // Enter. По уходу мышью не держим: тянуть фокус обратно
-                        // из обработчика его потери значит не выпускать человека
-                        // из поля, пока он не угадает имя.
+                        // Focus is returned only if the edit was confirmed by the person —
+                        // Enter. Not when leaving with the mouse: pulling focus back
+                        // from its loss handler means not letting the person out
+                        // of the field until they guess a name.
                         if (!fromFocusLoss) { _nameBox.Focus(); _nameBox.SelectAll(); return; }
                     }
                     else
                     {
-                        // Имя — такая же правка профиля, как всё остальное, и на
-                        // диск уходит вместе со всем остальным. Прежде здесь стоял
-                        // SaveCurrent: переименование молча записывало заодно и
-                        // несохранённую раскладку — без вопроса, который программа
-                        // обязательно задаёт в других местах.
+                        // The name is a profile edit like any other, and goes to
+                        // disk together with everything else. Before, SaveCurrent stood here:
+                        // renaming silently wrote the unsaved layout as well —
+                        // without the question the program always asks
+                        // elsewhere.
                         _current.Name = name;
                         MarkDirty();
                         RefreshProfileList();
@@ -1135,10 +1135,10 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Написать в полосу внизу итог применения, начатого не отсюда — горячей
-        /// клавишей или из меню значка. Без этого полного разбора не было нигде:
-        /// в подсказку трея он не помещается, а в окно не попадал вовсе, и совет
-        /// «откройте окно» вёл в пустоту.
+        /// Write to the bottom strip the outcome of an apply not started from here — by hotkey
+        /// or from the icon menu. Without this the full breakdown was nowhere:
+        /// it does not fit in the tray tooltip, and it never reached the window, and the advice
+        /// "open the window" led nowhere.
         /// </summary>
         public void ShowApplyResult(string profileName, ApplyResult result)
         {
@@ -1149,7 +1149,7 @@ namespace DIIISPL
             UpdateStatus(string.Join("  ", parts.ToArray()));
         }
 
-        /// <summary>Закрыть поле имени, ничего не меняя.</summary>
+        /// <summary>Close the name field, changing nothing.</summary>
         private void CancelRename()
         {
             if (!_renaming) return;
@@ -1159,7 +1159,7 @@ namespace DIIISPL
             UpdateHeader();
         }
 
-        /// <summary>Окно «О программе». Открывается и отсюда, и из меню значка в трее.</summary>
+        /// <summary>The "About" window. Opens both from here and from the tray icon menu.</summary>
         public void ShowAbout()
         {
             var window = new AboutWindow();
@@ -1168,7 +1168,7 @@ namespace DIIISPL
         }
 
 #if DEV
-        /// <summary>Открыть отдельный экран настроек панели задач для текущего профиля.</summary>
+        /// <summary>Open a separate taskbar settings screen for the current profile.</summary>
         private void OpenTaskbarSettings()
         {
             if (_current == null) return;
@@ -1178,7 +1178,7 @@ namespace DIIISPL
             window.Owner = this;
             window.ShowDialog();
 
-            // предпросмотр менял вид на лету, поэтому считаем изменённым по факту
+            // the preview changed the look on the fly, so we count it as changed by fact
             if (!SameSettings(before, _current.Taskbar)) MarkDirty();
             UpdateTaskbarButton();
             UpdateStatus(null);
@@ -1201,16 +1201,16 @@ namespace DIIISPL
             string count = on > 0 ? on.ToString(CultureInfo.InvariantCulture) : "";
             string words = on > 0 ? Text.TaskbarButtonN(on) : Text.TaskbarButton;
 
-            // Подпись словами, пока она помещается. Прежде на кнопке всегда
-            // стояло одно число: сжатие делалось ради узкого окна, а действовало
-            // при любой ширине — и в широком окне «4» рядом с «F16» не говорило
-            // ничего, пока между кнопкой и названием профиля пустовала половина
-            // шапки.
+            // The caption in words while it fits. The button used to always
+            // show a single number: the shrinking was done for a narrow window but applied
+            // at any width — and in a wide window "4" next to "F16" said
+            // nothing, while half of the header sat empty between the button and
+            // the profile name.
             //
-            // Помещается ли — не порог в пикселях, а мерка: ряд кнопок просят
-            // назвать свою ширину и складывают с названием, ужатым до предела.
-            // Так подпись остаётся словами и по-английски, где она короче, и
-            // сжимается там, где в сочетании клавиш выросло «Ctrl+Shift+F12».
+            // Whether it fits is not a pixel threshold but a measurement: the button row is asked
+            // for its width and added to the name shrunk to the limit.
+            // So the caption stays in words in English too, where it is shorter, and
+            // shrinks where "Ctrl+Shift+F12" grew in the shortcut.
             bool compact = false;
             _taskbarButton.Content = Glyph(TaskbarGlyph, words);
             if (_headerGrid != null && _headerGrid.ActualWidth > 0)
@@ -1220,8 +1220,8 @@ namespace DIIISPL
                 if (compact) _taskbarButton.Content = Glyph(TaskbarGlyph, count);
             }
 
-            // В подсказке — то, чего нет на кнопке. Пока подпись словами,
-            // повторять её незачем; сжатую до числа — наоборот, надо назвать.
+            // The tooltip holds what the button lacks. While the caption is in words,
+            // repeating it is pointless; one shrunk to a number — on the contrary, needs naming.
             _taskbarButton.ToolTip = (ExplorerTap.Available ? Text.TaskbarTip : Text.TaskbarMissing)
                                      + (compact ? Environment.NewLine + words : "");
         }
@@ -1229,13 +1229,13 @@ namespace DIIISPL
 
         private void UpdateHeader()
         {
-            // Захват сочетания живёт ровно до следующей перерисовки заголовка.
+            // Shortcut capture lives exactly until the next redraw of the title.
             //
-            // Прежде флаг гасился только по Esc, Delete и удачному сочетанию, а
-            // кнопке возвращали обычную надпись отсюда — из любого места, где
-            // меняется профиль. Оба признака захвата исчезали, сам захват
-            // оставался: окно переставало слышать клавиатуру вовсе, а первая же
-            // нажатая клавиша уезжала горячей в чужой профиль и сразу на диск.
+            // The flag used to be cleared only on Esc, Delete and a successful shortcut, while
+            // the button got its normal caption back from here — from any place where
+            // the profile changes. Both capture flags vanished, the capture itself
+            // remained: the window stopped hearing the keyboard altogether, and the very first
+            // key pressed went off as a hotkey into someone else's profile and straight to disk.
             _capturingHotkey = false;
 
             _updating = true;
@@ -1253,7 +1253,7 @@ namespace DIIISPL
             _updating = false;
         }
 
-        /// <summary>Короткая строка под названием профиля: что в нём и чем переключается.</summary>
+        /// <summary>A short line under the profile name: what is in it and how it is switched.</summary>
         private string DescribeCurrent()
         {
             if (_current == null) return "";
@@ -1304,7 +1304,7 @@ namespace DIIISPL
             _primarySwitch.IsChecked = d.Primary;
             _primarySwitch.IsEnabled = d.Enabled;
 
-            // разрешения
+            // resolutions
             var resItems = new List<Item>();
             var resList = live != null ? live.Modes : new List<Resolution>();
             bool found = false;
@@ -1330,9 +1330,9 @@ namespace DIIISPL
             FillRates(d, live);
 
             var rotItems = new List<Item>();
-            // Со стороной, а не голыми градусами: «270°» не говорит человеку,
-            // куда повернётся экран, а проверять это, перевернув рабочий стол, —
-            // дорогое удовольствие.
+            // With a side, not bare degrees: "270°" does not tell the person
+            // which way the screen will turn, and checking that by flipping the desktop is
+            // an expensive pleasure.
             rotItems.Add(new Item(Text.RotPlain, Native.DISPLAYCONFIG_ROTATION_IDENTITY));
             rotItems.Add(new Item(Text.Rot90, Native.DISPLAYCONFIG_ROTATION_ROTATE90));
             rotItems.Add(new Item(Text.Rot180, Native.DISPLAYCONFIG_ROTATION_ROTATE180));
@@ -1366,17 +1366,17 @@ namespace DIIISPL
             _hdrCombo.ItemsSource = hdrItems;
             foreach (Item it in hdrItems) if ((int)it.Value == d.Hdr) _hdrCombo.SelectedItem = it;
 
-            // Windows не предоставляет расширенный цвет выходам, объединённым в дублирование —
-            // проверено на LG UltraGear + Q80A и на 60, и на 120 Гц
+            // Windows does not provide advanced colour to outputs merged into duplication —
+            // verified on LG UltraGear + Q80A at both 60 and 120 Hz
             bool cloned = d.CloneGroup >= 0;
-            // Подсказки про недоступность HDR в дубле здесь нет: в этом случае поле
-            // не показывается вовсе, а причина написана строкой под названием монитора.
+            // There is no tooltip about HDR being unavailable in duplication here: in that case the field
+            // is not shown at all, and the reason is written in the line under the monitor name.
             _hdrCombo.IsEnabled = d.Enabled && !cloned;
 
-            // Что показать: у выключенного монитора настраивать нечего, частота нужна
-            // только при выборе, дублирование — только если есть с чем, HDR — только
-            // там, где он в принципе возможен. Причина отсутствия HDR в дубле уже
-            // написана строкой выше, под названием монитора.
+            // What to show: a disabled monitor has nothing to configure, the refresh rate is needed
+            // only when there is a choice, duplication — only if there is something to duplicate with, HDR — only
+            // where it is possible at all. The reason HDR is missing in duplication is already
+            // written in the line above, under the monitor name.
             if (!d.Enabled)
             {
                 ShowFields(_offNote);
@@ -1418,8 +1418,8 @@ namespace DIIISPL
         }
 
         /// <param name="keepPosition">
-        /// Монитор перетащили на холст — координаты уже выбраны пользователем, и
-        /// подбирать их заново не нужно.
+        /// The monitor was dragged onto the canvas — the coordinates are already chosen by the user, and
+        /// there is no need to pick them again.
         /// </param>
         private void OnEnabledChanged(bool enabled, bool keepPosition)
         {
@@ -1428,9 +1428,9 @@ namespace DIIISPL
             d.Enabled = enabled;
             if (enabled)
             {
-                // Наложение проверяем всегда, даже когда место выбрал пользователь:
-                // уронить монитор поверх соседа легко, а рабочие столы наложенными
-                // быть не могут — Windows такую раскладку не примет.
+                // We always check for overlap, even when the user chose the place:
+                // it is easy to drop a monitor on top of a neighbour, and desktops
+                // cannot overlap — Windows will not accept such a layout.
                 bool overlaps = false;
                 foreach (var o in _current.Displays)
                 {
@@ -1475,9 +1475,9 @@ namespace DIIISPL
             var d = _canvas.Selected;
             if (!primary)
             {
-                // Основной обязан быть ровно один, поэтому снять галочку нельзя —
-                // но раньше она просто прыгала обратно, и переключатель выглядел
-                // заедающим. Сказать, что делать вместо этого, стоит одной строки.
+                // Exactly one primary is required, so the tick cannot be removed —
+                // but it used to just jump back, and the switch looked
+                // sticky. Saying what to do instead costs one line.
                 _updating = true; _primarySwitch.IsChecked = true; _updating = false;
                 UpdateStatus(Text.PrimaryOnlyOne);
                 return;
@@ -1590,7 +1590,7 @@ namespace DIIISPL
             var d = _canvas.Selected;
             d.Hdr = (int)item.Value;
 
-            // в группе дублирования HDR обязан быть одинаковым, иначе Windows уводит всю группу в SDR
+            // in a duplication group HDR must be the same, otherwise Windows sends the whole group to SDR
             if (d.CloneGroup >= 0)
                 foreach (var o in _current.Displays)
                     if (o.CloneGroup == d.CloneGroup) o.Hdr = d.Hdr;
@@ -1609,9 +1609,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Строка внизу окна. Сама по себе она молчит: о том, какая раскладка применена,
-        /// говорит точка в списке слева, а имя профиля и его состав видны в заголовке
-        /// и на холсте. Здесь остаются только помехи и ответы на действия.
+        /// The strip at the bottom of the window. By itself it is silent: which layout is applied
+        /// is told by the dot in the list on the left, and the profile name and its contents are visible in the title
+        /// and on the canvas. Only interference and answers to actions remain here.
         /// </summary>
         private void UpdateStatus(string text)
         {
@@ -1622,7 +1622,7 @@ namespace DIIISPL
             _statusBar.Visibility = string.IsNullOrEmpty(_status.Text)
                 ? Visibility.Collapsed : Visibility.Visible;
         }
-        // ---------------------------------------------------------------- горячая клавиша
+        // ---------------------------------------------------------------- hotkey
         private void BeginHotkeyCapture()
         {
             if (_current == null) return;
@@ -1664,9 +1664,9 @@ namespace DIIISPL
             string combo = Hotkey.Describe(Keyboard.Modifiers, key);
             if (combo == null) { UpdateStatus(Text.ComboImpossible); return; }
 
-            // Проверяем **до** записи. Прежде сочетание сохранялось сразу, а
-            // разбор шёл после и молча: одиночная буква уезжала в профиль, и
-            // программа забирала её у всей системы, ничего об этом не сказав.
+            // We check **before** writing. The shortcut used to be saved at once, and
+            // the parsing came after, silently: a single letter went into the profile, and
+            // the program took it from the whole system without saying a word.
             uint mods, vk; string err;
             if (!Hotkey.TryParse(combo, out mods, out vk, out err))
             {
@@ -1674,10 +1674,10 @@ namespace DIIISPL
                 return;
             }
 
-            // Одно сочетание на два профиля назначалось бодрым «назначено», а
-            // потом всплывала подсказка «занято другой программой»: никакой
-            // другой программы нет, занято своим же профилем, и какой из двух
-            // остался рабочим — из окна не видно. Ищем тёзку заранее.
+            // One shortcut assigned to two profiles got a cheerful "assigned", and
+            // then the tooltip "taken by another program" popped up: there is no
+            // other program, it is taken by our own profile, and which of the two
+            // stayed working is not visible from the window. We look for the namesake in advance.
             foreach (var other in _profiles)
             {
                 if (ReferenceEquals(other, _current)) continue;
@@ -1692,11 +1692,11 @@ namespace DIIISPL
             SaveCurrent(false);
             UpdateHeader();
             RefreshProfileList();
-            // Сочетание работает, только пока программа запущена, а автозапуск по
-            // умолчанию выключен и спрятан в меню значка. Молчать об этом нельзя:
-            // человек назначает клавишу, перезагружается — и она не работает, а
-            // окно по-прежнему уверяет, что всё назначено. Ради этой клавиши
-            // программа и существует.
+            // The shortcut works only while the program is running, and autostart is
+            // off by default and hidden in the icon menu. We must not stay silent about this:
+            // the person assigns a key, reboots — and it does not work, while the
+            // window still insists that everything is assigned. This key
+            // is what the program exists for.
             UpdateStatus(Text.ComboSet(combo, _current.Name) +
                 (App.AutoStartEnabled ? "" : Text.ComboNeedsAutostart));
         }

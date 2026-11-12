@@ -1,10 +1,10 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 //
-// Рисует значок программы и складывает его в многоразмерный DIIISPL.ico.
-// Значок хранится в репозитории собранным, но собирается отсюда — чтобы его можно было
-// поправить, не заводя графический редактор и не гадая, чем именно он был нарисован.
+// Draws the program icon and packs it into a multi-size DIIISPL.ico.
+// The icon is stored in the repository already built, but it is built from here, so that it can be
+// tweaked without a graphics editor and without guessing what it was drawn with.
 
 using System;
 using System.Collections.Generic;
@@ -17,19 +17,19 @@ namespace DIIISPL.Tools
 {
     internal static class MakeIcon
     {
-        // Знак: раскладка из трёх экранов — широкий основной посередине и два боковых,
-        // повёрнутых набок. Разные пропорции важнее украшений: три одинаковые полосы
-        // читаются как эквалайзер, а экран в альбом рядом с экранами в портрет —
-        // ни с чем не спутаешь, и это ровно то, чем программа занимается.
+        // The mark: a layout of three screens, a wide main one in the middle and two side ones
+        // turned on edge. Different proportions matter more than decoration: three identical bars
+        // read as an equalizer, while a landscape screen between portrait screens
+        // is unmistakable, and that is exactly what the program does.
         //
-        // Поля узкие: значок должен заполнять отведённое место, иначе рядом с чужими
-        // выглядит мелким. На 16 точках выходит 3+1+7+1+3 — всё ещё различимо.
+        // The margins are narrow: the icon must fill its slot, otherwise next to others' icons it
+        // looks small. At 16 pixels it comes out 3+1+7+1+3, still distinguishable.
         private const double SideW = 0.185, SideH = 0.720;
         private const double MainW = 0.440, MainH = 0.360;
 
-        // Просвет между экранами обязателен: стоит им соприкоснуться, и знак читается
-        // одной фигурой — буквой «H», — а не тремя экранами. Ближе средний оказывается
-        // за счёт тени и цвета, а не за счёт перекрытия.
+        // A gap between the screens is mandatory: once they touch, the mark reads as
+        // a single figure, the letter "H", not three screens. The middle one looks closer
+        // through shadow and color, not through overlap.
         private const double Gap = 0.050;
 
         private static readonly Color MainTop    = Color.FromArgb(255, 0x5C, 0xC8, 0xFF);
@@ -53,23 +53,23 @@ namespace DIIISPL.Tools
             foreach (int size in Sizes) frames.Add(Draw(size));
 
             using (var file = File.Create(outPath)) Write(file, frames);
-            Console.WriteLine("Готово: " + Path.GetFullPath(outPath) + "  размеров: " + Sizes.Length);
+            Console.WriteLine("Done: " + Path.GetFullPath(outPath) + "  sizes: " + Sizes.Length);
 
             if (preview != null)
             {
                 using (Bitmap sheet = Preview(frames)) sheet.Save(preview, ImageFormat.Png);
-                Console.WriteLine("Образец: " + Path.GetFullPath(preview));
+                Console.WriteLine("Preview: " + Path.GetFullPath(preview));
             }
 
             foreach (Bitmap b in frames) b.Dispose();
             return 0;
         }
 
-        // ------------------------------------------------------------------ рисование
+        // ------------------------------------------------------------------ drawing
         /// <summary>
-        /// Крупные размеры рисуются со всем оформлением, мелкие — плоско.
-        /// Так делает и сама Windows: в 16 точках мягкая тень и блик превращаются
-        /// в грязь, там нужен силуэт, а не материал.
+        /// Large sizes are drawn with full styling, small ones flat.
+        /// Windows does the same: at 16 pixels a soft shadow and highlight turn
+        /// into mud, what is needed there is a silhouette, not a material.
         /// </summary>
         private static Bitmap Draw(int size)
         {
@@ -77,12 +77,12 @@ namespace DIIISPL.Tools
         }
 
         /// <summary>
-        /// Оформление в духе Fluent: слои с мягкой тенью, диагональный градиент,
-        /// светящаяся кромка сверху и блик по верхней половине. Свет один на весь
-        /// знак и падает сверху слева — иначе слои перестают складываться в объём.
+        /// Fluent-style styling: layers with a soft shadow, a diagonal gradient,
+        /// a glowing edge on top and a highlight on the upper half. There is one light for the whole
+        /// mark and it falls from the top left, otherwise the layers stop adding up to volume.
         ///
-        /// Рисуется вчетверо крупнее и потом уменьшается: тени и градиенты от этого
-        /// становятся ровными, а скругления перестают лесенкой.
+        /// Drawn four times larger and then scaled down: shadows and gradients become
+        /// smooth from this, and rounded corners lose their stair steps.
         /// </summary>
         private static Bitmap DrawFluent(int size)
         {
@@ -99,8 +99,8 @@ namespace DIIISPL.Tools
                 RectangleF[] plates = Plates(s);
                 float radius = (float)(0.045 * s);
 
-                // Тень: те же плиты, сдвинутые вниз и размытые. Боковые роняют свою,
-                // средняя — свою поверх них, оттого и читается, что она ближе.
+                // Shadow: the same slabs, shifted down and blurred. The side ones cast their own,
+                // the middle one casts its own on top of them, which is why it reads as closer.
                 using (Bitmap shadow = Shadow(s, plates, radius))
                     g.DrawImageUnscaled(shadow, 0, 0);
 
@@ -121,7 +121,7 @@ namespace DIIISPL.Tools
             return bmp;
         }
 
-        /// <summary>Три плиты знака в точках холста заданного размера.</summary>
+        /// <summary>The three slabs of the mark in pixels of a canvas of the given size.</summary>
         private static RectangleF[] Plates(float s)
         {
             double total = SideW + Gap + MainW + Gap + SideW;
@@ -138,19 +138,19 @@ namespace DIIISPL.Tools
             return new RectangleF[] { left, main, right };
         }
 
-        /// <summary>Одна плита: заливка, блик по верхней половине и кромка света.</summary>
+        /// <summary>One slab: fill, highlight on the upper half and edge light.</summary>
         private static void Plate(Graphics g, RectangleF r, float radius, Color top, Color bottom)
         {
             using (GraphicsPath path = Rounded(r, radius))
             {
-                // Градиент диагональный, а не сверху вниз: так плита выглядит освещённой,
-                // а не просто крашеной.
+                // The gradient is diagonal, not top to bottom: that way the slab looks lit
+                // rather than merely painted.
                 using (var fill = new LinearGradientBrush(
                            new RectangleF(r.X - 1, r.Y - 1, r.Width + 2, r.Height + 2),
                            top, bottom, 55f))
                     g.FillPath(fill, path);
 
-                // Блик: светлое пятно по верхней половине, сходящее на нет.
+                // Highlight: a light spot on the upper half, fading to nothing.
                 var glossArea = new RectangleF(r.X, r.Y, r.Width, r.Height * 0.62f);
                 using (var gloss = new LinearGradientBrush(
                            new RectangleF(glossArea.X, glossArea.Y - 1, glossArea.Width, glossArea.Height + 2),
@@ -162,7 +162,7 @@ namespace DIIISPL.Tools
                     g.Restore(saved);
                 }
 
-                // Кромка: сверху почти белая, книзу исчезает — свет ложится на верхний край.
+                // Edge: nearly white at the top, vanishing downward; light falls on the upper edge.
                 float pen = Math.Max(1f, r.Width * 0.035f);
                 using (var edge = new LinearGradientBrush(
                            new RectangleF(r.X, r.Y - 1, r.Width, r.Height + 2),
@@ -175,7 +175,7 @@ namespace DIIISPL.Tools
             }
         }
 
-        /// <summary>Мягкая тень под плитами: силуэт со сдвигом вниз, размытый по кругу.</summary>
+        /// <summary>Soft shadow under the slabs: the silhouette shifted down, blurred all around.</summary>
         private static Bitmap Shadow(int s, RectangleF[] plates, float radius)
         {
             float offset = 0.022f * s;
@@ -195,8 +195,8 @@ namespace DIIISPL.Tools
         }
 
         /// <summary>
-        /// Размытие прямоугольным окном в три прохода — этого достаточно, чтобы тень
-        /// выглядела мягкой; настоящего гауссова размытия в GDI+ нет.
+        /// Blur with a box window in three passes: enough for the shadow to
+        /// look soft; GDI+ has no real Gaussian blur.
         /// </summary>
         private static void Blur(Bitmap bmp, int radius)
         {
@@ -252,30 +252,30 @@ namespace DIIISPL.Tools
         }
 
         /// <summary>
-        /// Плоский вариант для мелких размеров: только силуэт, точка в точку.
+        /// Flat variant for small sizes: just the silhouette, pixel for pixel.
         ///
-        /// Раскладка считается сразу в целых точках, а не округлением каждого экрана
-        /// по отдельности. Иначе просветы съедаются: доли точки набегают, соседние
-        /// края сходятся в одну координату — и на 16 точках знак слипается в одну
-        /// фигуру, причём с разных сторон по-разному.
+        /// The layout is computed straight in whole pixels, not by rounding each screen
+        /// separately. Otherwise the gaps get eaten: fractions of a pixel accumulate, neighboring
+        /// edges converge to one coordinate, and at 16 pixels the mark sticks into a single
+        /// figure, and differently on different sides.
         /// </summary>
         private static Bitmap DrawFlat(int size)
         {
-            int gap   = Math.Max(1, (int)Math.Ceiling(Gap * size));   // просвет важнее долей точки
+            int gap   = Math.Max(1, (int)Math.Ceiling(Gap * size));   // a gap matters more than fractions of a pixel
             int sideW = Math.Max(2, (int)Math.Round(SideW * size));
             int mainW = Math.Max(3, (int)Math.Round(MainW * size));
             int sideH = Math.Max(4, (int)Math.Round(SideH * size));
             int mainH = Math.Max(3, (int)Math.Round(MainH * size));
 
-            // Если не влезло — ужимаем средний экран, потом боковые, но не просветы:
-            // без просвета знак перестаёт читаться, без пары точек ширины — нет.
+            // If it does not fit, squeeze the middle screen, then the side ones, but not the gaps:
+            // without a gap the mark stops reading, without a couple of pixels of width it does not.
             int total = sideW * 2 + gap * 2 + mainW;
             while (total > size && mainW > 3) { mainW--; total--; }
             while (total > size && sideW > 2) { sideW--; total -= 2; }
 
-            // Остаток нечётный — знак встанет на точку левее середины. Отдаём точку
-            // среднему экрану: лишняя точка его ширины незаметна, смещение всего знака —
-            // заметно. То же по высоте, для каждого экрана отдельно.
+            // The remainder is odd, so the mark would sit a pixel left of center. We give the pixel
+            // to the middle screen: an extra pixel of its width is unnoticeable, a shift of the whole mark
+            // is noticeable. The same for height, for each screen separately.
             if ((size - total) % 2 != 0 && mainW > 3) { mainW--; total--; }
             if ((size - sideH) % 2 != 0) sideH--;
             if ((size - mainH) % 2 != 0) mainH--;
@@ -298,7 +298,7 @@ namespace DIIISPL.Tools
             return bmp;
         }
 
-        /// <summary>Один экран целыми точками: без сглаживания и без скруглений.</summary>
+        /// <summary>One screen in whole pixels: no smoothing and no rounded corners.</summary>
         private static void Bar(Graphics g, int x, int y, int w, int h, Color top, Color bottom)
         {
             using (var brush = new LinearGradientBrush(
@@ -320,7 +320,7 @@ namespace DIIISPL.Tools
             return path;
         }
 
-        // ------------------------------------------------------------------ запись .ico
+        // ------------------------------------------------------------------ writing .ico
         private static void Write(Stream output, List<Bitmap> frames)
         {
             var payloads = new List<byte[]>();
@@ -328,20 +328,20 @@ namespace DIIISPL.Tools
                 payloads.Add(frame.Width >= 256 ? AsPng(frame) : AsDib(frame));
 
             var w = new BinaryWriter(output);
-            w.Write((short)0);                    // зарезервировано
-            w.Write((short)1);                    // тип: значок
+            w.Write((short)0);                    // reserved
+            w.Write((short)1);                    // type: icon
             w.Write((short)frames.Count);
 
             int offset = 6 + 16 * frames.Count;
             for (int i = 0; i < frames.Count; i++)
             {
                 Bitmap f = frames[i];
-                w.Write((byte)(f.Width >= 256 ? 0 : f.Width));    // 256 записывается нулём
+                w.Write((byte)(f.Width >= 256 ? 0 : f.Width));    // 256 is written as zero
                 w.Write((byte)(f.Height >= 256 ? 0 : f.Height));
-                w.Write((byte)0);                 // цветов в палитре: нет палитры
+                w.Write((byte)0);                 // colors in palette: no palette
                 w.Write((byte)0);
-                w.Write((short)1);                // плоскостей
-                w.Write((short)32);               // бит на точку
+                w.Write((short)1);                // planes
+                w.Write((short)32);               // bits per pixel
                 w.Write(payloads[i].Length);
                 w.Write(offset);
                 offset += payloads[i].Length;
@@ -360,26 +360,26 @@ namespace DIIISPL.Tools
         }
 
         /// <summary>
-        /// Старый формат кадра: заголовок DIB, точки снизу вверх и маска прозрачности.
-        /// Так пишется всё, кроме 256: PNG внутри значка понимают не везде — например,
-        /// System.Drawing.Icon.ToBitmap на таком кадре просто падает. Для 256 иначе
-        /// нельзя (кадр вышел бы на четверть мегабайта), а его читают только те,
-        /// кто про PNG знает.
+        /// Old frame format: DIB header, pixels bottom to top and a transparency mask.
+        /// Everything except 256 is written this way: PNG inside an icon is not understood everywhere, for example
+        /// System.Drawing.Icon.ToBitmap simply fails on such a frame. For 256 there is
+        /// no other way (the frame would come out a quarter megabyte), and it is read only by those
+        /// who know about PNG.
         /// </summary>
         private static byte[] AsDib(Bitmap frame)
         {
             int w = frame.Width, h = frame.Height;
-            int maskStride = ((w + 31) / 32) * 4;      // строка маски выравнивается на 4 байта
+            int maskStride = ((w + 31) / 32) * 4;      // a mask row is aligned to 4 bytes
 
             using (var ms = new MemoryStream())
             {
                 var b = new BinaryWriter(ms);
-                b.Write(40);                            // размер заголовка
+                b.Write(40);                            // header size
                 b.Write(w);
-                b.Write(h * 2);                         // высота: точки и маска вместе
+                b.Write(h * 2);                         // height: pixels and mask together
                 b.Write((short)1);
                 b.Write((short)32);
-                b.Write(0);                             // без сжатия
+                b.Write(0);                             // no compression
                 b.Write(w * h * 4 + maskStride * h);
                 b.Write(0); b.Write(0); b.Write(0); b.Write(0);
 
@@ -390,8 +390,8 @@ namespace DIIISPL.Tools
                         b.Write(c.B); b.Write(c.G); b.Write(c.R); b.Write(c.A);
                     }
 
-                // Маска нужна только ради формата: прозрачность уже задана каналом A,
-                // поэтому здесь всюду нули — «точка непрозрачна».
+                // The mask is needed only for the format: transparency is already set by the A channel,
+                // so it is all zeros here, meaning "the pixel is opaque".
                 for (int y = 0; y < h; y++) b.Write(new byte[maskStride]);
 
                 b.Flush();
@@ -399,11 +399,11 @@ namespace DIIISPL.Tools
             }
         }
 
-        // ------------------------------------------------------------------ образец
+        // ------------------------------------------------------------------ preview
         /// <summary>
-        /// Лист со всеми размерами на светлом и тёмном фоне — чтобы посмотреть глазами.
-        /// Мелкие размеры показаны ещё и увеличенными без сглаживания: именно на них
-        /// видно, попали ли полосы в сетку точек.
+        /// A sheet with all sizes on light and dark backgrounds, to look at with your eyes.
+        /// Small sizes are also shown enlarged without smoothing: they are the ones where
+        /// you can see whether the bars landed on the pixel grid.
         /// </summary>
         private static Bitmap Preview(List<Bitmap> frames)
         {
@@ -435,7 +435,7 @@ namespace DIIISPL.Tools
                     }
                 }
 
-                // мелкие размеры крупным планом, точка в точку
+                // small sizes close up, pixel for pixel
                 g.InterpolationMode = InterpolationMode.NearestNeighbor;
                 g.PixelOffsetMode = PixelOffsetMode.Half;
                 int zx = pad, zy = pad + rowH * 2 + pad;
@@ -446,7 +446,7 @@ namespace DIIISPL.Tools
                     zx += f.Width * zoom + pad;
                 }
 
-                // и самый большой размер целиком
+                // and the largest size in full
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic;
                 Bitmap big = frames[frames.Count - 1];
                 g.DrawImageUnscaled(big, pad, height - 256 - pad);

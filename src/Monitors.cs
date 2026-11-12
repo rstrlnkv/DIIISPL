@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -16,7 +16,7 @@ namespace DIIISPL
         public override string ToString() { return Width + " × " + Height; }
     }
 
-    /// <summary>Физический монитор, как его видит программа (а не «Дисплей 2» из Windows).</summary>
+    /// <summary>A physical monitor as the program sees it (not "Display 2" from Windows).</summary>
     internal class MonitorInfo
     {
         public Native.LUID Adapter;
@@ -24,16 +24,16 @@ namespace DIIISPL
         public string DevicePath;
         public EdidInfo Edid;
 
-        public string Identity;          // устойчивый ключ (EDID)
-        public string Name;              // «LG ULTRAGEAR+»
+        public string Identity;          // stable key (EDID)
+        public string Name;              // "LG ULTRAGEAR+"
         public string ConnectionType;    // HDMI / DisplayPort / ...
 
         public bool Active;
         public uint SourceId;
-        public string GdiName;           // \\.\DISPLAY1 — только для активных
+        public string GdiName;           // \\.\DISPLAY1 — only for active ones
 
         public int X, Y;
-        public int Width, Height;        // текущий режим рабочего стола
+        public int Width, Height;        // current desktop mode
         public double Hz;
         public uint Rotation = Native.DISPLAYCONFIG_ROTATION_IDENTITY;
         public uint Scaling = Native.DISPLAYCONFIG_SCALING_PREFERRED;
@@ -57,7 +57,7 @@ namespace DIIISPL
         private static readonly int[] CommonHeights = { 2160, 1440, 1600, 1440, 1080, 1050, 900, 900, 720 };
         private static readonly double[] CommonRates = { 240, 165, 144, 120, 100, 75, 60, 50, 30, 24 };
 
-        /// <summary>Все подключённые сейчас мониторы — включённые и выключенные.</summary>
+        /// <summary>All monitors connected now — enabled and disabled.</summary>
         public static List<MonitorInfo> Enumerate()
         {
             var result = new List<MonitorInfo>();
@@ -95,10 +95,10 @@ namespace DIIISPL
                         mon.PreferredHeight = mon.Edid.PreferredHeight;
                     }
                     if (string.IsNullOrEmpty(mon.Name))
-                        // Запасное имя — по-английски и мимо словаря: оно попадает
-                        // в файл профиля, а служебные файлы пишутся на одном языке.
-                        // Иначе профиль, снятый в русском окне, приносил бы
-                        // «Дисплей 2» на английскую машину — и наоборот.
+                        // Fallback name — in English and bypassing the dictionary: it ends up
+                        // in the profile file, and service files are written in one language.
+                        // Otherwise a profile captured in the Russian window would bring
+                        // "Дисплей 2" to an English machine — and vice versa.
                         mon.Name = string.IsNullOrEmpty(tn.monitorFriendlyDeviceName)
                             ? "Display " + path.targetInfo.id
                             : tn.monitorFriendlyDeviceName;
@@ -146,13 +146,13 @@ namespace DIIISPL
         {
             paths = new Native.DISPLAYCONFIG_PATH_INFO[0];
             modes = new Native.DISPLAYCONFIG_MODE_INFO[0];
-            // Между «сколько надо места» и «отдай данные» конфигурация может
-            // смениться, и тогда система отвечает ERROR_INSUFFICIENT_BUFFER —
-            // это не поломка, а просьба спросить размеры заново. Прежде все коды
-            // сливались в один отказ, Enumerate отдавал пустой список, и Missing,
-            // который зовёт его через 1300 мс после смены режима — в самый
-            // неустойчивый момент, — читал это как «не включился ни один
-            // монитор» и запускал лишнее тяжёлое перестроение.
+            // Between "how much space is needed" and "give me the data" the configuration may
+            // change, and then the system answers ERROR_INSUFFICIENT_BUFFER —
+            // this is not a failure but a request to ask for the sizes again. Previously all codes
+            // were merged into one failure, Enumerate returned an empty list, and Missing,
+            // which calls it 1300 ms after a mode change — at the most
+            // unstable moment — read that as "no monitor
+            // came on" and launched an unneeded heavy rebuild.
             for (int attempt = 0; attempt < 4; attempt++)
             {
                 uint pathCount, modeCount;
@@ -227,9 +227,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Состояние HDR. На Windows 11 24H2+ спрашиваем новый пакет: старый флаг
-        /// advancedColorEnabled там означает широкий цветовой охват и остаётся включённым
-        /// даже когда HDR выключен, так что судить по нему нельзя.
+        /// HDR state. On Windows 11 24H2+ we ask the new packet: the old flag
+        /// advancedColorEnabled there means a wide colour gamut and stays on
+        /// even when HDR is off, so it cannot be used to judge.
         /// </summary>
         public static void ReadHdr(MonitorInfo mon)
         {
@@ -245,7 +245,7 @@ namespace DIIISPL
                 return;
             }
 
-            // Windows 10 и ранние сборки 11 нового пакета не знают
+            // Windows 10 and early builds of 11 do not know the new packet
             var ac = new Native.DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO();
             ac.header.type = Native.DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO;
             ac.header.size = (uint)Marshal.SizeOf(typeof(Native.DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO));
@@ -259,8 +259,8 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Включить/выключить HDR. Сначала новым вызовом (24H2+), затем старым:
-        /// старый на новых сборках отвечает успехом, но HDR не выключает.
+        /// Turn HDR on/off. First with the new call (24H2+), then the old one:
+        /// the old one on new builds returns success but does not turn HDR off.
         /// </summary>
         public static int SetHdr(Native.LUID adapter, uint targetId, bool enable)
         {
@@ -273,13 +273,13 @@ namespace DIIISPL
             int rc = Native.DisplayConfigSetDeviceInfo(ref hdr);
             if (rc == 0)
             {
-                // Дать линку согласоваться. Мгновенным переключение не бывает, и в
-                // соседнем коде это признано паузами в 600–700 мс. Без выдержки
-                // проверка почти всегда читала «ещё не изменилось», и вдогонку
-                // уходил старый вызов — а на сборках 24H2+ он управляет уже не
-                // HDR, а расширенным цветовым охватом, который никто не просил
-                // трогать и который программа не умеет вернуть.
-                System.Threading.Thread.Sleep(700);   // столько же, сколько сверка в Applier
+                // Let the link negotiate. A switch is never instant, and in
+                // the neighbouring code this is recognised as pauses of 600–700 ms. Without the wait
+                // the check almost always read "not changed yet", and the old call
+                // followed up — and on 24H2+ builds it controls not
+                // HDR but the extended colour gamut, which nobody asked
+                // to touch and which the program cannot restore.
+                System.Threading.Thread.Sleep(700);   // the same as the check in Applier
 
                 var check = new MonitorInfo();
                 check.Adapter = adapter;
@@ -296,11 +296,11 @@ namespace DIIISPL
             set.value = enable ? 1u : 0u;
             int rc2 = Native.DisplayConfigSetDeviceInfo(ref set);
 
-            // Успех старого вызова — это успех, даже если новый пакет система не
-            // знает. Прежде здесь возвращалась ошибка нового: на Windows 10 и на
-            // сборках 11 до 24H2 — ровно там, ради чего запасной путь и написан, —
-            // HDR включался, а программа сообщала «видеокарта не принимает такое
-            // сочетание режимов» и не заносила монитор в список изменённых.
+            // Success of the old call is success, even if the system does not know
+            // the new packet. Previously the error of the new one was returned here: on Windows 10 and on
+            // builds of 11 before 24H2 — exactly where the fallback path was written for —
+            // HDR turned on, yet the program reported "the graphics card does not accept this
+            // combination of modes" and did not add the monitor to the changed list.
             return rc2 == 0 ? 0 : (rc != 0 ? rc : rc2);
         }
 
@@ -323,7 +323,7 @@ namespace DIIISPL
 
             if (byRes.Count == 0)
             {
-                // монитор сейчас выключен — строим список из предпочитаемого режима EDID
+                // the monitor is off now — build the list from the EDID preferred mode
                 mon.ModesAreApproximate = true;
                 int pw = mon.PreferredWidth > 0 ? mon.PreferredWidth : 1920;
                 int ph = mon.PreferredHeight > 0 ? mon.PreferredHeight : 1080;

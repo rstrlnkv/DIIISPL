@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -8,30 +8,30 @@ using System.Collections.Generic;
 namespace DIIISPL
 {
     /// <summary>
-    /// Выбор профиля по составу экранов — «включил телевизор, раскладка встала сама».
+    /// Choosing a profile by the set of screens — "turned the TV on, the layout set itself".
     ///
-    /// Решение живёт здесь, отдельно от того, кто его исполняет, по одной причине:
-    /// его должны одинаково видеть и программа, и команда `DIIISPL.exe /auto`.
-    /// Команда, которая пересказывает решение своими словами, рано или поздно
-    /// расскажет не то, что программа сделает на самом деле.
+    /// The decision lives here, apart from whoever carries it out, for one reason:
+    /// the program and the `DIIISPL.exe /auto` command must both see it the same way.
+    /// A command that retells the decision in its own words will sooner or later
+    /// tell something other than what the program will actually do.
     ///
-    /// Поводом служит **состав**, а не событие. Windows шлёт `WM_DISPLAYCHANGE`
-    /// на любое шевеление, в том числе на наше собственное применение раскладки, —
-    /// и «применили, получили событие, применили снова» это ровно та плотная
-    /// очередь перестроений, которой 19.08.2026 машину увело в BSOD. Применение
-    /// раскладки состав не меняет: те же мониторы остаются подключёнными. Значит
-    /// петли не будет, даже если все прочие предосторожности снять.
+    /// The trigger is the **set**, not an event. Windows sends `WM_DISPLAYCHANGE`
+    /// on any movement, including our own layout apply,
+    /// and "applied, got an event, applied again" is exactly the dense
+    /// queue of rebuilds that sent the machine into a BSOD on 19.08.2026. Applying
+    /// a layout does not change the set: the same monitors stay connected. So
+    /// there will be no loop even if all other precautions are removed.
     /// </summary>
     internal static class AutoSwitch
     {
         /// <summary>
-        /// Кто сейчас подключён — ключи всех мониторов, которые видит система,
-        /// упорядоченные, чтобы два состава можно было сравнить построчно.
+        /// Who is connected now — the keys of all monitors the system sees,
+        /// sorted so that two sets can be compared line by line.
         ///
-        /// Именно подключён, а не включён в раскладке: выключенный по HDMI
-        /// телевизор исчезает из системы совсем, и это тот самый сигнал, ради
-        /// которого всё затевается. Погашенный, но подключённый монитор из
-        /// состава не выпадает — его профиль обязан зажечь.
+        /// Connected, not enabled in the layout: a TV switched off over HDMI
+        /// disappears from the system completely, and that is the very signal
+        /// this is all for. A blanked but connected monitor does not
+        /// drop out of the set — its profile must light it up.
         /// </summary>
         public static List<string> Composition(List<MonitorInfo> live)
         {
@@ -43,7 +43,7 @@ namespace DIIISPL
             return keys;
         }
 
-        /// <summary>Тот же ли это состав. Пустой список и «не знаем» — разные вещи, поэтому null не равен ничему.</summary>
+        /// <summary>Whether this is the same set. An empty list and "unknown" are different things, so null is not equal to anything.</summary>
         public static bool Same(List<string> a, List<string> b)
         {
             if (a == null || b == null) return false;
@@ -54,21 +54,21 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Профиль под этот состав — или null, если такого нет.
+        /// The profile for this set — or null if there is none.
         ///
-        /// Применим тот, все включённые мониторы которого подключены. Требовать
-        /// **точного равенства** нельзя, и это измерено на живых профилях
-        /// 26.08.2026: профиль «Телевизор» нарочно оставляет два экрана тёмными,
-        /// хотя провода из них никто не вынимал, — при точном равенстве он не
-        /// сработал бы никогда. Профиль перечисляет все известные мониторы и
-        /// говорит, какие зажечь; подключённый, но погашенный им — это его
-        /// замысел, а не несовпадение.
+        /// One is applicable if all of its enabled monitors are connected. Requiring
+        /// **exact equality** is not possible, and this was measured on live profiles
+        /// on 26.08.2026: the "TV" profile deliberately leaves two screens dark
+        /// although nobody unplugged their cables — with exact equality it would
+        /// never fire. A profile lists all known monitors and
+        /// says which to light; connected but blanked by it is its
+        /// intent, not a mismatch.
         ///
-        /// Из применимых берём тот, что задействует больше экранов: иначе,
-        /// подключив всё, человек получал бы профиль на один монитор — он
-        /// применим всегда. При равенстве побеждает первый по списку: порядок
-        /// задаёт человек, двигает его `Alt+↑` и `Alt+↓` и видит глазами.
-        /// Правило, которое видно в окне, объяснять не нужно.
+        /// Of the applicable ones we take the one that uses more screens: otherwise,
+        /// with everything connected, a person would get a one-monitor profile — it
+        /// is always applicable. On a tie the first in the list wins: the order
+        /// is set by the person, moved with `Alt+↑` and `Alt+↓` and seen with their own eyes.
+        /// A rule that is visible in the window needs no explaining.
         /// </summary>
         public static Layout Pick(List<string> composition, List<Layout> profiles)
         {
@@ -78,24 +78,24 @@ namespace DIIISPL
             int bestUsed = 0;
             foreach (Layout l in profiles)
             {
-                if (!l.Auto) continue;                // исключён человеком — клавишей применяется, сам не встаёт
+                if (!l.Auto) continue;                // excluded by the person — applied by hotkey, never picks itself
 
                 List<string> wanted = Wanted(l);
-                if (wanted.Count == 0) continue;      // профиль, гасящий всё, не выбираем никогда
+                if (wanted.Count == 0) continue;      // a profile that blanks everything is never chosen
 
                 bool all = true;
                 foreach (string id in wanted)
                     if (!composition.Contains(id)) { all = false; break; }
                 if (!all) continue;
 
-                // Строго больше — значит при равенстве остаётся найденный раньше,
-                // то есть первый по списку.
+                // Strictly greater — so on a tie the one found earlier stays,
+                // that is, the first in the list.
                 if (wanted.Count > bestUsed) { best = l; bestUsed = wanted.Count; }
             }
             return best;
         }
 
-        /// <summary>Какие мониторы профиль хочет видеть включёнными.</summary>
+        /// <summary>Which monitors the profile wants enabled.</summary>
         public static List<string> Wanted(Layout layout)
         {
             var keys = new List<string>();

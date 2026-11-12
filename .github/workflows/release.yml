@@ -1,11 +1,11 @@
-# Сборка выпуска. Запускается тегом вида v0.1.0 — он же задаёт и версию, и канал.
-# Version files are not patched here: the "Версия" step fails the release when
+# Release build. Triggered by a tag like v0.1.0, which sets both the version and the channel.
+# Version files are not patched here: the "Version" step fails the release when
 # AssemblyInfo.cs or the CHANGELOG headings disagree with the tag.
 #
-# Тег с суффиксом (v0.1.1-dev.1) — сборка Dev: уезжает предварительным выпуском,
-# программа берёт такие только на канале Dev, и только в них есть настройки
-# панели задач. Тег без суффикса — стабильная сборка, без них.
-name: Выпуск
+# A tag with a suffix (v0.1.1-dev.1) is a Dev build: it goes out as a pre-release,
+# the program takes those only on the Dev channel, and only they have the
+# taskbar settings. A tag without a suffix is a stable build, without them.
+name: Release
 
 on:
   push:
@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Версия без «v», например 0.1.1 или 0.1.1-dev.1
+        description: Version without "v", for example 0.1.1 or 0.1.1-dev.1
         required: true
 
 permissions:
@@ -23,25 +23,25 @@ jobs:
   release:
     runs-on: windows-2022
 
-    # На уровне задачи — только признак «ключ есть», строка «true» или «false»,
-    # но не сам ключ. Переменная задачи видна каждому шагу, а среди шагов есть
-    # такой, который качает nuget.exe по ссылке «latest» без сверки хеша и
-    # запускает сборочные скрипты чужих портов. Ключ подписи там делать нечего:
-    # им подписывается всё, что программа готова поставить себе с правами.
+    # At job level there is only the "key is present" flag, the string "true" or "false",
+    # not the key itself. A job variable is visible to every step, and among the steps there is
+    # one that downloads nuget.exe from the "latest" link without a hash check and
+    # runs the build scripts of third-party ports. The signing key has no business there:
+    # it signs everything the program is ready to install for itself with privileges.
     #
-    # Сам секрет объявлен ниже, в единственном шаге, которому он нужен. Условие
-    # шага секретов не видит — отсюда и признак.
+    # The secret itself is declared below, in the one step that needs it. A step's condition
+    # cannot see secrets, hence the flag.
     env:
       HAS_SIGNING_KEY: ${{ secrets.SIGN_PFX != '' }}
 
     steps:
-      # Вся история, а не последний коммит: номер сборки — это их число, и при
-      # выкачке глубиной в один у каждого выпуска он был бы «1».
+      # The whole history, not the last commit: the build number is their count, and with
+      # a depth-one checkout it would be "1" for every release.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Версия
+      - name: Version
         shell: pwsh
         # Tag and input text reach the script through env, never spliced into its source.
         env:
@@ -53,17 +53,17 @@ jobs:
           $version = if ($env:GH_EVENT -eq 'workflow_dispatch') { $env:GH_INPUT_VERSION }
                      else { $tag -replace '^v','' }
           # Whole version, suffix included: it goes on into GITHUB_ENV and file names.
-          if ($version -notmatch '\A[0-9]+\.[0-9]+\.[0-9]+(-dev\.[0-9]+)?\z') { throw "Непонятная версия: $version" }
+          if ($version -notmatch '\A[0-9]+\.[0-9]+\.[0-9]+(-dev\.[0-9]+)?\z') { throw "Unrecognized version: $version" }
           $number = ($version -split '-')[0]          # 0.1.1-dev.1 → 0.1.1
           $early = $version -match '-'
 
-          # Тег задаёт и канал. Суффикс — сборка Dev: в ней есть настройки панели
-          # задач и библиотека оформления; в стабильной их нет вовсе.
+          # The tag sets the channel too. A suffix means a Dev build: it has the taskbar
+          # settings and the styling library; the stable one has none at all.
           #
-          # Ниже именно ToString().ToLower(): PowerShell пишет булево как «True», а
-          # действие выпуска сравнивает строку с «true» — с заглавной буквы
-          # предварительный выпуск не пометится предварительным и уйдёт всем,
-          # включая тех, кто канал Dev не выбирал.
+          # Below it is ToString().ToLower() on purpose: PowerShell writes a boolean as "True", and
+          # the release action compares the string with "true"; with a capital letter
+          # the pre-release would not be marked as a pre-release and would go to everyone,
+          # including those who did not choose the Dev channel.
           $channel = if ($early) { 'dev' } else { 'stable' }
 
           "DIIISPL_VERSION=$number"                      | Out-File $env:GITHUB_ENV -Append -Encoding utf8
@@ -86,21 +86,21 @@ jobs:
             if (@($head).Count -lt 2 -or $head[0] -notmatch '^## \[Unreleased\]\s*$') { throw "${log}: the first heading must be '## [Unreleased]'." }
             if ($head[1] -notmatch ('^## \[' + [regex]::Escape($version) + '\] - \d{4}-\d{2}-\d{2}\s*$')) { throw "${log}: the first released heading is '$($head[1])', the tag says $version." }
           }
-          Write-Host "Собираю $version"
+          Write-Host "Building $version"
 
-      # Только для сборок Dev: в стабильной библиотеки нет ни в программе, ни в
-      # пакете, и тратить на неё минуты незачем. Собирается из исходников —
-      # detours и wil тянет vcpkg, поэтому шаг долгий. Кэш сюда не поставлен
-      # намеренно: build-native.cmd раскладывает промежуточные файлы во временную
-      # папку, путь к которой у сборщика свой, и ключ кэша указывал бы мимо.
-      - name: Библиотека оформления панели задач
+      # Only for Dev builds: the stable one has the library neither in the program nor in
+      # the package, and there is no point spending minutes on it. Built from source:
+      # vcpkg pulls detours and wil, so the step is long. The cache is deliberately
+      # not set here: build-native.cmd lays out intermediate files in a temporary
+      # folder whose path differs on the builder, and the cache key would point wrong.
+      - name: Taskbar styling library
         if: ${{ env.DIIISPL_CHANNEL == 'dev' }}
         run: native\build-native.cmd
 
-      # Сертификат самодельный и в репозиторий не попадает. Есть в секретах —
-      # подписываем; нет — собираем без подписи, но такой выпуск программа
-      # у себя не поставит: она сверяет подпись с известным отпечатком.
-      - name: Сертификат подписи
+      # The certificate is self-made and does not enter the repository. If it is in the secrets,
+      # we sign; if not, we build unsigned, but the program will not install such
+      # a release: it checks the signature against a known thumbprint.
+      - name: Signing certificate
         if: ${{ env.HAS_SIGNING_KEY == 'true' }}
         env:
           SIGN_PFX: ${{ secrets.SIGN_PFX }}
@@ -115,59 +115,59 @@ jobs:
           Remove-Item $path -Force
           "DIIISPL_SIGN_THUMBPRINT=$($cert.Thumbprint)" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
 
-      # «.\» обязательна. У шагов run на windows-раннере оболочка — PowerShell,
-      # а он принципиально не ищет исполняемые файлы в текущем каталоге: голое
-      # «build.cmd» кончается «The term is not recognized». Соседние шаги живы
-      # только потому, что в их строках есть разделитель пути, и PowerShell
-      # считает их относительным путём.
-      - name: Программа
+      # The ".\" is required. For run steps on a windows runner the shell is PowerShell,
+      # and it deliberately does not look for executables in the current directory: a bare
+      # "build.cmd" ends with "The term is not recognized". The neighboring steps work
+      # only because their lines contain a path separator, and PowerShell
+      # treats them as a relative path.
+      - name: Program
         run: .\scripts\build.cmd ${{ env.DIIISPL_CHANNEL }}
 
-      - name: Установщик
+      - name: Installer
         run: .\installer\build-msi.cmd ${{ env.DIIISPL_CHANNEL }}
 
-      # Выпуск без подписи программа у себя не поставит: она сверяет установщик
-      # с известным отпечатком. Собирается он при этом до конца и зеленеет —
-      # поэтому проверяем здесь, до публикации, а не после жалобы пользователя.
-      - name: Пакет подписан
+      # The program will not install an unsigned release: it checks the installer
+      # against a known thumbprint. It still builds to the end and goes green,
+      # so we check here, before publishing, not after a user complaint.
+      - name: Package is signed
         shell: pwsh
         run: |
           $msi = "DIIISPL-$env:DIIISPL_VERSION-$env:DIIISPL_CHANNEL-x64.msi"
           $sig = Get-AuthenticodeSignature $msi
 
-          # Смотрим на сертификат, а не на Status: корень самоподписанный, и
-          # Get-AuthenticodeSignature на правильно подписанном пакете отвечает
-          # UnknownError. Проверка по Status валила бы каждый выпуск.
+          # We look at the certificate, not at Status: the root is self-signed, and
+          # Get-AuthenticodeSignature answers UnknownError on a correctly signed package.
+          # Checking by Status would fail every release.
           if ($sig.SignerCertificate -eq $null) {
-            throw "Пакет $msi собран без подписи — такой выпуск программа не поставит."
+            throw "Package $msi was built unsigned; the program will not install such a release."
           }
 
-          # И отпечаток тот самый. Программа сверяет установщик именно с ним
-          # (src/Updater.cs), поэтому подписанный чужим ключом выпуск она отвергнет —
-          # а сборка без этой проверки позеленела бы и опубликовала его.
+          # And it is the right thumbprint. The program checks the installer against exactly that one
+          # (src/Updater.cs), so it rejects a release signed with someone else's key,
+          # while a build without this check would go green and publish it.
           $want = '103850469089DEECC19D0DD6CE1D4DD3307601FA'
           if ($sig.SignerCertificate.Thumbprint -ne $want) {
-            throw "Пакет подписан ключом $($sig.SignerCertificate.Thumbprint), а программа ждёт $want."
+            throw "Package is signed with key $($sig.SignerCertificate.Thumbprint), but the program expects $want."
           }
-          Write-Host "Подписан: $($sig.SignerCertificate.Thumbprint)"
+          Write-Host "Signed: $($sig.SignerCertificate.Thumbprint)"
 
-      # Описание выпуска собирается здесь, а не в шаге ниже: страница выпуска —
-      # это то, куда ведёт кнопка «Что нового» из окна программы, и первым человек
-      # должен увидеть то, за чем пришёл.
+      # The release description is assembled here, not in the step below: the release page is
+      # where the "What's new" button in the program window leads, and the first thing the user
+      # should see is what they came for.
       #
-      # Устройство страницы взято у Helm: одна строка сверху говорит, что это за
-      # выпуск, дальше «Что нового», «Установка и обновление» с контрольной суммой
-      # и подписью, «Что дальше». Список коммитов дописывает GitHub своим
-      # «What's Changed» — это и есть последний раздел.
+      # The page layout is borrowed from Helm: one line on top says what kind of
+      # release it is, then "What's new", "Installation and upgrading" with the checksum
+      # and signature, "What's next". GitHub appends the commit list with its own
+      # "What's Changed", which is the last section.
       #
-      # Прозу держат файлы .github/release-template.*.md, здесь только подстановки.
-      # Нет раздела чейнджлога хотя бы в одном языке — падаем: выпуск без «что
-      # нового» создался бы молча, а нашёлся бы только глазами человека.
-      - name: Что нового
+      # The prose is kept in the .github/release-template.*.md files, only substitutions are here.
+      # If a changelog section is missing in even one language, we fail: a release without "what's
+      # new" would be created silently and found only by a human eye.
+      - name: What's new
         shell: pwsh
         run: |
           function Section([string]$file, [string]$version) {
-            if (-not (Test-Path $file)) { throw "Нет файла $file." }
+            if (-not (Test-Path $file)) { throw "File $file not found." }
             $found = $false
             $lines = New-Object System.Collections.Generic.List[string]
             foreach ($line in (Get-Content $file -Encoding utf8)) {
@@ -181,9 +181,9 @@ jobs:
               }
               if ($found) { $lines.Add($line) }
             }
-            if (-not $found) { throw "В $file нет раздела «$version» — впишите его до того, как ставить тег." }
+            if (-not $found) { throw "No section '$version' in $file; add it before pushing the tag." }
             $text = ($lines -join "`n").Trim()
-            if ($text -eq '') { throw "Раздел «$version» в $file пуст." }
+            if ($text -eq '') { throw "Section '$version' in $file is empty." }
             return $text
           }
 
@@ -191,9 +191,9 @@ jobs:
           $num = $env:DIIISPL_VERSION
           $msi = "DIIISPL-$num-$env:DIIISPL_CHANNEL-x64.msi"
 
-          # Сумму и отпечаток берём у самого пакета, а не из того, что мы про него
-          # думаем: страница обещает человеку сверить скачанное, и обещание должно
-          # относиться к тому файлу, который к ней приложен.
+          # We take the checksum and thumbprint from the package itself, not from what we
+          # think about it: the page promises the user they can verify the download, and the promise must
+          # refer to the file attached to it.
           $sha = (Get-FileHash $msi -Algorithm SHA256).Hash.ToLower()
           $thumb = (Get-AuthenticodeSignature $msi).SignerCertificate.Thumbprint
 
@@ -204,8 +204,8 @@ jobs:
           $ru = Section 'CHANGELOG.ru.md' $tag
           $en = Section 'CHANGELOG.md'    $tag
 
-          # Род выпуска берём из самих строк, а не из номера: 0.2.2 по номеру —
-          # PATCH, а возможностей в нём пять, и номер соврал бы.
+          # We take the kind of release from the lines themselves, not from the number: 0.2.2 by number is
+          # a PATCH, yet it has five features, and the number would lie.
           $hasNew = $en -match '(?m)^### Added\s*$'
           $early = $env:DIIISPL_EARLY -eq 'true'
           $kindRu = if ($hasNew) { 'с новыми возможностями' } else { 'с исправлениями' }
@@ -221,8 +221,8 @@ jobs:
             return $t.TrimEnd()
           }
 
-          # Английский — целиком под складкой: у Helm страница одноязычная и потому
-          # короткая, а два скелета подряд сделали бы её вдвое длиннее ни за чем.
+          # English goes entirely below the fold: Helm's page is single-language and therefore
+          # short, and two skeletons in a row would make it twice as long for nothing.
           $body = @(
             (Fill '.github/release-template.ru.md' $ru $whatRu), '',
             '<details>', '<summary>English</summary>', '',
@@ -233,21 +233,21 @@ jobs:
           Set-Content release-body.md $body -Encoding utf8
           Write-Host $body
 
-      - name: Выпуск
+      - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.DIIISPL_TAG }}
-          # Заголовок называет канал: на эту страницу ведёт кнопка «Что нового»
-          # из окна программы, а суффикс «-dev.1» в теге прочитают не все.
+          # The title names the channel: the "What's new" button in the program window leads to this
+          # page, and not everyone will read the "-dev.1" suffix in the tag.
           name: ${{ env.DIIISPL_CHANNEL == 'dev' && format('{0} · Dev — с панелью задач', env.DIIISPL_TAG) || env.DIIISPL_TAG }}
           prerelease: ${{ env.DIIISPL_EARLY }}
-          # Описание пишем своё, шагом выше: generate_release_notes собирает текст
-          # из слитых pull request'ов — у нас их нет, и страница встретила бы
-          # человека пустой строчкой. Сгенерированное допишется следом, одно
-          # другому не мешает.
+          # We write our own description, in the step above: generate_release_notes assembles text
+          # from merged pull requests, and we have none, so the page would greet
+          # the user with an empty line. The generated text is appended after; one
+          # does not get in the way of the other.
           body_path: release-body.md
           generate_release_notes: true
           files: DIIISPL-${{ env.DIIISPL_VERSION }}-${{ env.DIIISPL_CHANNEL }}-x64.msi
-          # Без этого выпуск без пакета создаётся молча и шаг зеленеет. А выпуск
-          # без пакета программа не поставит: она ищет вложение с «.msi».
+          # Without this, a release without a package is created silently and the step goes green. And a release
+          # without a package the program will not install: it looks for an attachment with ".msi".
           fail_on_unmatched_files: true

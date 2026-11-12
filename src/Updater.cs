@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — a monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -16,12 +16,12 @@ using System.Web.Script.Serialization;
 namespace DIIISPL
 {
     /// <summary>
-    /// Обновление через релизы на GitHub: спросить, что вышло, забрать установщик,
-    /// проверить подпись и запустить.
+    /// Updating through GitHub releases: ask what is out, fetch the installer,
+    /// verify the signature and launch it.
     ///
-    /// Установщик запускается, а не распаковывается вручную: он умеет закрыть
-    /// работающую копию, заменить файлы и обновить запись в списке программ, а
-    /// самодельная замена файла на ходу упирается в то, что файл занят.
+    /// The installer is launched rather than unpacked by hand: it knows how to close
+    /// the running copy, replace the files and update the entry in the programs list, while
+    /// a homemade on-the-fly file replacement runs into the file being in use.
     /// </summary>
     internal static class Updater
     {
@@ -29,11 +29,11 @@ namespace DIIISPL
         public const string Repo = "DIIISPL";
 
         /// <summary>
-        /// Отпечаток сертификата, которым подписаны сборки. Скачанный установщик обязан
-        /// быть подписан именно им — иначе он не запускается, даже если пришёл с GitHub.
-        /// Сертификат самодельный, и цепочка доверия здесь ничего не доказала бы: на чужой
-        /// машине его корень не установлен. Сверка с известным отпечатком строже — она
-        /// проверяет не «кто-то подписал», а «подписал тот самый».
+        /// Thumbprint of the certificate the builds are signed with. The downloaded installer must
+        /// be signed with exactly it — otherwise it is not launched, even if it came from GitHub.
+        /// The certificate is self-made, and a chain of trust would prove nothing here: on someone else's
+        /// machine its root is not installed. Matching a known thumbprint is stricter — it
+        /// checks not "someone signed" but "that very one signed".
         /// </summary>
         private const string SignerThumbprint = "103850469089DEECC19D0DD6CE1D4DD3307601FA";
 
@@ -47,7 +47,7 @@ namespace DIIISPL
             get { return "https://github.com/" + Owner + "/" + Repo; }
         }
 
-        /// <summary>Что нашлось на GitHub.</summary>
+        /// <summary>What was found on GitHub.</summary>
         internal class Release
         {
             public Version Version;
@@ -60,7 +60,7 @@ namespace DIIISPL
             public bool Early;
         }
 
-        /// <summary>Версия работающей программы.</summary>
+        /// <summary>Version of the running program.</summary>
         public static Version Current
         {
             get
@@ -76,7 +76,7 @@ namespace DIIISPL
             }
         }
 
-        /// <summary>Версия для показа: «0.1.0» читается лучше, чем «0.1.0.0».</summary>
+        /// <summary>Version for display: "0.1.0" reads better than "0.1.0.0".</summary>
         public static string CurrentText
         {
             get
@@ -113,11 +113,11 @@ namespace DIIISPL
             get { return DisplayText + " (" + BuildInfo.Number + ")"; }
         }
 
-        // ------------------------------------------------------------------ проверка
+        // ------------------------------------------------------------------ checking
         /// <summary>
-        /// Спросить GitHub, что вышло. Возвращает более новый выпуск или null, если
-        /// новее ничего нет. Ошибку возвращает текстом — её показывают на странице
-        /// «О программе», а не пишут в журнал.
+        /// Ask GitHub what is out. Returns the newer release or null if
+        /// there is nothing newer. The error is returned as text — it is shown on the
+        /// About page rather than written to a log.
         /// </summary>
         public static Release Check(string channel, out string error)
         {
@@ -136,21 +136,21 @@ namespace DIIISPL
                     Release r = Read(item, channel);
                     if (r == null) continue;
                     if (Truthy(item, "draft")) continue;
-                    // на канале Stable сборки Dev не предлагаем
+                    // the Stable channel is not offered Dev builds
                     if (r.Early && channel != Settings.Dev) { skippedEarly = true; continue; }
                     if (best == null || r.Version > best.Version) best = r;
                 }
 
-                // Отметку ставим и тогда, когда подходящего выпуска не нашлось:
-                // связь была, ответ получен — проверка состоялась. Прежде она
-                // ставилась только при находке, и на пустом канале строка «когда
-                // проверяли» не менялась никогда.
+                // The mark is set even when no suitable release was found:
+                // there was a connection, a reply came — the check took place. It used to
+                // be set only on a find, and on an empty channel the "when it was
+                // checked" line never changed.
                 Settings.LastCheck = DateTime.UtcNow;
                 if (best == null)
                 {
-                    // «Выпусков нет» и «есть, но только предварительные» — разные
-                    // вещи, и вторая иначе предлагает жать «Ещё раз» на том, что
-                    // не изменится.
+                    // "No releases" and "there are some, but only pre-releases" are different
+                    // things, and otherwise the second one suggests pressing "Again" on something that
+                    // will not change.
                     error = skippedEarly
                         ? Text.OnlyPrereleases
                         : Text.NoReleasesYet;
@@ -160,8 +160,8 @@ namespace DIIISPL
             }
             catch (WebException ex)
             {
-                // Пока не вышло ни одного выпуска, GitHub отвечает «нет такого» —
-                // это не поломка связи, и говорить о ней так не надо.
+                // While no release has been published, GitHub answers "not found" —
+                // that is not a broken connection, and it should not be described as one.
                 var http = ex.Response as HttpWebResponse;
                 error = http != null && http.StatusCode == HttpStatusCode.NotFound
                     ? Text.NoReleasesYet
@@ -202,10 +202,10 @@ namespace DIIISPL
                         string name = Field(asset, "name");
                         if (name == null || !name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase)) continue;
 
-                        // Свой канал — вперёд. Сейчас в выпуске один пакет, и
-                        // выбирать не из чего; но если в один выпуск когда-нибудь
-                        // лягут оба, стабильная копия не должна молча поставить
-                        // себе Dev просто потому, что тот оказался первым.
+                        // Own channel first. Right now a release has a single package, so
+                        // there is nothing to choose from; but if both ever land in one release,
+                        // a stable copy must not silently install
+                        // Dev just because it happened to be first.
                         bool mine = name.IndexOf("-" + channel + "-", StringComparison.OrdinalIgnoreCase) >= 0;
                         if (r.FileName != null && !mine) continue;
 
@@ -218,10 +218,10 @@ namespace DIIISPL
             return r;
         }
 
-        // ------------------------------------------------------------------ загрузка
+        // ------------------------------------------------------------------ download
         /// <summary>
-        /// Забрать установщик во временную папку и убедиться, что он подписан нашим
-        /// сертификатом. Возвращает путь к файлу или null с объяснением.
+        /// Fetch the installer into a temp folder and make sure it is signed with our
+        /// certificate. Returns the path to the file or null with an explanation.
         /// </summary>
         public static string Download(Release release, out string error)
         {
@@ -235,32 +235,32 @@ namespace DIIISPL
             string path = null;
             try
             {
-                // Прежний пакет мы держим открытым, чтобы его не подменили; пока
-                // не отпустим, его не удалить и поверх него не записать.
+                // We keep the previous package open so it cannot be swapped; until
+                // we release it, it cannot be deleted or written over.
                 Unhold();
 
                 string dir = Path.Combine(Path.GetTempPath(), "DIIISPL-update");
                 Directory.CreateDirectory(dir);
 
-                // Прошлые пакеты убираем здесь, а не после установки: там файл
-                // ещё читает msiexec. Иначе они копились по полтора мегабайта
-                // за обновление и оставались лежать даже после удаления
-                // программы — папку эту создаём мы, и убрать её некому.
+                // Past packages are removed here, not after installation: there the file
+                // is still being read by msiexec. Otherwise they piled up at one and a half megabytes
+                // per update and stayed even after the program
+                // was uninstalled — we create this folder, and nobody else would clean it.
                 try
                 {
                     foreach (string old in Directory.GetFiles(dir, "*.msi"))
                         try { File.Delete(old); } catch { }
                 }
                 catch { }
-                // Только имя файла и ничего больше. Имя приходит с сервера, а Path.Combine
-                // при корневом втором аргументе выбрасывает первый целиком: «C:\…\что.msi»
-                // или «..\..\что.msi» увели бы запись из временной папки куда угодно —
-                // и запись идёт до проверки подписи.
+                // The file name only and nothing else. The name comes from the server, and Path.Combine
+                // with a rooted second argument throws away the first entirely: "C:\…\what.msi"
+                // or "..\..\what.msi" would take the write out of the temp folder anywhere —
+                // and the write happens before the signature check.
                 path = Path.Combine(dir, Path.GetFileName(release.FileName));
 
-                // Адрес приходит из ответа GitHub, и схему в нём никто не обещал.
-                // Подпись всё равно не пропустит чужое, но качать по file:// с сетевой
-                // шары или открытым текстом по http — не то, чего мы просили.
+                // The address comes from the GitHub reply, and nobody promised the scheme in it.
+                // The signature would not let foreign content through anyway, but downloading via file:// from a network
+                // share or in clear text over http is not what we asked for.
                 Uri url;
                 if (!Uri.TryCreate(release.FileUrl, UriKind.Absolute, out url) ||
                     url.Scheme != Uri.UriSchemeHttps)
@@ -276,14 +276,14 @@ namespace DIIISPL
                     client.DownloadFile(url, path);
                 }
 
-                // Держим файл открытым от проверки подписи до запуска установщика.
+                // We keep the file open from the signature check until the installer launches.
                 //
-                // Между этими мгновениями пакет лежит во временной папке, куда
-                // пишет любая программа этого пользователя. Проверили подпись,
-                // человек прочитал, что нового, подумал минуту, нажал «Обновить» —
-                // и запустился уже не тот файл, который проверяли. Открытый на
-                // чтение с запретом записи, он подменён быть не может: msiexec его
-                // прочитает, а переписать не сможет никто.
+                // Between those moments the package sits in a temp folder, where
+                // any program of this user can write. The signature was checked,
+                // the person read what's new, thought for a minute, pressed "Update" —
+                // and what launched was no longer the file that was checked. Opened for
+                // reading with writing denied, it cannot be swapped: msiexec will
+                // read it, and nobody can rewrite it.
                 Hold(path);
 
                 string wrong = SignatureProblem(path);
@@ -304,9 +304,9 @@ namespace DIIISPL
             }
             catch (Exception)
             {
-                // Системное сообщение здесь не помогает: его читают в окне
-                // «О программе», и сделать с ним нечего. Говорим о деле —
-                // что не получилось и куда смотреть.
+                // The system message does not help here: it is read in the
+                // About window, and there is nothing to do with it. We speak of the matter —
+                // what failed and where to look.
                 Forget(path);
                 error = Text.SaveFailed;
                 return null;
@@ -314,29 +314,29 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Что не так с подписью файла. null — всё в порядке. Две разные беды названы
-        /// по-разному: «не подписан» бывает у сборки, собранной без сертификата, а
-        /// «подписан не тем» — повод насторожиться всерьёз.
+        /// What is wrong with the file's signature. null — all is well. Two different troubles are named
+        /// differently: "not signed" happens with a build made without a certificate, while
+        /// "signed by the wrong one" is a reason to be seriously wary.
         /// </summary>
         private static string SignatureProblem(string path)
         {
-            // Сначала целостность: цела ли подпись для этого содержимого.
+            // Integrity first: whether the signature is intact for this content.
             //
-            // Одного отпечатка мало, и это не мелочь. Сертификат читается прямо из
-            // файла, поэтому в файл, к которому дописали чужое, он придёт всё тот же:
-            // проверка отвечала бы «подписан тем самым» про пакет, собранный кем угодно.
+            // A thumbprint alone is not enough, and this is no small matter. The certificate is read straight from
+            // the file, so for a file with foreign data appended it comes out just the same:
+            // the check would answer "signed by that very one" about a package built by anyone.
             int verdict = Verify(path);
 
-            // Самоподписанный корень на чужой машине не установлен, и WinVerifyTrust
-            // честно об этом говорит. Для нас это не отказ: доверие мы берём не из
-            // цепочки, а из отпечатка ниже. Отвергаем всё остальное — и в первую
-            // очередь несовпадение содержимого с подписью.
+            // The self-signed root is not installed on someone else's machine, and WinVerifyTrust
+            // says so honestly. For us this is not a refusal: we take trust not from
+            // the chain but from the thumbprint below. We reject everything else — and first of
+            // all a mismatch between the content and the signature.
             //
-            // Истёкший срок сертификата тоже не отказ. Подпись ставится с меткой
-            // времени, поэтому старый выпуск остаётся действительным и после
-            // истечения; но если метку когда-нибудь не поставят, все прошлые
-            // сборки в один день перестанут ставиться — а календарь не улика.
-            // Подмену содержимого ловит не срок, а отдельный вердикт TRUST_E_BAD_DIGEST.
+            // An expired certificate is not a refusal either. The signature is made with a timestamp,
+            // so an old release stays valid after
+            // expiry; but if the timestamp is ever not applied, all past
+            // builds would stop installing on one day — and the calendar is no evidence.
+            // Content tampering is caught not by the expiry but by the separate verdict TRUST_E_BAD_DIGEST.
             if (verdict != 0 &&
                 verdict != Native.CERT_E_UNTRUSTEDROOT &&
                 verdict != Native.CERT_E_CHAINING &&
@@ -345,21 +345,21 @@ namespace DIIISPL
                 if (verdict == Native.TRUST_E_BAD_DIGEST)
                     return Text.TamperedFile;
 
-                // Замерено на испорченных файлах: и на дописанных байтах, и на
-                // перевёрнутом байте в середине, и на затёртой полезной нагрузке
-                // система отвечает одинаково — «подписи нет», тем же кодом, что и
-                // у честно неподписанной сборки. Ветка TRUST_E_BAD_DIGEST выше не
-                // срабатывает ни разу, хотя Get-AuthenticodeSignature на тех же
-                // файлах про несовпадение хеша говорит. Различить «не подписан» и
-                // «испорчен» этим вызовом нельзя — значит и текст не должен
-                // выбирать за человека один из двух случаев.
+                // Measured on corrupted files: with appended bytes, with a
+                // flipped byte in the middle, and with a wiped payload
+                // the system answers the same — "no signature", with the same code as
+                // for an honestly unsigned build. The TRUST_E_BAD_DIGEST branch above never
+                // fires, although Get-AuthenticodeSignature on the same
+                // files reports the hash mismatch. This call cannot tell "not signed" from
+                // "corrupted" — so the text must not
+                // pick one of the two cases for the person.
                 if (verdict == Native.TRUST_E_NOSIGNATURE)
                     return Text.SignatureUnconfirmed;
 
                 return Text.SignatureRejected;
             }
 
-            // Потом личность: тот ли это ключ.
+            // Then identity: whether this is the right key.
             X509Certificate2 cert;
             try { cert = new X509Certificate2(X509Certificate.CreateFromSignedFile(path)); }
             catch { return Text.SignatureUnconfirmed; }
@@ -370,7 +370,7 @@ namespace DIIISPL
             return null;
         }
 
-        /// <summary>Что скажет система о подписи файла. 0 — всё в порядке.</summary>
+        /// <summary>What the system says about the file's signature. 0 — all is well.</summary>
         private static int Verify(string path)
         {
             var file = new Native.WINTRUST_FILE_INFO();
@@ -388,7 +388,7 @@ namespace DIIISPL
                 var data = new Native.WINTRUST_DATA();
                 data.cbStruct = (uint)Marshal.SizeOf(typeof(Native.WINTRUST_DATA));
                 data.dwUIChoice = Native.WTD_UI_NONE;
-                data.fdwRevocationChecks = Native.WTD_REVOKE_NONE;   // сеть уже могла отвалиться
+                data.fdwRevocationChecks = Native.WTD_REVOKE_NONE;   // the network may already have dropped
                 data.dwUnionChoice = Native.WTD_CHOICE_FILE;
                 data.pFile = filePtr;
                 data.dwStateAction = Native.WTD_STATEACTION_VERIFY;
@@ -401,7 +401,7 @@ namespace DIIISPL
                 Guid action = Native.WINTRUST_ACTION_GENERIC_VERIFY_V2;
                 int result = Native.WinVerifyTrust(IntPtr.Zero, ref action, dataPtr);
 
-                // Закрыть состояние обязательно, иначе течёт память провайдера.
+                // The state must be closed, otherwise the provider's memory leaks.
                 data = (Native.WINTRUST_DATA)Marshal.PtrToStructure(dataPtr, typeof(Native.WINTRUST_DATA));
                 data.dwStateAction = Native.WTD_STATEACTION_CLOSE;
                 Marshal.StructureToPtr(data, dataPtr, true);
@@ -409,13 +409,13 @@ namespace DIIISPL
 
                 return result;
             }
-            catch { return Native.TRUST_E_NOSIGNATURE; }   // не смогли проверить — считаем, что не прошло
+            catch { return Native.TRUST_E_NOSIGNATURE; }   // could not check — treat as failed
             finally
             {
-                // Освободить память под структурой мало. Путь к файлу в ней —
-                // строка, и StructureToPtr отводит под неё отдельный кусок;
-                // FreeHGlobal о нём не знает и оставляет его висеть. Утечка
-                // маленькая, но при каждой проверке обновлений.
+                // Freeing the memory under the structure is not enough. The file path in it is a
+                // string, and StructureToPtr allocates a separate chunk for it;
+                // FreeHGlobal does not know about it and leaves it hanging. The leak
+                // is small, but it happens on every update check.
                 if (dataPtr != IntPtr.Zero)
                 {
                     if (dataWritten) Marshal.DestroyStructure(dataPtr, typeof(Native.WINTRUST_DATA));
@@ -433,8 +433,8 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Проверенный пакет, который держим открытым, чтобы его не подменили.
-        /// Живёт до запуска установщика — тот закрывает программу сам.
+        /// A verified package that we keep open so it cannot be swapped.
+        /// Lives until the installer launches — it closes the program itself.
         /// </summary>
         private static FileStream _held;
 
@@ -442,7 +442,7 @@ namespace DIIISPL
         {
             Unhold();
             try { _held = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read); }
-            catch { _held = null; }     // не удержали — подпись всё равно проверим
+            catch { _held = null; }     // could not hold it — the signature is checked anyway
         }
 
         private static void Unhold()
@@ -452,19 +452,19 @@ namespace DIIISPL
             _held = null;
         }
 
-        // ------------------------------------------------------------------ установка
+        // ------------------------------------------------------------------ installation
         /// <summary>
-        /// Запустить установщик и выйти. Дальше работает он: закрывает эту копию,
-        /// заменяет файлы и запускает программу заново.
+        /// Launch the installer and exit. From there it takes over: closes this copy,
+        /// replaces the files and starts the program again.
         /// </summary>
         public static bool Install(string msiPath, out string error)
         {
             error = null;
 
-            // Подпись сверяем ещё раз, прямо перед запуском. Обычно файл всё это
-            // время открыт нами и подменить его нельзя, но открыть удаётся не
-            // всегда — а установщик получает полное доверие человека, и одна
-            // лишняя секунда здесь дешевле чужого пакета с правами системы.
+            // We check the signature once more, right before launching. Normally the file has been
+            // open by us all this time and cannot be swapped, but opening it does not always
+            // succeed — and the installer gets the person's full trust, and one
+            // extra second here is cheaper than a foreign package with system rights.
             string wrong = SignatureProblem(msiPath);
             if (wrong != null)
             {
@@ -476,17 +476,17 @@ namespace DIIISPL
 
             try
             {
-                // Полный путь обязателен. По голому имени ShellExecute ищет и в текущем
-                // каталоге тоже, а он у программы бывает чужим — из «Загрузок», из
-                // консоли, из автозапуска. Подставленный туда msiexec.exe получил бы
-                // уже скачанный и проверенный пакет в аргументах и полное доверие
-                // человека к происходящему.
+                // The full path is mandatory. With a bare name ShellExecute also searches the current
+                // directory, and for the program it is sometimes foreign — from "Downloads", from the
+                // console, from autostart. A msiexec.exe planted there would receive
+                // the already downloaded and verified package in its arguments and the person's
+                // full trust in what is happening.
                 var start = new ProcessStartInfo(
                     Path.Combine(Environment.SystemDirectory, "msiexec.exe"));
-                // DIIISPLRELAUNCH=1 просит установщик поднять программу заново.
-                // Без него обновление изнутри кончалось исчезновением значка из
-                // трея: /qb — это установка без последнего окна, а запуск висел
-                // только на его кнопке «Готово».
+                // DIIISPLRELAUNCH=1 asks the installer to start the program again.
+                // Without it an in-app update ended with the tray icon vanishing:
+                // /qb is an installation without the final window, and the launch hung
+                // only on its "Finish" button.
                 start.Arguments = "/i \"" + msiPath + "\" DIIISPLRELAUNCH=1 /qb /norestart";
                 start.UseShellExecute = true;
                 Process.Start(start);
@@ -502,27 +502,27 @@ namespace DIIISPL
         public static void OpenPage(string url)
         {
             try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
-            catch { /* нечем открыть — молча */ }
+            catch { /* nothing to open it with — silently */ }
         }
 
-        // ------------------------------------------------------------------ мелочи
+        // ------------------------------------------------------------------ odds and ends
         /// <summary>
-        /// Строки «что нового» из описания выпуска — на языке программы.
+        /// The "what's new" lines from the release description — in the program's language.
         ///
-        /// Описание и так скачивается вместе со сведениями о выпуске, и до сих
-        /// пор его разбирали и выбрасывали: поле Notes не читал никто, а человек
-        /// шёл за тем же текстом в браузер.
+        /// The description is downloaded along with the release details anyway, and until now
+        /// it was parsed and thrown away: nobody read the Notes field, and the person
+        /// went to the browser for the same text.
         ///
-        /// Тело выпуска сборщик складывает из CHANGELOG.ru.md и CHANGELOG.md,
-        /// поэтому оно устроено предсказуемо: «## Что нового в 0.2.0», следом
-        /// «## Whats new in 0.2.0», потом черта и рассказ о программе. Свой
-        /// заголовок язык называет сам, строкой из словаря; язык, приехавший
-        /// файлом, своего раздела в описании не имеет — и получит английский,
-        /// потому что незаведённая строка падает на запасной язык.
+        /// The release body is assembled by the builder from CHANGELOG.ru.md and CHANGELOG.md,
+        /// so it has a predictable shape: "## Что нового в 0.2.0", followed by
+        /// "## Whats new in 0.2.0", then a rule and a story about the program. The language names its own
+        /// heading, with a string from the dictionary; a language that arrived as
+        /// a file has no section of its own in the description — and gets English,
+        /// because a string that is not defined falls back to the fallback language.
         ///
-        /// Описание выпуска — чужой текст с чужого сервера. Разметку отсюда
-        /// показывать нельзя, поэтому берутся только строки списка, и только
-        /// первые несколько. Строка без своего бейджа берёт бейдж своей группы «###».
+        /// The release description is foreign text from a foreign server. Markup must not be
+        /// shown from here, so only list lines are taken, and only
+        /// the first few. A line without its own badge takes the badge of its "###" group.
         /// </summary>
         public static List<string> Highlights(string notes, int max, out int more)
         {
@@ -534,7 +534,7 @@ namespace DIIISPL
         {
             Prepare();
             var request = (HttpWebRequest)WebRequest.Create(url);
-            request.UserAgent = Repo;                    // GitHub отвечает 403 без него
+            request.UserAgent = Repo;                    // GitHub answers 403 without it
             request.Accept = "application/vnd.github+json";
             request.Timeout = 15000;
             using (var response = request.GetResponse())
@@ -543,8 +543,8 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// .NET Framework по умолчанию предлагает протоколы, от которых GitHub отказался
-        /// ещё в 2018-м. Без этой строки соединение рвётся до первого байта.
+        /// By default .NET Framework offers protocols that GitHub dropped
+        /// back in 2018. Without this line the connection breaks before the first byte.
         /// </summary>
         private static void Prepare()
         {
@@ -552,7 +552,7 @@ namespace DIIISPL
             catch { }
         }
 
-        /// <summary>«v1.0.1», «1.0.1», «1.0.1-beta.2» — берём числа, остальное отбрасываем.</summary>
+        /// <summary>"v1.0.1", "1.0.1", "1.0.1-beta.2" — we take the numbers, discard the rest.</summary>
         public static Version ParseVersion(string text)
         {
             if (string.IsNullOrEmpty(text)) return null;
@@ -569,17 +569,17 @@ namespace DIIISPL
                 if (!int.TryParse(p, NumberStyles.Integer, CultureInfo.InvariantCulture, out n)) break;
                 numbers.Add(n);
             }
-            // Спрашивать, есть ли числа, надо до заполнения нулями, а не после:
-            // прежде строка сначала добавляла четыре нуля, и ответ был всегда
-            // «есть». Метка вроде «latest» становилась версией 0.0.0.0 — то есть
-            // выпуском, который дальше сравнивают с нашим, а не мусором.
+            // Whether there are numbers must be asked before padding with zeros, not after:
+            // the line used to add four zeros first, and the answer was always
+            // "yes". A label like "latest" became version 0.0.0.0 — that is, a
+            // release to be compared with ours, not garbage.
             if (numbers.Count == 0) return null;
             while (numbers.Count < 4) numbers.Add(0);
             return new Version(numbers[0], numbers[1], numbers[2], numbers[3]);
         }
 
-        /// <summary>Строковое поле из ответа GitHub. Названо Field, а не Text: класс
-        /// с текстами программы зовётся Text, и одноимённый метод его перекрывал.</summary>
+        /// <summary>A string field from the GitHub reply. Named Field, not Text: the class
+        /// with the program's texts is called Text, and a method of the same name shadowed it.</summary>
         private static string Field(Dictionary<string, object> map, string key)
         {
             object v;
@@ -592,7 +592,7 @@ namespace DIIISPL
             return map.TryGetValue(key, out v) && v is bool && (bool)v;
         }
 
-        /// <summary>«только что», «5 мин назад», «3 дня назад» — для строки о последней проверке.</summary>
+        /// <summary>"just now", "5 min ago", "3 days ago" — for the last-check line.</summary>
         public static string Ago(DateTime? moment)
         {
             if (!moment.HasValue) return Text.NeverChecked;

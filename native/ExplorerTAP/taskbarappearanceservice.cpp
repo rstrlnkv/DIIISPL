@@ -37,19 +37,19 @@ HRESULT TaskbarAppearanceService::GetVersion(DWORD* apiVersion) noexcept
 
 HRESULT TaskbarAppearanceService::SetTaskbarAppearance(HWND taskbar, TaskbarBrush brush, UINT color) try
 {
-	DiiisplLog(L"SetTaskbarAppearance: вызвана");
+	DiiisplLog(L"SetTaskbarAppearance: called");
 
 	if (auto info = GetTaskbarInfo(taskbar))
 	{
-		DiiisplLog(std::wstring(L"  control=") + (info->background.control ? L"есть" : L"НЕТ") +
-		         L", originalFill=" + (info->background.originalFill ? L"есть" : L"НЕТ"));
+		DiiisplLog(std::wstring(L"  control=") + (info->background.control ? L"present" : L"ABSENT") +
+		         L", originalFill=" + (info->background.originalFill ? L"present" : L"ABSENT"));
 
-		// Кисть фона могла быть ещё не назначена в момент, когда прямоугольник
-		// только появился в дереве, — тогда перечитываем её сейчас.
+		// The background brush may not have been assigned yet at the moment the rectangle
+		// just appeared in the tree, so we re-read it now.
 		if (info->background.control && !info->background.originalFill)
 		{
 			info->background.originalFill = info->background.control.Fill();
-			DiiisplLog(std::wstring(L"  перечитал Fill: ") + (info->background.originalFill ? L"получилось" : L"всё равно пусто"));
+			DiiisplLog(std::wstring(L"  re-read Fill: ") + (info->background.originalFill ? L"succeeded" : L"still empty"));
 		}
 
 		if (info->background.control)

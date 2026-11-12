@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — a monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 
 namespace DIIISPL
 {
-    /// <summary>Строка изменения: бейдж и текст порознь — в окне они рисуются по-разному.</summary>
+    /// <summary>A change line: badge and text apart — the window draws them differently.</summary>
     internal sealed class ChangelogLine
     {
         public string Badge = "";          // NEW, FIX, UPD, DEL, DEP, SEC; empty - no badge
@@ -19,37 +19,37 @@ namespace DIIISPL
         public string Text = "";
     }
 
-    /// <summary>Один выпуск в чейнджлоге: номер, дата и строки изменений.</summary>
+    /// <summary>One release in the changelog: number, date and change lines.</summary>
     internal sealed class ChangelogEntry
     {
         public string Version = "";
         public string Date = "";
-        public string Note = "";           // «Первый выпуск.» и подобное — абзац перед списком
+        public string Note = "";           // "First release." and the like — a paragraph before the list
         public List<ChangelogLine> Lines = new List<ChangelogLine>();
     }
 
     /// <summary>
-    /// Чейнджлог, лежащий внутри программы.
+    /// The changelog kept inside the program.
     ///
-    /// `CHANGELOG.ru.md` и `CHANGELOG.md` (английский) кладутся в сборку ресурсами — так же,
-    /// как номер сборки вписывается в `BuildInfo.g.cs`. Причина простая: до этого
-    /// прочитать «что нового» изнутри было нельзя ни при каких условиях, кроме
-    /// «вышло что-то новее». Человек, который только что обновился, хочет знать,
-    /// что он получил, — а именно этот случай и не покрывался: кнопка уводила
-    /// в браузер, на страницу выпусков, где его версии может не быть вовсе.
+    /// `CHANGELOG.ru.md` and `CHANGELOG.md` (English) go into the build as resources — the same way
+    /// as the build number is written into `BuildInfo.g.cs`. The reason is simple: until now
+    /// there was no way to read "what's new" from inside, except
+    /// "something newer is out". A person who has just updated wants to know
+    /// what they got — and exactly that case was not covered: the button led
+    /// to the browser, to the releases page, where their version may not exist at all.
     ///
-    /// Внутри программы он работает всегда: без сети, без выпуска на GitHub и
-    /// у копии, собранной на своей машине.
+    /// Inside the program it always works: without a network, without a GitHub release, and
+    /// for a copy built on one's own machine.
     /// </summary>
     internal static class Changelog
     {
-        /// <summary>Выпуски, свежий первым. Пусто — ресурса нет (сборка без чейнджлога).</summary>
+        /// <summary>Releases, newest first. Empty — no resource (a build without a changelog).</summary>
         public static List<ChangelogEntry> Read()
         {
             string text = Raw(Text.Code);
 
-            // Язык, приехавший файлом, своего чейнджлога не имеет и не может иметь:
-            // перевод надписей — дело пользователя, перевод истории выпусков — нет.
+            // A language that arrived as a file has no changelog of its own and cannot have one:
+            // translating the labels is up to the user, translating the release history is not.
             if (text == null) text = Raw(Lang.Codes[0]);
 
             return Parse(text);
@@ -125,9 +125,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Разобрать строку списка на бейдж и текст. «**NEW** Профиль встаёт сам» —
-        /// это бейдж «NEW» и всё остальное; звёздочки и кавычки вокруг команд
-        /// убираются, потому что в окне их некому превратить в оформление.
+        /// Split a list line into badge and text. "**NEW** Profile applies itself" —
+        /// is the badge "NEW" and the rest; asterisks and quotes around commands
+        /// are removed, because in the window nothing turns them into formatting.
         /// </summary>
         public static ChangelogLine Split(string bullet)
         {
@@ -148,9 +148,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// То же самое одной строкой — для мест, где бейджу негде быть отдельным:
-        /// подсказка о найденном обновлении и абзац перед списком. Строка без своего
-        /// бейджа берёт бейдж группы (groupBadge).
+        /// The same as one line — for places where the badge has nowhere to stand apart:
+        /// the hint about a found update and the paragraph before the list. A line without its own
+        /// badge takes the group's badge (groupBadge).
         /// </summary>
         public static string Plain(string text, string groupBadge = "")
         {

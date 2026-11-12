@@ -1,9 +1,9 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 //
-// Рисует картинки для окон установщика: полосу вверху и боковину приветствия.
-// Размеры заданы форматом установщика Windows: 493×58 и 493×312 точек.
+// Draws the images for the installer dialogs: the top banner and the welcome side panel.
+// Sizes are set by the Windows Installer format: 493×58 and 493×312 pixels.
 
 using System;
 using System.Drawing;
@@ -15,7 +15,7 @@ namespace DIIISPL.Tools
 {
     internal static class MakeArt
     {
-        // Те же цвета, что и у значка программы.
+        // The same colors as the program icon.
         private static readonly Color MainTop    = Color.FromArgb(0x5C, 0xC8, 0xFF);
         private static readonly Color MainBottom = Color.FromArgb(0x0B, 0x62, 0xCE);
         private static readonly Color SideTop     = Color.FromArgb(0x6F, 0xA8, 0xD8);
@@ -33,13 +33,13 @@ namespace DIIISPL.Tools
             using (Bitmap b = Banner()) Save(b, Path.Combine(dir, "banner.bmp"));
             using (Bitmap d = Dialog()) Save(d, Path.Combine(dir, "dialog.bmp"));
 
-            Console.WriteLine("Картинки установщика: " + Path.GetFullPath(dir));
+            Console.WriteLine("Installer images: " + Path.GetFullPath(dir));
             return 0;
         }
 
         /// <summary>
-        /// Полоса вверху окон. Заголовок и пояснение установщик пишет поверх неё слева
-        /// тёмным по светлому, поэтому фон светлый, а знак уходит вправо.
+        /// Banner at the top of the dialogs. The installer writes the title and description over it on the left,
+        /// dark on light, so the background is light and the mark goes to the right.
         /// </summary>
         private static Bitmap Banner()
         {
@@ -48,14 +48,14 @@ namespace DIIISPL.Tools
             {
                 Fill(g, new Rectangle(0, 0, 493, 58), LightTop, LightBottom);
 
-                // тонкая линия у нижнего края — та же, что отделяет шапку в самой программе
+                // thin line at the bottom edge, the same one that separates the header in the program itself
                 using (var line = new SolidBrush(Color.FromArgb(0xDF, 0xE5, 0xEE)))
                     g.FillRectangle(line, 0, 57, 493, 1);
 
-                // Здесь только знак, без названия: пояснение под заголовком установщик
-                // тянет почти до правого края, и подпись рядом со знаком либо лезла
-                // на текст, либо обрезалась краем — тем вернее, чем длиннее имя.
-                // Название и так стоит в заголовке окна.
+                // Only the mark here, without the name: the installer stretches the description under the title
+                // almost to the right edge, and a caption next to the mark either ran
+                // into the text or was cut off by the edge, the more so the longer the name.
+                // The name is already in the window title.
                 float markH = 28;
                 float markW = markH * 1.28f;
                 Mark(g, 493 - 18 - markW, (58 - markH) / 2, markH);
@@ -64,8 +64,8 @@ namespace DIIISPL.Tools
         }
 
         /// <summary>
-        /// Боковина окна приветствия и последнего окна. Слева тёмная полоса со знаком,
-        /// справа светлое поле: туда установщик кладёт свой текст.
+        /// Side panel of the welcome dialog and the last dialog. A dark strip with the mark on the left,
+        /// a light field on the right: the installer puts its own text there.
         /// </summary>
         private static Bitmap Dialog()
         {
@@ -73,18 +73,18 @@ namespace DIIISPL.Tools
             var bmp = new Bitmap(493, 312, PixelFormat.Format24bppRgb);
             using (Graphics g = Prepare(bmp))
             {
-                // Правая половина — ровно тот же серый, каким установщик красит свои окна
-                // (240,240,240, замерено по живому мастеру). Флажок «Запустить DIIISPL»
-                // на последнем окне рисует свой фон поверх картинки: на белом от него
-                // оставалась заметная полоса, а на этом сером шва не видно. Заодно
-                // приветствие и последнее окно перестали выделяться среди прочих страниц.
+                // The right half is exactly the same gray the installer paints its dialogs
+                // (240,240,240, measured on a live wizard). The "Launch DIIISPL" checkbox
+                // on the last dialog draws its own background over the image: on white it
+                // left a visible stripe, and on this gray no seam shows. It also
+                // keeps the welcome and last dialogs from standing out among the other pages.
                 using (var face = new SolidBrush(Color.FromArgb(0xF0, 0xF0, 0xF0)))
                     g.FillRectangle(face, 0, 0, 493, 312);
                 Fill(g, new Rectangle(0, 0, panel, 312), PanelTop, PanelBottom);
 
-                // Мягкое свечение за знаком: тёмная полоса без него выглядит плоской
-                // заливкой. Обрезаем по панели — иначе пятно вылезает на светлое поле
-                // и читается не свечением, а кляксой.
+                // A soft glow behind the mark: without it the dark strip looks like a flat
+                // fill. Clipped to the panel, otherwise the spot spills onto the light field
+                // and reads as a smudge, not a glow.
                 GraphicsState saved = g.Save();
                 g.SetClip(new Rectangle(0, 0, panel, 312));
                 using (var path = new GraphicsPath())
@@ -100,20 +100,20 @@ namespace DIIISPL.Tools
                 }
                 g.Restore(saved);
 
-                // Каждая строка центрируется по своей ширине, а не по ширине знака:
-                // иначе длинное название уезжает вбок и блок разъезжается.
-                // Только знак и название — без подписи под ним. Картинка одна на
-                // все языки: она рисуется до сборки и в разницу между языковыми
-                // пакетами не попадает, так что любая фраза здесь осталась бы на
-                // одном языке для всех. Название языка не имеет, подпись имела.
+                // Each line is centered on its own width, not on the mark's width:
+                // otherwise a long name drifts sideways and the block falls apart.
+                // Only the mark and the name, with no caption under it. There is one image for
+                // all languages: it is drawn before the build and does not enter the difference between the language
+                // packages, so any phrase here would stay in
+                // one language for everyone. A name has no language, a caption did.
                 Mark(g, (panel - 88 * 1.28f) / 2, 92, 88);
                 Centered(g, Program, "Segoe UI Semibold", 20f, Color.White, panel, 205);
             }
             return bmp;
         }
 
-        // ------------------------------------------------------------------ детали
-        /// <summary>Знак программы: широкий экран посередине, два боковых набок.</summary>
+        // ------------------------------------------------------------------ details
+        /// <summary>The program mark: a wide screen in the middle, two side ones on edge.</summary>
         private static void Mark(Graphics g, float x, float y, float height)
         {
             float sideW = height * 0.26f, sideH = height;
@@ -135,10 +135,10 @@ namespace DIIISPL.Tools
                 g.FillPath(brush, path);
         }
 
-        /// <summary>Название программы. Отсюда его берут все надписи на картинках.</summary>
+        /// <summary>The program name. All captions on the images take it from here.</summary>
         private const string Program = "DIIISPL";
 
-        /// <summary>Строка по центру полосы заданной ширины — с замером, а не на глаз.</summary>
+        /// <summary>A line centered in a strip of given width, measured, not by eye.</summary>
         private static void Centered(Graphics g, string text, string face, float size,
                                      Color color, float width, float y)
         {
@@ -178,7 +178,7 @@ namespace DIIISPL.Tools
             return path;
         }
 
-        /// <summary>Установщик читает только BMP, причём без прозрачности.</summary>
+        /// <summary>The installer reads only BMP, and without transparency.</summary>
         private static void Save(Bitmap bmp, string path)
         {
             bmp.Save(path, ImageFormat.Bmp);

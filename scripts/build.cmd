@@ -1,20 +1,20 @@
 @echo off
-rem Сборка программы.
+rem Build the program.
 rem
-rem   scripts\build.cmd        стабильная сборка
-rem   scripts\build.cmd dev    сборка канала Dev — с настройками панели задач
+rem   scripts\build.cmd        stable build
+rem   scripts\build.cmd dev    Dev channel build, with taskbar settings
 rem
-rem Канал — это разные сборки, а не переключатель внутри одной: в стабильной
-rem кода панели задач нет вовсе, а значит в проводник ничего не грузится и
-rem библиотека оформления в пакет не кладётся. Настройку, которой в сборке нет,
-rem нельзя случайно включить.
+rem Channels are separate builds, not a switch inside one: the stable build
+rem has no taskbar code at all, so nothing is loaded into Explorer and the
+rem styling library is not put in the package. A setting that is not in the
+rem build cannot be turned on by accident.
 setlocal
 rem The repository root is the parent of scripts\, written once and normalised.
 for %%I in ("%~dp0..") do set ROOT=%%~fI
 set NETDIR=%WINDIR%\Microsoft.NET\Framework64\v4.0.30319
 if not exist "%NETDIR%\csc.exe" set NETDIR=%WINDIR%\Microsoft.NET\Framework\v4.0.30319
 if not exist "%NETDIR%\csc.exe" (
-  echo Не найден компилятор C# из .NET Framework.
+  echo C# compiler from .NET Framework not found.
   exit /b 1
 )
 set WPF=%NETDIR%\WPF
@@ -32,18 +32,18 @@ if "%CHANNEL%"=="dev" (
     exit /b 1
   )
   set DEVRES=/resource:"%ROOT%\LICENSE",licenses.gpl3 /resource:"%ROOT%\licenses\detours.txt",licenses.detours /resource:"%ROOT%\licenses\wil.txt",licenses.wil /resource:"%ROOT%\licenses\cppwinrt.txt",licenses.cppwinrt
-  echo === Сборка Dev: с панелью задач ===
+  echo === Dev build: with taskbar ===
 ) else (
   set DEFINE=
   set TASKBAR=
   set DEVSRC=
   set DEVRES=
-  echo === Сборка Stable: без панели задач ===
+  echo === Stable build: without taskbar ===
 )
 
-rem Номер сборки — число коммитов. Он растёт сам, не требует ведения вручную и
-rem не разъезжается с версией: версия говорит «что это», номер — «какая по счёту».
-rem Файл создаётся при каждой сборке и в репозиторий не попадает.
+rem The build number is the commit count. It grows on its own, needs no manual
+rem upkeep and cannot drift from the version: the version says "what it is", the number "which one in order".
+rem The file is created on every build and is not committed to the repository.
 rem
 rem The number must be exact (Core standards/versioning.md rules 1-3), so every case
 rem where git cannot count this project's own full history stops the build here,
@@ -103,7 +103,7 @@ echo %BUILD%| findstr /r /x "[0-9][0-9]*" >nul || (
   echo Build refused: git rev-list --count HEAD did not give a number, the repository has no commits.
   exit /b 1
 )
-> "%ROOT%\src\BuildInfo.g.cs" echo // Создаётся build.cmd при каждой сборке. Править незачем.
+> "%ROOT%\src\BuildInfo.g.cs" echo // Created by build.cmd on every build. No need to edit.
 >> "%ROOT%\src\BuildInfo.g.cs" echo namespace DIIISPL { internal static class BuildInfo { public const string Number = "%BUILD%"; } }
 
 "%NETDIR%\csc.exe" /nologo /target:winexe /optimize+ /platform:anycpu /codepage:65001 %DEFINE% ^
@@ -121,14 +121,14 @@ echo %BUILD%| findstr /r /x "[0-9][0-9]*" >nul || (
 
 if errorlevel 1 exit /b 1
 
-rem Канал записываем рядом с программой — и только после удачной компиляции.
-rem Пакет собирается из готового exe и раньше принимал на веру, что канал у них
-rem общий: собрал build.cmd dev, потом по привычке build-msi.cmd без аргумента —
-rem и выходил «стабильный» пакет с Dev-программой. Записать метку до компиляции
-rem тоже нельзя: упавшая сборка оставила бы «dev» рядом со стабильным exe, и
-rem сверка пропустила бы неверную пару.
+rem The channel is recorded next to the program, and only after a successful compile.
+rem The package is built from the finished exe and used to take it on trust that
+rem both share a channel: build.cmd dev, then out of habit build-msi.cmd with no
+rem argument, and a "stable" package came out with a Dev program. Writing the
+rem marker before compiling is no good either: a failed build would leave "dev"
+rem next to a stable exe, and the check would pass a wrong pair.
 > "%ROOT%\.channel" echo %CHANNEL%
 
 call "%ROOT%\installer\sign.cmd" "%ROOT%\DIIISPL.exe" || exit /b 1
 
-echo Готово: %ROOT%\DIIISPL.exe
+echo Done: %ROOT%\DIIISPL.exe

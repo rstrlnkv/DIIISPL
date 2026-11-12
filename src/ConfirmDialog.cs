@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Windows;
@@ -11,7 +11,7 @@ using System.Windows.Media.Effects;
 
 namespace DIIISPL
 {
-    /// <summary>Диалог в стиле Fluent: карточка со скруглением и тенью, без системной рамки.</summary>
+    /// <summary>Fluent-style dialog: a card with rounded corners and a shadow, no system frame.</summary>
     internal class ConfirmDialog : Window
     {
         public ConfirmDialog(string title, string message, string okText)
@@ -20,10 +20,10 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Второй кнопке имя задаётся отдельно там, где «Отмена» лжёт. В диалоге
-        /// сохранения она не отменяла закрытие окна, как читается, а молча
-        /// выбрасывала правки: человек нажимал «Отмена», чтобы ничего не случилось,
-        /// и терял работу.
+        /// The second button gets its own name where 'Cancel' lies. In the save dialog
+        /// it did not cancel closing the window, as it reads, but silently
+        /// discarded the edits: the user pressed 'Cancel' so that nothing would happen,
+        /// and lost their work.
         /// </summary>
         public ConfirmDialog(string title, string message, string okText, string cancelText)
         {
@@ -90,11 +90,11 @@ namespace DIIISPL
             card.Child = stack;
             Content = card;
 
-            // Esc — это не вторая кнопка, а «я передумал спрашивать». Раньше он был
-            // на ней (IsCancel), и в диалоге сохранения нажатие Esc выбрасывало
-            // правки — то есть делало ровно то, чего им хотели избежать. Теперь
-            // окно закрывается, не назвав ответа: ShowDialog возвращает null, и
-            // тот, кто спрашивал, решает сам. Для «Удалить?» это по-прежнему отказ.
+            // Esc is not the second button but 'I changed my mind about asking'. It used to be
+            // on it (IsCancel), and in the save dialog pressing Esc discarded the
+            // edits — exactly what it was meant to avoid. Now the
+            // window closes without giving an answer: ShowDialog returns null, and
+            // the asker decides. For 'Delete?' it is still a refusal.
             PreviewKeyDown += delegate(object s, KeyEventArgs e)
             {
                 if (e.Key != Key.Escape) return;

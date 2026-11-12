@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — a monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -21,10 +21,10 @@ namespace DIIISPL
                     case "hdr": return DumpHdr();
                     case "state": return DumpState();
                     case "auto": return DumpAuto();
-                    // «/help» и «/?» — не опечатка, а вопрос. Прежде на них
-                    // отвечали «не знаю такой команды» и кодом 2: справка
-                    // печаталась, но сперва человека упрекали за то, что он
-                    // спросил единственным очевидным способом.
+                    // "/help" and "/?" are not a typo but a question. They used to be
+                    // answered with "unknown command" and exit code 2: the help was
+                    // printed, but first the person was reproached for having
+                    // asked in the one obvious way.
                     case "help":
                     case "?": return Help();
 #if DEV
@@ -38,9 +38,9 @@ namespace DIIISPL
                     case "switch": return ApplyProfile(args);
                     case "delete": return DeleteProfile(args);
                     default:
-                        // Опечатка в команде не должна выглядеть удачей: прежде
-                        // `/aply "Кино"` печатал справку и возвращал 0, и ни
-                        // человек, ни скрипт не узнавали, что ничего не применено.
+                        // A typo in the command must not look like success: `/aply "Movie"`
+                        // used to print the help and return 0, and neither the
+                        // person nor the script learned that nothing was applied.
                         Console.WriteLine();
                         Console.WriteLine(Text.CliUnknownCmd(cmd));
                         Help();
@@ -113,7 +113,7 @@ namespace DIIISPL
         }
 
 #if DEV
-        /// <summary>Что программа видит на экранах и какой вид панели из этого следует.</summary>
+        /// <summary>What the program sees on the displays and what taskbar look follows from it.</summary>
         private static int DumpTaskbarState(string[] args)
         {
             Console.WriteLine();
@@ -137,7 +137,7 @@ namespace DIIISPL
             return 0;
         }
 
-        /// <summary>Вид панели задач: default, opaque, clear, blur, acrylic.</summary>
+        /// <summary>Taskbar look: default, opaque, clear, blur, acrylic.</summary>
         private static int SetTaskbar(string[] args)
         {
             Console.WriteLine();
@@ -152,9 +152,9 @@ namespace DIIISPL
                 return 2;
             }
 
-            // Опечатка в названии вида не должна выглядеть удачей. Прежде
-            // «acrilic» разбиралось в «обычную» панель, команда бодро отвечала
-            // «применено», и человек искал причину в чём угодно, кроме буквы.
+            // A typo in the look name must not look like success. "acrilic"
+            // used to parse as the "default" taskbar, the command cheerfully answered
+            // "applied", and the person looked for the cause anywhere but the letter.
             string wanted = args[1].Trim().ToLowerInvariant();
             bool known = false;
             foreach (string n in ExplorerTap.Names) if (n == wanted) known = true;
@@ -175,8 +175,8 @@ namespace DIIISPL
                 return 2;
             }
 
-            // То же и с последним словом: тихо проглоченное «line1» оставляло
-            // человека гадать, почему линии у края нет.
+            // The same goes for the last word: a silently swallowed "line1" left
+            // the person guessing why there is no line at the edge.
             bool showLine = false;
             if (args.Length > 3)
             {
@@ -196,7 +196,7 @@ namespace DIIISPL
         }
 #endif
 
-        /// <summary>Состояние в машиночитаемом виде — для скриптов и диагностики.</summary>
+        /// <summary>State in machine-readable form — for scripts and diagnostics.</summary>
         private static int DumpState()
         {
             foreach (var m in Monitors.Enumerate())
@@ -218,11 +218,11 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Какой профиль подходит мониторам сейчас и что программа сделала бы.
+        /// Which profile fits the monitors now and what the program would do.
         ///
-        /// Без этой команды решение об автоматическом переключении нельзя
-        /// проверить иначе как выдёргиванием кабеля. Печатает она то же самое,
-        /// что решает программа, — тем же кодом, а не пересказом.
+        /// Without this command the decision on automatic switching cannot
+        /// be checked except by pulling a cable. It prints the same thing
+        /// the program decides — by the same code, not a retelling.
         /// </summary>
         private static int DumpAuto()
         {
@@ -247,7 +247,7 @@ namespace DIIISPL
             return 0;
         }
 
-        /// <summary>Кто сейчас в HDR и кто вообще может — для разбора полётов с дублированием.</summary>
+        /// <summary>Who is in HDR now and who even can be — for sorting out duplication.</summary>
         private static int DumpHdr()
         {
             Console.WriteLine();
@@ -290,9 +290,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Записать образец перевода: все ключи с английскими значениями, а строки,
-        /// которые уже переведены, — переведёнными. Без такого образца человек не
-        /// знает ни списка ключей, ни того, что вообще можно перевести.
+        /// Write a translation sample: all keys with English values, and the lines
+        /// that are already translated — as translated. Without such a sample a person
+        /// knows neither the list of keys nor that anything can be translated at all.
         /// </summary>
         private static int WriteLangTemplate(string[] args)
         {
@@ -309,8 +309,8 @@ namespace DIIISPL
             string path = LangFile.WriteTemplate(code);
             Console.WriteLine(Text.CliLangWritten(path));
 
-            // Сколько строк ещё английские. Без этого числа переводчик узнаёт о
-            // пропущенном только увидев его в чужом окне.
+            // How many lines are still English. Without this number the translator learns of
+            // a missed one only on seeing it in someone else's window.
             int left = Text.Missing(code).Count;
             if (left > 0) Console.WriteLine(Text.CliLangLeft(left));
 
@@ -337,17 +337,17 @@ namespace DIIISPL
             if (args.Length < 2) { Console.WriteLine(Text.CliNeedName); return 2; }
             var layout = Layout.FromCurrent(args[1]);
 
-            // Сохранение поверх существующего профиля переснимает **раскладку**, а не
-            // весь профиль. Прежде FromCurrent строил чистый объект и Store.Save писал
-            // им поверх файла: одна команда молча уносила и назначенное сочетание
-            // клавиш, и место в списке, и секцию вида панели задач.
+            // Saving over an existing profile retakes the **layout**, not
+            // the whole profile. FromCurrent used to build a clean object and Store.Save wrote
+            // it over the file: one command silently took away the assigned key
+            // combination, the place in the list, and the taskbar look section.
             var existing = Store.LoadByName(args[1]);
 
-            // Профиль ищется по имени, а файл выбирается по очищенному имени — и
-            // это разные вещи. `/save "Дом "` с лишним пробелом не находил «Дом»,
-            // зато писал ровно в его файл: свежий снимок ложился поверх, унося и
-            // сочетание клавиш, и место в списке, и вид панели задач. В консоли
-            // при этом бодро писалось «Сохранено».
+            // The profile is looked up by name, while the file is chosen by the cleaned name — and
+            // these are different things. `/save "Home "` with a stray space did not find "Home",
+            // yet wrote exactly into its file: the fresh snapshot landed on top, taking away the key
+            // combination, the place in the list and the taskbar look. The console
+            // meanwhile cheerfully printed "Saved".
             if (existing == null)
             {
                 string clash = Store.NameInUse(args[1], null);

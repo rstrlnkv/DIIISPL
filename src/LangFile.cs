@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — a monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -10,21 +10,21 @@ using System.Text;
 namespace DIIISPL
 {
     /// <summary>
-    /// Переводы из файлов: язык можно добавить, не пересобирая программу.
+    /// Translations from files: a language can be added without rebuilding the program.
     ///
-    /// Встроенные словари остаются основой, файл их только дополняет и перекрывает.
-    /// Значит перевод, в котором чего-то не хватает, не оставляет в окне пустых
-    /// мест, а тот, кто хочет поправить одну строку, пишет в файл одну строку.
+    /// The built-in dictionaries remain the basis; a file only supplements and overrides them.
+    /// So a translation that lacks something leaves no blank spots in the window,
+    /// and whoever wants to fix one string writes one string in a file.
     ///
-    /// Ищем в двух местах, и порядок важен:
-    ///   1) `lang` рядом с программой — сюда кладут переводы, приезжающие с ней;
-    ///   2) `%AppData%\DIIISPL\lang` — сюда пишет человек, у которого нет прав на
-    ///      Program Files. Его файл сильнее: это его машина и его выбор.
+    /// Looked up in two places, and the order matters:
+    ///   1) `lang` next to the program — translations shipped with it go here;
+    ///   2) `%AppData%\DIIISPL\lang` — written by a person without rights to
+    ///      Program Files. Their file wins: it is their machine and their choice.
     ///
-    /// Формат — тот же, что у профилей и настроек: строки `ключ = значение`,
-    /// решётка и точка с запятой начинают комментарий. Кодировка UTF-8; BOM не
-    /// обязателен, но без него не-английские буквы придётся сохранять именно в
-    /// UTF-8, а не в кодировке системы.
+    /// The format is the same as for profiles and settings: `key = value` lines,
+    /// a hash and a semicolon start a comment. Encoding is UTF-8; a BOM is not
+    /// required, but without it non-English letters must be saved as UTF-8
+    /// and not in the system code page.
     /// </summary>
     internal static class LangFile
     {
@@ -32,9 +32,9 @@ namespace DIIISPL
         public const string Extension = ".lang";
 
         /// <summary>
-        /// Годится ли строка кодом языка. Отсекает не только запрещённые в именах
-        /// файлов знаки, но и имена устройств: `/lang nul` бодро отвечал «образец
-        /// записан», а запись уходила в никуда, и файла не появлялось.
+        /// Whether a string is acceptable as a language code. Rejects not only characters
+        /// forbidden in file names but also device names: `/lang nul` cheerfully answered "sample
+        /// written" while the write went nowhere and no file appeared.
         /// </summary>
         public static bool IsUsableCode(string code)
         {
@@ -55,7 +55,7 @@ namespace DIIISPL
             "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
         };
 
-        /// <summary>Наложить файл языка на готовый словарь. Файла нет — словарь не меняется.</summary>
+        /// <summary>Overlay a language file onto a ready dictionary. No file — the dictionary stays unchanged.</summary>
         public static void Overlay(string code, Dictionary<string, string> table)
         {
             foreach (string path in PathsFor(code))
@@ -65,13 +65,13 @@ namespace DIIISPL
                     if (!File.Exists(path)) continue;
                     ReadInto(path, table);
                 }
-                catch { /* нечитаемый файл — остаётся встроенный перевод */ }
+                catch { /* unreadable file — the built-in translation stays */ }
             }
         }
 
         /// <summary>
-        /// Какие языки лежат файлами. Нужны окну выбора: язык, которого нет во
-        /// встроенном списке, иначе неоткуда взять.
+        /// Which languages exist as files. The picker window needs them: a language that is not
+        /// in the built-in list has nowhere else to come from.
         /// </summary>
         public static List<string> Codes()
         {
@@ -86,8 +86,8 @@ namespace DIIISPL
                         string code = Path.GetFileNameWithoutExtension(f).ToLowerInvariant();
                         if (code.Length == 0 || found.Contains(code)) continue;
 
-                        // «auto» в настройках значит «как в Windows». Файл с таким
-                        // именем стал бы языком для всех, кто ничего не выбирал.
+                        // "auto" in the settings means "as in Windows". A file with such a
+                        // name would become the language for everyone who chose nothing.
                         if (code == Text.Auto) continue;
 
                         found.Add(code);
@@ -100,8 +100,8 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Название языка из файла — строка `language.name`. Ею язык подписывает
-        /// себя сам; без неё в окне выбора остаётся только код.
+        /// Name of the language from a file — the `language.name` line. The language labels
+        /// itself with it; without it the picker shows only the code.
         /// </summary>
         public static string NameOf(string code)
         {
@@ -112,9 +112,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Записать образец для перевода: все ключи с английскими значениями и
-        /// пометкой, где чего не хватает. Без такого образца человек не знает ни
-        /// списка ключей, ни того, что вообще можно перевести.
+        /// Write a sample for translation: all keys with English values and
+        /// a note on what is missing where. Without such a sample a person knows neither
+        /// the list of keys nor that anything can be translated at all.
         /// </summary>
         public static string WriteTemplate(string code)
         {
@@ -122,13 +122,13 @@ namespace DIIISPL
             var mine = Lang.Table(code);
             LangFile.Overlay(code, mine);
 
-            // Формы после числа есть не во всех языках сразу: «.few» живёт только
-            // в русском. Строй образец по одному английскому — и переводчик на
-            // польский о третьей форме не узнал бы вовсе.
+            // Forms after a number do not exist in all languages at once: ".few" lives only
+            // in Russian. Build the sample from English alone — and a Polish
+            // translator would never learn about the third form.
             //
-            // Значение при этом берём английское, от формы «.many» того же ключа:
-            // русская строка в чешском образце сбивала бы с толку не меньше, чем
-            // отсутствие строки вовсе.
+            // The value taken is the English one, from the ".many" form of the same key:
+            // a Russian string in a Czech sample would confuse no less than
+            // a missing string altogether.
             foreach (string other in Lang.Codes)
             {
                 if (other == Lang.Codes[0]) continue;
@@ -170,9 +170,9 @@ namespace DIIISPL
                 string mineValue;
                 bool have = mine.TryGetValue(key, out mineValue) && mineValue != full[key];
 
-                // Оригинал показываем только над переведённой строкой: там он
-                // нужен для сверки. Над непереведённой он повторил бы её слово
-                // в слово и превратил бы файл в двойной список.
+                // Show the original only above a translated string: there it is
+                // needed for checking. Above an untranslated one it would repeat it word
+                // for word and turn the file into a double list.
                 if (have) sb.AppendLine("# " + Escape(full[key]));
                 sb.AppendLine(key + " = " + Escape(have ? mineValue : full[key]));
             }
@@ -185,12 +185,12 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Перенос строки — обратно в «\n». Строка формата однострочная: настоящий
-        /// перенос в образце разорвал бы значение надвое, и вторая половина
-        /// пропала бы при чтении.
+        /// Newline back to "\n". The format string is single-line: a real
+        /// newline in the sample would tear the value in two, and the second half
+        /// would be lost on reading.
         ///
-        /// Обратная косая перед «n» удваивается — иначе путь вида `C:\notes` после
-        /// круга через образец молча превратился бы в две строки.
+        /// A backslash before "n" is doubled — otherwise a path like `C:\notes` after
+        /// a round trip through the sample would silently turn into two lines.
         /// </summary>
         private static string Escape(string value)
         {
@@ -199,16 +199,16 @@ namespace DIIISPL
                         .Replace("\n", "\\n");
         }
 
-        /// <summary>Обратно: «\\n» — это две буквы, «\n» — перенос строки.</summary>
+        /// <summary>Back: "\\n" is two letters, "\n" is a line break.</summary>
         private static string Unescape(string value)
         {
-            const string keep = "\u0001";     // метка на время разбора; в текстах не встречается
+            const string keep = "\u0001";     // marker for the duration of parsing; never occurs in texts
             return value.Replace("\\\\n", keep)
                         .Replace("\\n", "\n")
                         .Replace(keep, "\\n");
         }
 
-        // ------------------------------------------------------------------ пути
+        // ------------------------------------------------------------------ paths
         private static IEnumerable<string> Folders()
         {
             string beside = null;
@@ -245,21 +245,21 @@ namespace DIIISPL
                 string key = line.Substring(0, eq).Trim();
                 if (key.Length == 0) continue;
 
-                // Значение обрезать нельзя: у восьми десятков строк пробел с краю
-                // несёт смысл. Ими выровнена вся справка командной строки, и ими
-                // же приклеиваются хвосты вроде « ещё 2 замечания» — обрезка
-                // склеивала бы слова. Снимается ровно один пробел — тот, что
-                // ставится при записи вокруг знака равенства.
+                // The value must not be trimmed: for about eighty strings a space at the edge
+                // carries meaning. The whole command-line help is aligned with them, and with them
+                // tails such as " 2 more notes" are attached — trimming
+                // would glue words together. Exactly one space is removed — the one
+                // written around the equals sign.
                 string value = line.Substring(eq + 1);
                 if (value.Length > 0 && value[0] == ' ') value = value.Substring(1);
 
-                // Стёртое значение — не пустая надпись, а «переведи это». Стереть
-                // текст после «=» проще, чем удалить строку, и человек вправе
-                // ждать, что программа возьмёт своё.
+                // An erased value is not an empty label but "translate this". Erasing
+                // the text after "=" is easier than deleting the line, and a person is entitled
+                // to expect the program to take its own.
                 if (value.Length == 0) continue;
 
-                // «\n» в файле — перевод строки: строки формата однострочные, а в
-                // паре сообщений перенос нужен по смыслу.
+                // "\n" in a file is a line break: format strings are single-line, but in
+                // a couple of messages a break is needed by meaning.
                 table[key] = Unescape(value);
             }
         }

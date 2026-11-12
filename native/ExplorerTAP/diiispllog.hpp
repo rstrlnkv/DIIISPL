@@ -1,17 +1,17 @@
-// DIIISPL — журнал отладки для библиотеки, работающей внутри проводника.
-// Copyright (C) 2026 r.strlnkv, GPLv3 (см. LICENSE в корне DIIISPL).
+// DIIISPL — debug log for the library running inside Explorer.
+// Copyright (C) 2026 r.strlnkv, GPLv3 (see LICENSE in the DIIISPL root).
 //
-// Изнутри explorer.exe ни консоли, ни отладчика под рукой нет, поэтому пишем
-// в %TEMP%\diiispl-tap.log. Файл открывается на дозапись при каждой строке —
-// медленно, зато переживает падения и не требует состояния.
+// Inside explorer.exe there is no console or debugger at hand, so we write
+// to %TEMP%\diiispl-tap.log. The file is opened for append on every line:
+// slow, but it survives crashes and needs no state.
 
 #pragma once
 #include <windows.h>
 #include <string>
 
-// Журнал по умолчанию молчит: он пишется изнутри проводника на каждое изменение
-// XAML-дерева, а это сотни строк за секунду. Включается созданием файла-маркера
-// %TEMP%\diiispl-tap-debug — тогда рядом появится diiispl-tap.log.
+// The log is silent by default: it is written from inside Explorer on every change
+// of the XAML tree, which is hundreds of lines a second. It is enabled by creating a marker file
+// %TEMP%\diiispl-tap-debug, after which diiispl-tap.log appears next to it.
 inline bool DiiisplLogEnabled()
 {
 	static int enabled = -1;

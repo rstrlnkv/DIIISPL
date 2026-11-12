@@ -1,33 +1,33 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!--
-  DIIISPL — менеджер раскладок мониторов для Windows.
+  DIIISPL — monitor layout manager for Windows.
   Copyright (C) 2026 r.strlnkv
-  Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+  Free software under the GNU General Public License v3 or later; see LICENSE.
 
-  Свой набор окон установщика.
+  The installer's own dialog set.
 
-  Готовые наборы WiX не подошли: WixUI_InstallDir даёт отдельную страницу выбора
-  папки, но не умеет спрашивать про ярлык; WixUI_FeatureTree наоборот — показывает
-  состав, но выбора папки в нём нет. Дописать окно к чужому набору нельзя, зато
-  можно собрать последовательность самому из тех же готовых окон, добавив своё.
+  The ready-made WiX sets did not fit: WixUI_InstallDir gives a separate folder
+  selection page but cannot ask about a shortcut; WixUI_FeatureTree, conversely, shows
+  the contents but has no folder selection. A dialog cannot be added to someone else's set, but
+  the sequence can be assembled from the same ready-made dialogs plus our own.
 
-  Порядок: приветствие → лицензия → папка → ярлык → подтверждение.
+  Order: welcome → licence → folder → shortcut → confirmation.
 -->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Fragment>
     <UI Id="WixUI_DIIISPL">
 
       <!--
-        Шрифты окон. Задаются здесь, а не берутся из общего набора: при своей
-        последовательности он не подтягивается, и без этих строк установщик
-        не собирается — готовые окна ссылаются на стили, которых нет.
+        Dialog fonts. Set here and not taken from the common set: with our own
+        sequence it is not pulled in, and without these lines the installer
+        does not build, since the ready-made dialogs refer to styles that do not exist.
       -->
       <TextStyle Id="WixUI_Font_Normal" FaceName="Segoe UI" Size="9" />
       <TextStyle Id="WixUI_Font_Bigger" FaceName="Segoe UI" Size="13" />
       <TextStyle Id="WixUI_Font_Title"  FaceName="Segoe UI Semibold" Size="11" />
       <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
 
-      <!-- Своё окно: один вопрос — создавать ли ярлык. -->
+      <!-- Own dialog: a single question, whether to create a shortcut. -->
       <Dialog Id="ShortcutDlg" Width="370" Height="270" Title="!(loc.InstallDirDlg_Title)">
         <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44"
                  TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
@@ -54,7 +54,7 @@
         </Control>
       </Dialog>
 
-      <!-- Готовые окна, которые используются последовательностью. -->
+      <!-- Ready-made dialogs used by the sequence. -->
       <DialogRef Id="BrowseDlg" />
       <DialogRef Id="DiskCostDlg" />
       <DialogRef Id="ErrorDlg" />
@@ -89,26 +89,26 @@
       <Publish Dialog="ShortcutDlg" Control="Back" Event="NewDialog" Value="InstallDirDlg">1</Publish>
 
       <!--
-        Отметка «человек ответил про ярлык сам».
+        Marker "the user answered the shortcut question themselves".
 
-        Без неё ответ из этого окна пропадал при «Изменить» и при обновлении:
-        SetINSTALLSHORTCUT стоит в обеих последовательностях и во второй раз
-        выполняется уже после окон — то есть затирает выбранное умолчанием
-        «ярлыка не было, значит и не надо». Выключить ярлык так получалось,
-        а включить обратно — нет, и окно при этом отвечало «готово».
+        Without it the answer from this dialog was lost on Modify and on upgrade:
+        SetINSTALLSHORTCUT is in both sequences and the second time it
+        runs after the dialogs, overwriting the choice with the default
+        "there was no shortcut, so none is needed". Turning the shortcut off worked,
+        but turning it back on did not, and the dialog meanwhile answered "done".
       -->
       <Publish Dialog="ShortcutDlg" Control="Next" Property="SHORTCUTCHOSEN" Value="1" Order="1">1</Publish>
       <Publish Dialog="ShortcutDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="2">1</Publish>
 
       <!--
-        «Назад» обязано вести туда, откуда пришли.
+        Back must lead to where the user came from.
 
-        При «Изменить» человек идёт мимо приветствия и лицензии: обслуживание →
-        папка → ярлык → подтверждение. «Назад» с подтверждения при этом прыгало
-        сразу к выбору действия, перескакивая через оба только что заполненных
-        окна, а «Назад» с окна папки уводило на лицензию, которой в этом пути не
-        было вовсе. Отметка DIIISPLCHANGING отличает этот путь от установки
-        начисто; ставится она там же, где путь начинается.
+        On Modify the user bypasses welcome and licence: maintenance →
+        folder → shortcut → confirmation. Back from confirmation then jumped
+        straight to the action choice, skipping both dialogs just filled in,
+        and Back from the folder dialog led to the licence, which was not on this path
+        at all. The DIIISPLCHANGING marker tells this path from a clean
+        install; it is set where the path begins.
       -->
       <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="ShortcutDlg" Order="1">NOT Installed OR DIIISPLCHANGING = "1"</Publish>
       <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="2">Installed AND NOT PATCH AND DIIISPLCHANGING &lt;&gt; "1"</Publish>
@@ -117,8 +117,8 @@
       <Publish Dialog="MaintenanceWelcomeDlg" Control="Next" Event="NewDialog" Value="MaintenanceTypeDlg">1</Publish>
       <Publish Dialog="MaintenanceTypeDlg" Control="ChangeButton" Property="DIIISPLCHANGING" Value="1" Order="1">1</Publish>
       <Publish Dialog="MaintenanceTypeDlg" Control="ChangeButton" Event="NewDialog" Value="InstallDirDlg" Order="2">1</Publish>
-      <!-- Ремонт и удаление идут своим путём: отметку снимаем, иначе «Назад» с
-           подтверждения увело бы в окна, которых человек не открывал. -->
+      <!-- Repair and uninstall go their own way: clear the marker, otherwise Back from
+           confirmation would lead to dialogs the user never opened. -->
       <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Property="DIIISPLCHANGING" Value="{}" Order="1">1</Publish>
       <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="VerifyReadyDlg" Order="2">1</Publish>
       <Publish Dialog="MaintenanceTypeDlg" Control="RemoveButton" Property="DIIISPLCHANGING" Value="{}" Order="1">1</Publish>

@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!--
-  DIIISPL — менеджер раскладок мониторов для Windows.
+  DIIISPL — monitor layout manager for Windows.
   Copyright (C) 2026 r.strlnkv
-  Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+  Free software under the GNU General Public License v3 or later; see LICENSE.
 
-  Установщик. Собирается installer\build-msi.cmd.
+  The installer. Built by installer\build-msi.cmd.
 -->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
      xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
@@ -16,12 +16,12 @@
   <?endif ?>
 
   <!--
-       Код продукта приходит извне, а не выписан звёздочкой. Пакет собирается
-       дважды — по разу на язык, — и перевод внутрь встаёт разницей между этими
-       сборками. Со звёздочкой каждая сборка получала бы свой код, и «перевод»
-       первым делом подменял бы продукт целиком. Новый код на каждую сборку
-       выдаёт build-msi.cmd — там же и объяснено, почему новый, а не выведенный
-       из номера версии.
+       The product code comes from outside, not as an asterisk. The package is built
+       twice, once per language, and a translation embeds as the difference between
+       the builds. With an asterisk each build would get its own code, and a "translation"
+       would first of all replace the whole product. build-msi.cmd issues a new code
+       for every build, and explains there why it is new and not derived
+       from the version number.
   -->
   <?ifndef ProductCode ?>
   <?define ProductCode = "*" ?>
@@ -44,13 +44,13 @@
 
     <MediaTemplate EmbedCab="yes" />
 
-    <!-- Новая версия заменяет прежнюю, а не встаёт рядом с ней. -->
+    <!-- A new version replaces the old one rather than sitting next to it. -->
     <MajorUpgrade AllowSameVersionUpgrades="yes"
                   DowngradeErrorMessage="!(loc.DowngradeError)" />
 
     <!--
-      Программа живёт в трее и держит открытой библиотеку внутри проводника.
-      Если её не закрыть, файлы окажутся занятыми и установка потребует перезагрузки.
+      The program lives in the tray and keeps a library open inside Explorer.
+      If it is not closed, the files stay locked and the install will require a reboot.
     -->
     <util:CloseApplication Id="CloseDIIISPL"
                            Target="DIIISPL.exe"
@@ -62,22 +62,22 @@
     <Property Id="ARPPRODUCTICON" Value="DIIISPL.ico" />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/rstrlnkv/DIIISPL" />
 
-    <!-- Иначе в списке установленных программ расположение и размер остаются пустыми. -->
+    <!-- Otherwise the installed programs list shows empty location and size. -->
     <SetProperty Id="ARPINSTALLLOCATION" Value="[INSTALLFOLDER]" After="CostFinalize" />
 
     <!--
-      Обновление обязано встать туда же, где стояла прежняя версия, и не
-      возвращать ярлык, от которого отказались.
+      An upgrade must land where the previous version was, and must not
+      bring back a shortcut that was declined.
 
-      Обновление из окна программы идёт с ключом /qb, то есть без единого
-      вопроса. Пока установщик ничего не помнил, это значило: программу,
-      поставленную в D:\Programs, обновление молча переносило в
-      C:\Program Files, а в меню «Пуск» появлялся ярлык, которого человек не
-      просил. Заодно ломался автозапуск — в нём записан путь к прежнему файлу.
+      An upgrade from the program window runs with /qb, that is, without a single
+      question. While the installer remembered nothing, this meant: a program
+      installed in D:\Programs was silently moved by the upgrade to
+      C:\Program Files, and a Start menu shortcut appeared that the user did not
+      ask for. Autostart broke as well, since it holds the path to the old file.
 
-      Папку помним записью в реестре, а про ярлык спрашивать реестр не нужно:
-      у его компонента ключ и так лежит там, и само наличие ключа означает
-      «ярлык ставили».
+      The folder is remembered by a registry entry, but the registry need not be asked about the shortcut:
+      its component keeps its key there anyway, and the key being present means
+      "the shortcut was installed".
     -->
     <Property Id="INSTALLFOLDER">
       <RegistrySearch Id="PrevInstallFolder" Root="HKLM" Key="Software\DIIISPL"
@@ -90,14 +90,14 @@
     </Property>
 
     <!--
-      SHORTCUTCHOSEN ставит окно с вопросом про ярлык. Пока его не было, ответ
-      человека затирался: действие стоит в обеих последовательностях, и во
-      второй раз выполняется уже после окон.
+      SHORTCUTCHOSEN is set by the dialog asking about the shortcut. While it was missing, the user's
+      answer was overwritten: the action is in both sequences, and the
+      second time it runs after the dialogs.
     -->
     <Property Id="SHORTCUTCHOSEN" Secure="yes" />
 
-    <!-- Отметка «идём путём „Изменить“»: по ней окна знают, куда возвращает
-         кнопка «Назад». Ставится и снимается в DIIISPLUI.wxs. -->
+    <!-- Marker "taking the Modify path": the dialogs use it to know where the
+         Back button goes. Set and cleared in DIIISPLUI.wxs. -->
     <Property Id="DIIISPLCHANGING" Secure="yes" />
     <SetProperty Id="INSTALLSHORTCUT" Value="0" After="AppSearch" Sequence="both">
       (WIX_UPGRADE_DETECTED OR Installed) AND NOT PREVSHORTCUT AND NOT SHORTCUTCHOSEN
@@ -116,10 +116,10 @@
       </Component>
 
       <!--
-        Библиотека оформления панели задач — только в сборках Dev. В стабильной
-        панели задач нет вовсе, и класть рядом с программой библиотеку, которая
-        загружается внутрь проводника и остаётся там жить, незачем: чего в пакете
-        нет, то не выстрелит.
+        The taskbar styling library is only in Dev builds. The stable one has no
+        taskbar code at all, and there is no point putting next to the program a library that
+        is loaded into Explorer and stays there: what is not in the package
+        cannot go off.
       -->
       <?if $(var.Channel) = "dev" ?>
       <Component Id="TaskbarLibrary" Guid="*" Win64="yes">
@@ -127,7 +127,7 @@
       </Component>
       <?endif ?>
 
-      <!-- По компоненту на файл: у обоих нет версии, а такие в один не складываются. -->
+      <!-- One component per file: neither has a version, and such files do not combine into one. -->
       <Component Id="License" Guid="*" Win64="yes">
         <File Id="LICENSE.txt" Source="$(var.SourceDir)\LICENSE" Name="LICENSE.txt" KeyPath="yes" />
       </Component>
@@ -136,7 +136,7 @@
         <File Id="README.md" Source="$(var.SourceDir)\README.md" KeyPath="yes" />
       </Component>
 
-      <!-- Куда поставили. Читается при следующем обновлении, см. RegistrySearch выше. -->
+      <!-- Where it was installed. Read at the next upgrade, see RegistrySearch above. -->
       <Component Id="InstallState" Guid="*" Win64="yes">
         <RegistryValue Root="HKLM" Key="Software\DIIISPL" Name="InstallFolder"
                        Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
@@ -144,18 +144,18 @@
     </DirectoryRef>
 
     <!--
-      Ярлык отдельным компонентом, а не довеском к файлу программы: иначе от него
-      нельзя отказаться — компонент ставится целиком. Ключом здесь запись в реестре,
-      потому что сам ярлык ключом быть не может.
+      The shortcut is a separate component, not an add-on to the program file: otherwise it
+      cannot be declined, since a component is installed whole. The key here is a registry entry,
+      because the shortcut itself cannot be a key.
     -->
     <Property Id="INSTALLSHORTCUT" Value="1" Secure="yes" />
 
     <DirectoryRef Id="ProgramMenuFolder">
       <Component Id="StartMenuShortcut" Guid="*" Win64="yes">
         <!--
-          Сравнение со значением обязательно: голое имя свойства истинно при любой
-          непустой строке, а «0» — тоже непустая строка, и ярлык создавался бы
-          даже при снятом флажке.
+          Comparing with a value is required: a bare property name is true for any
+          non-empty string, and "0" is also a non-empty string, so the shortcut would be created
+          even with the checkbox cleared.
         -->
         <Condition>INSTALLSHORTCUT = "1"</Condition>
         <Shortcut Id="DIIISPLShortcut"
@@ -182,25 +182,25 @@
       <ComponentRef Id="StartMenuShortcut" />
     </Feature>
 
-    <!-- Предложить запуск сразу после установки. -->
+    <!-- Offer to launch right after install. -->
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="!(loc.LaunchCheckbox)" />
     <Property Id="WixShellExecTarget" Value="[#DIIISPL.exe]" />
     <CustomAction Id="LaunchApplication" BinaryKey="WixCA" DllEntry="WixShellExec"
                   Impersonate="yes" Return="ignore" />
 
     <!--
-      Вернуть программу в трей после обновления изнутри.
+      Return the program to the tray after an upgrade from within.
 
-      Обновление идёт с /qb: последнего окна с кнопкой «Готово» нет, а запуск
-      висел только на ней. Получалось так: человек нажал «Обновить», установщик
-      закрыл работающую копию, заменил файлы — и всё. Значок из трея исчез, окно
-      не вернулось, ничего не сказано; со стороны это выглядит как «обновление
-      уронило программу».
+      The upgrade runs with /qb: there is no last dialog with a Finish button, and the launch
+      hung only on it. The result: the user pressed "Update", the installer
+      closed the running copy, replaced the files, and that was all. The tray icon vanished, the window
+      did not come back, nothing was said; from outside this looks like "the upgrade
+      crashed the program".
 
-      Свойство передаёт сам Updater, поэтому обычная установка руками этим путём
-      не идёт — там за запуск по-прежнему отвечает галочка в последнем окне.
-      Действие немедленное и без ожидания: оно выполняется от имени того, кто
-      обновлялся, а держать установщик открытым, пока живёт программа, незачем.
+      The property is passed by Updater itself, so a regular manual install does not
+      take this path: there the checkbox in the last dialog still handles the launch.
+      The action is immediate and does not wait: it runs as the user who
+      updated, and there is no need to keep the installer open while the program lives.
     -->
     <Property Id="DIIISPLRELAUNCH" Secure="yes" />
     <SetProperty Id="RelaunchExe" Value="[INSTALLFOLDER]DIIISPL.exe"
@@ -209,20 +209,20 @@
                   Execute="immediate" Return="asyncNoWait" />
 
     <!--
-      Убрать запись автозапуска при удалении программы.
+      Remove the autostart entry when the program is uninstalled.
 
-      Автозапуск включает сама программа — пунктом в меню значка в трее, — и
-      запись при этом ложится в ветку пользователя. Пакет ставится на всю машину,
-      про эту запись не знает, и после удаления она оставалась висеть: Windows
-      при каждом входе пыталась запустить файл, которого больше нет.
+      Autostart is enabled by the program itself, from the tray icon menu, and
+      the entry goes into the user's hive. The package installs machine-wide,
+      does not know about this entry, and after uninstall it was left hanging: Windows
+      tried at every sign-in to launch a file that no longer exists.
 
-      Действие именно немедленное. Отложенные при установке на машину выполняются
-      от имени системы, и HKCU там — ветка системной учётной записи, а не того,
-      кто удаляет; запись пользователя так не достать. Немедленное идёт в его
-      собственной ветке.
+      The action must be immediate. Deferred ones run during a machine-wide install
+      as the system, and HKCU there is the hive of the system account, not of the one
+      uninstalling; the user's entry cannot be reached that way. An immediate one runs in the
+      user's own hive.
 
-      Return="ignore" обязателен: если автозапуск не включали, reg вернёт «нет
-      такого значения», и удаление пакета не должно на этом останавливаться.
+      Return="ignore" is required: if autostart was never enabled, reg returns "no
+      such value", and the uninstall must not stop on that.
     -->
     <SetProperty Id="DIIISPLREGEXE" Value="[System64Folder]reg.exe"
                  Before="CleanAutoStart" Sequence="execute" />
@@ -232,22 +232,22 @@
 
     <InstallExecuteSequence>
       <!--
-        NOT UPGRADINGPRODUCTCODE обязательно. Обновление устроено так, что новый
-        пакет прогоняет удаление старого — с REMOVE="ALL" в его собственной
-        последовательности. Без этой оговорки каждое обновление стирало бы
-        запись автозапуска: программа возвращалась бы в трей, но при следующем
-        входе в Windows уже не запускалась, и галочка стояла бы снятой. То есть
-        обновление само выключало бы ровно ту настройку, которую мы тут чиним.
+        NOT UPGRADINGPRODUCTCODE is required. An upgrade works so that the new
+        package runs the uninstall of the old one, with REMOVE="ALL" in its own
+        sequence. Without this condition every upgrade would erase the
+        autostart entry: the program would return to the tray, but at the next
+        Windows sign-in it would no longer start, and the checkbox would be cleared. That is,
+        the upgrade itself would turn off exactly the setting we are fixing here.
       -->
       <Custom Action="CleanAutoStart" Before="RemoveFiles">REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE</Custom>
       <Custom Action="RelaunchInTray" After="InstallFinalize">DIIISPLRELAUNCH="1" AND NOT REMOVE="ALL"</Custom>
     </InstallExecuteSequence>
 
-    <!-- Свой набор окон: выбор папки плюс отдельный вопрос про ярлык, см. DIIISPLUI.wxs. -->
+    <!-- Own dialog set: folder choice plus a separate shortcut question, see DIIISPLUI.wxs. -->
     <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
     <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
 
-    <!-- Свои картинки вместо стандартных из набора WiX. -->
+    <!-- Own images instead of the standard ones from the WiX set. -->
     <WixVariable Id="WixUIBannerBmp" Value="$(var.ArtDir)\banner.bmp" />
     <WixVariable Id="WixUIDialogBmp" Value="$(var.ArtDir)\dialog.bmp" />
     <UIRef Id="WixUI_DIIISPL" />

@@ -24,7 +24,7 @@ VisualTreeWatcher::VisualTreeWatcher(winrt::com_ptr<IUnknown> site, wil::unique_
 
 HRESULT VisualTreeWatcher::OnVisualTreeChange(ParentChildRelation relation, VisualElement element, VisualMutationType mutationType) try
 {
-	if (mutationType == Add) DiiisplLog(std::wstring(L"дерево +: ") + std::wstring(element.Type, SysStringLen(element.Type)) + L"  имя=" + std::wstring(element.Name, SysStringLen(element.Name)));
+	if (mutationType == Add) DiiisplLog(std::wstring(L"tree +: ") + std::wstring(element.Type, SysStringLen(element.Type)) + L"  name=" + std::wstring(element.Name, SysStringLen(element.Name)));
 	switch (mutationType)
 	{
 	case Add:
@@ -64,7 +64,7 @@ HRESULT VisualTreeWatcher::OnVisualTreeChange(ParentChildRelation relation, Visu
 					HWND hwnd = nullptr;
 					winrt::check_hresult(nativeSource->get_WindowHandle(&hwnd));
 
-					DiiisplLog(L"НАШЁЛ TaskbarFrame -> RegisterTaskbar");
+					DiiisplLog(L"FOUND TaskbarFrame -> RegisterTaskbar");
 					m_AppearanceService->RegisterTaskbar(element.Handle, hwnd);
 					m_NonMatchingXamlSources.erase(it);
 
@@ -87,7 +87,7 @@ HRESULT VisualTreeWatcher::OnVisualTreeChange(ParentChildRelation relation, Visu
 					const auto shape = FromHandle<wux::Shapes::Rectangle>(element.Handle);
 					if (backgroundFill)
 					{
-						DiiisplLog(L"НАШЁЛ BackgroundFill -> RegisterTaskbarBackground");
+						DiiisplLog(L"FOUND BackgroundFill -> RegisterTaskbarBackground");
 						m_AppearanceService->RegisterTaskbarBackground(handle, shape);
 					}
 					else if (backgroundStroke)

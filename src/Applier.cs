@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -12,40 +12,40 @@ namespace DIIISPL
         public bool Success;
         public string Error;
         public List<string> Warnings = new List<string>();
-        /// <summary>Мониторы, которые реально попали в заявку (были подключены на момент сборки).</summary>
+        /// <summary>Monitors that actually made it into the request (were connected at build time).</summary>
         public List<string> Requested = new List<string>();
     }
 
     /// <summary>
-    /// Превращает профиль в конфигурацию дисплеев: сам собирает пути и режимы CCD,
-    /// не опираясь на то, что Windows запомнила про эти мониторы.
+    /// Turns a profile into a display configuration: builds the CCD paths and modes itself,
+    /// without relying on what Windows remembered about these monitors.
     /// </summary>
     internal static class Applier
     {
         private class Group
         {
             public string Key;
-            public LayoutDisplay Rep;                       // представитель группы (задаёт позицию и режим)
+            public LayoutDisplay Rep;                       // group representative (sets position and mode)
             public List<LayoutDisplay> Members = new List<LayoutDisplay>();
             public List<MonitorInfo> Monitors = new List<MonitorInfo>();
             public uint SourceId;
             public int ModeIndex;
         }
 
-        /// <summary>Пауза между ступенями лестницы попыток внутри одного применения.</summary>
+        /// <summary>Pause between the rungs of the attempt ladder within one apply.</summary>
         private const int RungPauseMs = 600;
 
         public static ApplyResult Apply(Layout layout)
         {
-            // Очередь и пауза — общие на все процессы сеанса, см. ApplyGate.
-            // Затвор берётся до первого взгляда на дисплеи: иначе двое, начавших
-            // одновременно, оба увидят «раскладка уже такая» и оба пойдут дальше.
+            // The queue and the pause are shared by all processes of the session, see ApplyGate.
+            // The gate is taken before the first look at the displays: otherwise two that started
+            // simultaneously would both see "layout already like this" and both go on.
             using (ApplyGate gate = ApplyGate.Enter())
             {
-                // Не пропустили — значит соседняя копия всё ещё перестраивает дисплеи.
-                // Идти дальше нельзя: два одновременных SetDisplayConfig это ровно та
-                // нагрузка, ради которой затвор и стоит. Раньше по истечении ожидания
-                // шли как ни в чём не бывало.
+                // Not let through — so a neighbouring copy is still rebuilding the displays.
+                // We must not go on: two simultaneous SetDisplayConfig calls are exactly the
+                // load the gate exists for. Previously, when the wait ran out, we
+                // went on as if nothing had happened.
                 if (!gate.Held)
                 {
                     var busy = new ApplyResult();
@@ -53,10 +53,10 @@ namespace DIIISPL
                     return busy;
                 }
 
-                // Наложенную раскладку Windows не примет: она расставит экраны
-                // по-своему, а профиль останется с невозможными координатами.
-                // Проверка стоит здесь, а не только в окне: горячая клавиша, меню
-                // значка и файл, поправленный руками, идут мимо окна.
+                // Windows will not accept an overlapping layout: it will arrange the screens
+                // its own way, and the profile will be left with impossible coordinates.
+                // The check is here, and not only in the window: the hotkey, the tray icon menu
+                // and a hand-edited file bypass the window.
                 string overlap = layout.OverlapProblem();
                 if (overlap != null)
                 {
@@ -74,21 +74,21 @@ namespace DIIISPL
         {
             var res = new ApplyResult();
 
-            // Раскладка уже ровно такая — дисплеи не трогаем.
+            // The layout is already exactly like this — we do not touch the displays.
             //
-            // Каждый вызов SetDisplayConfig пересогласовывает вывод: экран моргает,
-            // а на мониторе с HDR это ещё и заметный скачок яркости. Раньше повторное
-            // применение того же профиля проходило полный путь до конца — строгая заявка
-            // отклонялась, срабатывал запасной вариант с послаблениями, — и каждое
-            // нажатие уже нажатой горячей клавиши мигало экраном на ровном месте.
+            // Every SetDisplayConfig call renegotiates the output: the screen blinks,
+            // and on an HDR monitor there is also a noticeable brightness jump. Previously, re-applying
+            // the same profile went the full way to the end — the strict request was
+            // rejected, the fallback with relaxations kicked in — and every
+            // press of an already pressed hotkey blinked the screen for no reason.
             //
-            // Вид панели задач и HDR при этом всё равно выставляем: они могли разъехаться
-            // сами по себе, а стоят дёшево — HDR трогается только там, где он отличается.
-            // Здесь спрашиваем именно «изменит ли что-нибудь», а не «это ли стоит
-            // на экранах»: вопросы разные. Профиль, просящий отключённый сейчас
-            // телевизор, действующим не считается — точка в списке у него не
-            // горит, — но применять его всё равно нечего: этот монитор заявка
-            // пропустит, а остальное уже стоит как надо.
+            // We still set the taskbar look and HDR: they may have drifted apart
+            // on their own, and they are cheap — HDR is touched only where it differs.
+            // Here we ask exactly "will anything change", not "is this what is
+            // on the screens": the questions differ. A profile asking for a TV that is off now
+            // is not counted as active — its dot in the list does not
+            // light — but there is nothing to apply for it anyway: the request skips
+            // that monitor, and the rest is already as it should be.
             if (layout.ChangesNothing(Monitors.Enumerate()))
             {
                 res.Success = true;
@@ -97,15 +97,15 @@ namespace DIIISPL
                 return res;
             }
 
-            // Перестройка конфигурации дисплеев — тяжёлая операция в ядре графического стека.
-            // Частые подряд идущие смены (зажатая горячая клавиша, скрипт в цикле) способны
-            // подвесить или уронить видеодрайвер, поэтому выдерживаем паузу между применениями.
+            // Rebuilding the display configuration is a heavy operation in the graphics stack kernel.
+            // Frequent back-to-back changes (a held hotkey, a script in a loop) can
+            // hang or crash the video driver, so we keep a pause between applies.
             gate.Wait();
 
-            // Выход, входящий в дублирование, получает от драйвера другой target id: у телевизора
-            // это 16781568 вместо 4352. Пары «обычных» id не существует, поэтому собранная вручную
-            // конфигурация теряет второй экран. Если дубль ещё не собран — пусть его построит
-            // Windows, а мы затем наложим точную раскладку по идентификаторам, годным в дубле.
+            // An output entering duplication gets a different target id from the driver: for a TV
+            // it is 16781568 instead of 4352. A pair of "ordinary" ids does not exist, so a hand-built
+            // configuration loses the second screen. If the duplicate is not built yet, let
+            // Windows build it, and then we overlay the exact layout using the ids valid in the duplicate.
             if (HasClone(layout) && !ClonesFormed(layout))
             {
                 Native.SetDisplayTopology(0, IntPtr.Zero, 0, IntPtr.Zero, Native.SDC_APPLY | Native.SDC_TOPOLOGY_CLONE);
@@ -117,8 +117,8 @@ namespace DIIISPL
 
             if (err != 0)
             {
-                // Из некоторых состояний система отвергает любую заявку целиком.
-                // Сбрасываем топологию в заведомо рабочую и пробуем ещё раз.
+                // In some states the system rejects any request entirely.
+                // We reset the topology to a known-good one and try again.
                 Native.SetDisplayTopology(0, IntPtr.Zero, 0, IntPtr.Zero, Native.SDC_APPLY | Native.SDC_TOPOLOGY_EXTEND);
                 System.Threading.Thread.Sleep(1400);
                 res.Warnings.Clear();
@@ -132,8 +132,8 @@ namespace DIIISPL
             }
             res.Success = true;
 
-            // Погашенный выход первая попытка поднимает не всегда: Windows применяет остальное
-            // и рапортует успех. Поэтому сверяем результат и, если надо, настаиваем.
+            // The first attempt does not always bring up a blanked output: Windows applies the rest
+            // and reports success. So we check the result and, if needed, insist.
             var missing = Missing(layout, res, 1300);
             if (missing.Count > 0)
             {
@@ -142,10 +142,10 @@ namespace DIIISPL
                 missing = Missing(layout, res, 900);
             }
 
-            // Отдельная беда — дублирование: некоторые мониторы (телевизоры особенно) получают
-            // другой target id, когда входят в дубль, и пары «обычных» id просто не существует.
-            // Поэтому просим Windows построить дублирование штатно, а затем накладываем
-            // точную раскладку — уже по свежим идентификаторам выходов.
+            // A separate trouble is duplication: some monitors (TVs especially) get a
+            // different target id when they enter a duplicate, and a pair of "ordinary" ids simply does not exist.
+            // So we ask Windows to build the duplication normally, and then overlay
+            // the exact layout — already by the fresh output identifiers.
             if (missing.Count > 0 || !ClonesFormed(layout))
             {
                 uint topology = HasClone(layout) ? Native.SDC_TOPOLOGY_CLONE : Native.SDC_TOPOLOGY_EXTEND;
@@ -163,11 +163,11 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Уточняющие заявки идут уже после того, как Success выставлен, и их код
-        /// возврата прежде не читал никто: раскладка могла остаться расставленной
-        /// самой Windows, а `DIIISPL.exe apply X` в скрипте всё равно печатал
-        /// «Применено» и возвращал ноль. Опустить Success тут нельзя — часть
-        /// раскладки применена, — но промолчать тоже нельзя.
+        /// Follow-up requests go after Success is set, and nobody used to read
+        /// their return code: the layout could be left arranged by
+        /// Windows itself, while `DIIISPL.exe apply X` in a script still printed
+        /// "Applied" and returned zero. Success cannot be dropped here — part of the
+        /// layout is applied — but staying silent is not allowed either.
         /// </summary>
         private static void NoteLate(int err, ApplyResult res)
         {
@@ -177,12 +177,12 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Передать наблюдателю настройки панели из профиля. Кеш сбрасывается обязательно:
-        /// смена раскладки пересоздаёт панели задач, и всё, что мы помнили об их окнах
-        /// и о связи со службой в проводнике, после этого недействительно.
+        /// Pass the taskbar settings from the profile to the watcher. The cache is reset necessarily:
+        /// a layout change recreates the taskbars, and everything we remembered about their windows
+        /// and the link with the service inside Explorer is invalid after that.
         ///
-        /// В стабильной сборке панели задач нет вовсе — ни экрана настроек, ни
-        /// наблюдателя, ни библиотеки внутри проводника, — поэтому применять нечего.
+        /// The stable build has no taskbar at all — no settings screen, no
+        /// watcher, no library inside Explorer — so there is nothing to apply.
         /// </summary>
         private static void ApplyTaskbar(Layout layout, ApplyResult res)
         {
@@ -198,8 +198,8 @@ namespace DIIISPL
 
             TaskbarWatcher.Use(layout.Taskbar);
 
-            // И ещё раз, когда панели улягутся: пересоздаёт их Windows не сразу,
-            // и всё, что наблюдатель успел о них запомнить между делом, — неправда.
+            // And once more when the taskbars settle: Windows recreates them not at once,
+            // and everything the watcher managed to remember about them in the meantime is untrue.
             TaskbarWatcher.ResetSoon();
             if (ExplorerTap.LastError != null)
                 res.Warnings.Add(Text.TaskbarPrefix(ExplorerTap.LastError));
@@ -213,7 +213,7 @@ namespace DIIISPL
             return false;
         }
 
-        /// <summary>Сложились ли группы дублирования: все участники обязаны сидеть на одном источнике.</summary>
+        /// <summary>Whether duplication groups came together: all members must sit on one source.</summary>
         private static bool ClonesFormed(Layout layout)
         {
             if (!HasClone(layout)) return true;
@@ -226,19 +226,19 @@ namespace DIIISPL
                 if (!d.Enabled || d.CloneGroup < 0) continue;
                 MonitorInfo mon;
 
-                // Два разных случая, и путать их нельзя.
+                // Two different cases, and they must not be confused.
                 //
-                // Монитора нет в перечислении — «складывать не из чего», пропускаем.
-                // Прежде здесь стоял отказ, и отказ этот был вечным: монитор не
-                // подключён, значит условие не выполнится никогда, и каждое
-                // применение гнало систему через два лишних перестроения топологии.
+                // The monitor is not in the enumeration — "nothing to put together", we skip it.
+                // Previously a failure stood here, and it was permanent: the monitor is not
+                // connected, so the condition would never be met, and every
+                // apply drove the system through two extra topology rebuilds.
                 if (!byId.TryGetValue(d.Identity, out mon)) continue;
 
-                // А вот подключённый, но погашенный участник — это ровно то
-                // состояние, ради которого дублирование и строится силами Windows:
-                // выход в дубле получает другой target id, вручную собранная
-                // конфигурация его не поднимает, и экран остаётся тёмным. Считать
-                // это «дубль сложился» нельзя.
+                // But a connected, blanked member is exactly the
+                // state for which duplication is built by Windows itself:
+                // an output in a duplicate gets a different target id, a hand-built
+                // configuration does not bring it up, and the screen stays dark. It must not be counted
+                // as "duplicate came together".
                 if (!mon.Active) return false;
                 uint src;
                 if (!groupSource.TryGetValue(d.CloneGroup, out src)) groupSource[d.CloneGroup] = mon.SourceId;
@@ -253,7 +253,7 @@ namespace DIIISPL
             var byId = new Dictionary<string, MonitorInfo>();
             foreach (var m in monitors) byId[m.Identity] = m;
 
-            // --- участники ---
+            // --- members ---
             var groups = new List<Group>();
             var groupByKey = new Dictionary<string, Group>();
 
@@ -295,7 +295,7 @@ namespace DIIISPL
                 return -1;
             }
 
-            // --- раздаём source id: одна группа = один рабочий стол ---
+            // --- handing out source ids: one group = one desktop ---
             var usedSources = new Dictionary<string, bool>();
             foreach (var g in groups)
             {
@@ -308,9 +308,9 @@ namespace DIIISPL
                 }
                 candidates.Sort();
 
-                // Сперва пробуем источник, на котором эти выходы работают прямо сейчас:
-                // видеокарта поддерживает не любое сочетание «источник + пара выходов»,
-                // и наугад взятый наименьший свободный номер может оказаться нерабочим.
+                // First we try the source on which these outputs work right now:
+                // the video card does not support every "source + pair of outputs" combination,
+                // and the lowest free number taken at random may turn out unworkable.
                 uint current = 0;
                 bool hasCurrent = g.Monitors[0].Active;
                 if (hasCurrent)
@@ -342,7 +342,7 @@ namespace DIIISPL
                 }
             }
 
-            // --- режимы источников (по одному на группу) ---
+            // --- source modes (one per group) ---
             var modes = new List<Native.DISPLAYCONFIG_MODE_INFO>();
             foreach (var g in groups)
             {
@@ -350,8 +350,8 @@ namespace DIIISPL
                 mode.infoType = Native.DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE;
                 mode.id = g.SourceId;
                 mode.adapterId = g.Monitors[0].Adapter;
-                // режим источника задаётся в «родной» ориентации панели: поворот Windows
-                // применяет поверх него сама, и повёрнутые стороны здесь ей не нужны
+                // the source mode is set in the panel's "native" orientation: Windows applies
+                // rotation on top of it itself, and the rotated sides are not needed here
                 mode.modeInfo.sourceMode.width = (uint)Math.Max(640, g.Rep.Width);
                 mode.modeInfo.sourceMode.height = (uint)Math.Max(480, g.Rep.Height);
                 mode.modeInfo.sourceMode.pixelFormat = Native.DISPLAYCONFIG_PIXELFORMAT_32BPP;
@@ -361,11 +361,11 @@ namespace DIIISPL
                 modes.Add(mode);
             }
 
-            // --- основной монитор обязан стоять в (0,0) ---
-            // `break` из внутреннего цикла выходит только из него: перебор групп
-            // продолжался, и найденной оказывалась последняя группа с основным
-            // монитором, а не первая. Сегодня основной ровно один, так что вреда
-            // не было, — но написано было не то, что имелось в виду.
+            // --- the primary monitor must stand at (0,0) ---
+            // `break` from the inner loop exits only it: the group scan
+            // continued, and the last group with a primary
+            // monitor was found, not the first. Today there is exactly one primary, so there was no harm
+            // done — but what was written was not what was meant.
             Group primary = null;
             foreach (var g in groups)
             {
@@ -388,7 +388,7 @@ namespace DIIISPL
                 }
             }
 
-            // --- пути ---
+            // --- paths ---
             var paths = new List<Native.DISPLAYCONFIG_PATH_INFO>();
             foreach (var g in groups)
             {
@@ -430,22 +430,22 @@ namespace DIIISPL
                 return -1;
             }
 
-            // --- применяем, с постепенным ослаблением требований ---
+            // --- applying, with gradual relaxation of requirements ---
             var pathArr = paths.ToArray();
             var modeArr = modes.ToArray();
 
             uint baseFlags = Native.SDC_APPLY | Native.SDC_USE_SUPPLIED_DISPLAY_CONFIG | Native.SDC_SAVE_TO_DATABASE;
 
-            // Строго: без SDC_ALLOW_CHANGES Windows либо делает ровно то, что просят, либо отказывает.
-            // С этим флагом она вправе «поправить» раскладку — например, молча выкинуть пути
-            // к погашенным выходам и вернуть успех, чего мы как раз не хотим.
-            // SDC_FORCE_MODE_ENUMERATION заставляет драйвер заново перечислить все режимы —
-            // операция тяжёлая, поэтому она не в первой попытке, а в запасной.
-            // Между ступенями — пауза. Отказ приходит быстро, поэтому без неё четыре
-            // заявки подряд уходят в драйвер почти вплотную: пауза в 1,2 секунды стоит
-            // перед всем применением и внутри лестницы не действует. А тяжелее всего
-            // как раз ступени с SDC_FORCE_MODE_ENUMERATION — драйвер перечисляет режимы
-            // заново, и именно такой поток запросов ронял машину.
+            // Strict: without SDC_ALLOW_CHANGES Windows either does exactly what is asked or refuses.
+            // With this flag it may "correct" the layout — for example, silently drop the paths
+            // to blanked outputs and return success, which is exactly what we do not want.
+            // SDC_FORCE_MODE_ENUMERATION makes the driver enumerate all modes again —
+            // a heavy operation, so it is not in the first attempt but in the fallback.
+            // Between rungs — a pause. A refusal comes quickly, so without it four
+            // requests in a row go to the driver almost back to back: the 1.2-second pause
+            // stands before the whole apply and does not act inside the ladder. And the heaviest
+            // are exactly the rungs with SDC_FORCE_MODE_ENUMERATION — the driver enumerates modes
+            // again, and it was such a stream of requests that crashed the machine.
             int err = Native.SetDisplayConfig((uint)pathArr.Length, pathArr, (uint)modeArr.Length, modeArr, baseFlags);
             if (err != 0)
             {
@@ -456,15 +456,15 @@ namespace DIIISPL
 
             if (err != 0)
             {
-                // разрешаем системе подобрать режимы самой
-                // расхождения, если они есть, покажет сверка ниже — internals пользователю не нужны
+                // we allow the system to pick the modes itself
+                // discrepancies, if any, will be shown by the check below — internals are not needed by the user
                 System.Threading.Thread.Sleep(RungPauseMs);
                 err = Native.SetDisplayConfig((uint)pathArr.Length, pathArr, (uint)modeArr.Length, modeArr,
                         baseFlags | Native.SDC_ALLOW_CHANGES | Native.SDC_FORCE_MODE_ENUMERATION);
             }
             if (err != 0)
             {
-                // последняя попытка: без явной частоты
+                // last attempt: without an explicit refresh rate
                 System.Threading.Thread.Sleep(RungPauseMs);
                 var relaxed = (Native.DISPLAYCONFIG_PATH_INFO[])pathArr.Clone();
                 for (int i = 0; i < relaxed.Length; i++)
@@ -480,13 +480,13 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Кто из заказанных мониторов так и не включился. Сверяем полученное с
-        /// заказанным: SetDisplayConfig умеет вернуть успех, применив не то, о чём
-        /// просили, — особенно если монитор физически погашен.
+        /// Which of the ordered monitors never came on. We compare what we got with
+        /// what was ordered: SetDisplayConfig can return success having applied something other than what was
+        /// asked — especially if the monitor is physically blanked.
         ///
-        /// Монитор, пропавший из перечисления,
-        /// тоже считается недостающим: после неудачной попытки Windows гасит выход, и он
-        /// временно исчезает из списка — раньше это принималось за «всё в порядке».
+        /// A monitor that vanished from the enumeration
+        /// is also counted as missing: after a failed attempt Windows blanks the output, and it
+        /// temporarily disappears from the list — this used to be taken for "all is well".
         /// </summary>
         private static List<string> Missing(Layout layout, ApplyResult res, int settleMs)
         {
@@ -524,7 +524,7 @@ namespace DIIISPL
                     if (known && mon.Active) notTurnedOff.Add(d.Name);
                     continue;
                 }
-                if (!known) continue;                       // про неподключённые уже сказали выше
+                if (!known) continue;                       // already reported about the disconnected ones above
                 if (!mon.Active) { notTurnedOn.Add(d.Name); continue; }
 
                 if (mon.Width != d.Width || mon.Height != d.Height)
@@ -532,19 +532,19 @@ namespace DIIISPL
                 else if (d.Hz > 0 && Math.Abs(mon.Hz - d.Hz) > 1.5)
                     res.Warnings.Add(Text.GotRateInstead(d.Name, mon.Hz.ToString("0.##"), d.Hz.ToString("0.##")));
 
-                // Поворот сверяем наравне с режимом. Прежде это была единственная
-                // величина, которую программа заказывает и не проверяет, — и молчание
-                // тут стоило дорого: сверка «применён сейчас» поворот учитывает, значит
-                // точка у профиля не загоралась, быстрый выход не срабатывал никогда,
-                // и каждое нажатие горячей клавиши шло на полное перестроение. Человек
-                // при этом видел «Раскладка применена» без единого замечания и жал ещё
-                // раз, потому что точка не загоралась. Это и есть та повторяемая
-                // нагрузка, которой 19.08.2026 машину увело в синий экран.
+                // We check rotation on a par with the mode. Previously it was the only
+                // quantity that the program orders and does not check — and silence
+                // here was costly: the "applied now" check takes rotation into account, so
+                // the profile's dot did not light, the quick exit never fired,
+                // and every hotkey press went for a full rebuild. The person
+                // saw "Layout applied" without a single remark and pressed again,
+                // because the dot did not light. This is the repeatable
+                // load that sent the machine into a blue screen on 19.08.2026.
                 if (mon.Rotation != d.Rotation)
                     res.Warnings.Add(Text.RotationNotApplied(d.Name));
             }
 
-            // дублирование проверяем по source id: одна группа обязана сидеть на одном источнике
+            // we check duplication by source id: a group must sit on one source
             var groupSource = new Dictionary<int, uint>();
             foreach (var d in layout.Displays)
             {
@@ -557,25 +557,25 @@ namespace DIIISPL
                     res.Warnings.Add(Text.NotCloned(d.Name));
             }
 
-            // Позиции и основной экран — то единственное, что расходится, когда
-            // заявку отбило и раскладку расставила сама Windows. Прежде их никто
-            // не сверял: в окне писалось «Раскладка применена», а на столе стояло
-            // не то, и профиль после этого никогда не отмечался точкой «применён
-            // сейчас» — потому что применено было другое.
-            // Про невключившиеся и невыключившиеся говорим здесь, до выбора начала
-            // координат. Прежде эти две строки стояли ниже, а между ними и набором
-            // был выход «сверять нечего» — и профиль, у которого не зажёгся ни один
-            // монитор, уходил вообще без предупреждений: «Раскладка применена» и всё.
+            // Positions and the primary screen are the only things that differ when
+            // the request was rejected and Windows arranged the layout itself. Previously nobody
+            // checked them: the window said "Layout applied", yet the desk had
+            // something else, and the profile was then never marked with the "applied
+            // now" dot — because something else had been applied.
+            // We report the non-enabled and non-disabled ones here, before choosing the origin
+            // of coordinates. Previously those two lines stood below, and between them and the set
+            // was the exit "nothing to check" — and a profile in which no monitor
+            // came on left with no warnings at all: "Layout applied" and that's it.
             if (notTurnedOn.Count > 0)
                 res.Warnings.Add(Text.DidNotTurnOn(string.Join(", ", notTurnedOn.ToArray())));
             if (notTurnedOff.Count > 0)
                 res.Warnings.Add(Text.StayedOn(string.Join(", ", notTurnedOff.ToArray())));
 
-            // Начало координат выбираем тем же правилом, каким его выбирает Submit:
-            // основной, если он подключён и горит, иначе первый горящий. Иначе
-            // получаются два разных начала на одну раскладку, и сверка ругается
-            // на верно применённый профиль — измерено на профиле, где основным
-            // отмечен отключённый телевизор: «Windows расставила по-своему».
+            // We choose the origin by the same rule Submit uses:
+            // the primary if it is connected and lit, otherwise the first lit one. Otherwise
+            // we get two different origins for one layout, and the check complains
+            // about a correctly applied profile — measured on a profile where a disconnected
+            // TV is marked primary: "Windows arranged it its own way".
             LayoutDisplay origin = null;
             foreach (var d in layout.Displays)
             {
@@ -590,14 +590,14 @@ namespace DIIISPL
                     MonitorInfo p;
                     if (byId.TryGetValue(d.Identity, out p) && p.Active) { origin = d; break; }
                 }
-            if (origin == null) return;                  // сверять нечего: ничего не горит
+            if (origin == null) return;                  // nothing to check: nothing is lit
 
             MonitorInfo originMon = byId[origin.Identity];
             int shiftX = originMon.X - origin.X;
             int shiftY = originMon.Y - origin.Y;
 
-            // Про основной говорим только тогда, когда заказанный основной на месте
-            // и горит, а Windows всё равно поставила началом координат другой.
+            // We report the primary only when the ordered primary is in place
+            // and lit, and Windows still put another at the origin of coordinates.
             if (origin.Primary && (originMon.X != 0 || originMon.Y != 0))
                 res.Warnings.Add(Text.NotPrimary(origin.Name));
 
@@ -615,14 +615,14 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// HDR ставится отдельно и уже после того, как топология применена: при смене раскладки
-        /// (особенно при дублировании) Windows пересобирает цепочку вывода и гасит расширенный цвет.
-        /// В группе дублирования состояние HDR должно быть одинаковым на всех выходах, иначе
-        /// Windows принудительно переводит всю группу в SDR — поэтому группу выставляем целиком.
+        /// HDR is set separately and after the topology is applied: on a layout change
+        /// (especially with duplication) Windows rebuilds the output chain and drops advanced colour.
+        /// In a duplication group the HDR state must be the same on all outputs, otherwise
+        /// Windows forcibly puts the whole group into SDR — so we set the group as a whole.
         /// </summary>
         public static void ApplyHdr(Layout layout, ApplyResult res, ApplyGate gate)
         {
-            var wanted = new Dictionary<string, bool>();     // identity -> нужное состояние
+            var wanted = new Dictionary<string, bool>();     // identity -> desired state
             foreach (var d in layout.Displays)
             {
                 if (!d.Enabled || d.Hdr < 0) continue;
@@ -630,7 +630,7 @@ namespace DIIISPL
             }
             if (wanted.Count == 0) return;
 
-            // выравниваем группы дублирования: если HDR просят хотя бы для одного выхода — включаем всей группе
+            // we align duplication groups: if HDR is requested for at least one output — we enable it for the whole group
             foreach (var d in layout.Displays)
             {
                 if (!d.Enabled || d.CloneGroup < 0) continue;
@@ -644,7 +644,7 @@ namespace DIIISPL
                 if (groupWantsHdr) wanted[d.Identity] = true;
             }
 
-            // мониторы перечитываем: после смены раскладки идентификаторы выходов могли смениться
+            // we re-read the monitors: after a layout change the output identifiers may have changed
             var byId = new Dictionary<string, MonitorInfo>();
             foreach (var m in Monitors.Enumerate()) byId[m.Identity] = m;
 
@@ -663,7 +663,7 @@ namespace DIIISPL
                     var self = layout.Find(kv.Key);
                     if (self != null && IsCloned(layout, kv.Key))
                     {
-                        // проверено: Windows не отдаёт расширенный цвет выходам в дублировании
+                        // verified: Windows does not give advanced colour to outputs in duplication
                         if (!cloneWarned.ContainsKey(self.CloneGroup))
                         {
                             cloneWarned[self.CloneGroup] = true;
@@ -673,15 +673,15 @@ namespace DIIISPL
                     else res.Warnings.Add(Text.HdrUnavailable(names[kv.Key]));
                     continue;
                 }
-                // Уже как надо — трогать нечего. Прежде такой монитор всё равно
-                // попадал в touched, из-за чего дальше всегда набегала лишняя
-                // пауза в 700 мс, а имя списка переставало быть правдой.
+                // Already as needed — nothing to touch. Previously such a monitor still
+                // landed in touched, because of which an extra 700 ms pause
+                // always piled up later, and the list name stopped being true.
                 if (mon.HdrEnabled == kv.Value) continue;
 
-                // Переключение расширенного цвета пересогласовывает линк — операция
-                // того же класса, что и смена раскладки. Быстрый путь «раскладка уже
-                // такая» доходит сюда, минуя паузу, поэтому выдерживаем её здесь и
-                // только перед настоящим первым изменением.
+                // Switching advanced colour renegotiates the link — an operation
+                // of the same class as a layout change. The quick path "layout already
+                // like this" gets here bypassing the pause, so we keep it here and
+                // only before the real first change.
                 if (gate != null) { gate.Wait(); gate = null; }
 
                 int err = Monitors.SetHdr(mon.Adapter, mon.TargetId, kv.Value);
@@ -695,8 +695,8 @@ namespace DIIISPL
 
             if (touched.Count == 0) return;
 
-            // Windows пересогласовывает линк не мгновенно — проверяем результат с паузой.
-            // Заодно повторяем: система любит вернуть запомненное состояние HDR после смены режима.
+            // Windows renegotiates the link not instantly — we check the result with a pause.
+            // We also repeat: the system likes to restore the remembered HDR state after a mode change.
             System.Threading.Thread.Sleep(700);
             foreach (var mon in touched)
             {
@@ -720,11 +720,11 @@ namespace DIIISPL
 
                 if (want && !check.HdrEnabled)
                 {
-                    // Совета «задайте группе 4K60» здесь больше нет. Он обещал то,
-                    // чего не бывает: выходам, объединённым в дублирование, Windows
-                    // расширенный цвет не отдаёт вовсе — проверено и на 60 Гц, и на
-                    // 120. Об этом же говорит и окно, и автотест; одна эта строка
-                    // отправляла человека подбирать режим, который не поможет.
+                    // The advice "set the group to 4K60" is gone here. It promised what
+                    // cannot happen: Windows does not give advanced colour to outputs
+                    // joined in duplication at all — verified at both 60 Hz and
+                    // 120. The window says the same, and so does the autotest; this one line
+                    // sent a person off to pick a mode that would not help.
                     res.Warnings.Add(Text.HdrDidNotTurnOn(names[mon.Identity], IsCloned(layout, mon.Identity)));
                 }
             }
@@ -742,14 +742,14 @@ namespace DIIISPL
         private static bool FindTemplate(Native.DISPLAYCONFIG_PATH_INFO[] all, MonitorInfo mon, uint sourceId,
             out Native.DISPLAYCONFIG_PATH_INFO path)
         {
-            // точное совпадение source+target
+            // exact match of source+target
             foreach (var p in all)
             {
                 if (p.targetInfo.adapterId.Key == mon.Adapter.Key && p.targetInfo.id == mon.TargetId &&
                     p.sourceInfo.id == sourceId)
                 { path = p; return true; }
             }
-            // любой путь к этому монитору — source подменим сами
+            // any path to this monitor — we substitute the source ourselves
             foreach (var p in all)
             {
                 if (p.targetInfo.adapterId.Key == mon.Adapter.Key && p.targetInfo.id == mon.TargetId)

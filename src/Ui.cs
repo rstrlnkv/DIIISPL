@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — a monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Windows;
@@ -10,13 +10,13 @@ using System.Windows.Media;
 namespace DIIISPL
 {
     /// <summary>
-    /// Строительные блоки окон: карточка, строка с подписью и пояснением, сноска.
-    /// Собраны в одном месте, чтобы экраны выглядели одинаково не по совпадению,
-    /// а потому что сложены из одних и тех же деталей.
+    /// Building blocks of the windows: a card, a row with a label and a hint, a footnote.
+    /// Kept in one place so the screens look alike not by coincidence
+    /// but because they are built from the same parts.
     /// </summary>
     internal static class Ui
     {
-        /// <summary>Карточка с заголовком и содержимым.</summary>
+        /// <summary>A card with a title and content.</summary>
         public static Border Card(string title, string subtitle, params UIElement[] children)
         {
             var card = new Border();
@@ -61,7 +61,7 @@ namespace DIIISPL
             return card;
         }
 
-        /// <summary>Строка настройки: слева подпись с пояснением, справа управление.</summary>
+        /// <summary>A settings row: label with hint on the left, the control on the right.</summary>
         public static UIElement Row(string label, string hint, UIElement control, double controlWidth)
         {
             var grid = new Grid();
@@ -94,7 +94,7 @@ namespace DIIISPL
             return grid;
         }
 
-        /// <summary>Пояснение мелким шрифтом.</summary>
+        /// <summary>A hint in small type.</summary>
         public static TextBlock Note(string text)
         {
             var t = new TextBlock();
@@ -105,7 +105,7 @@ namespace DIIISPL
             return t;
         }
 
-        /// <summary>Пункт списка с тире.</summary>
+        /// <summary>A bullet-list item with a dash.</summary>
         public static UIElement Bullet(string text)
         {
             var grid = new Grid();
@@ -127,7 +127,7 @@ namespace DIIISPL
             return grid;
         }
 
-        /// <summary>Заголовок окна и строка под ним — общая шапка всех экранов.</summary>
+        /// <summary>Window title and the line under it — the common header of all screens.</summary>
         public static UIElement Head(string title, string hint)
         {
             var head = new StackPanel();

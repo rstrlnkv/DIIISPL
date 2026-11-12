@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Runtime.InteropServices;
@@ -187,7 +187,7 @@ namespace DIIISPL
             public string monitorDevicePath;
         }
 
-        // ---- расширенный цвет (HDR) и предпочитаемый режим ----
+        // ---- advanced colour (HDR) and preferred mode ----
         public const uint DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_PREFERRED_MODE = 3;
         public const uint DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO = 9;
         public const uint DISPLAYCONFIG_DEVICE_INFO_SET_ADVANCED_COLOR_STATE = 10;
@@ -206,7 +206,7 @@ namespace DIIISPL
         public struct DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO
         {
             public DISPLAYCONFIG_DEVICE_INFO_HEADER header;
-            public uint value;            // биты: 0 supported, 1 enabled, 2 wideColorEnforced, 3 forceDisabled
+            public uint value;            // bits: 0 supported, 1 enabled, 2 wideColorEnforced, 3 forceDisabled
             public uint colorEncoding;
             public uint bitsPerColorChannel;
 
@@ -219,15 +219,15 @@ namespace DIIISPL
         public struct DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE
         {
             public DISPLAYCONFIG_DEVICE_INFO_HEADER header;
-            public uint value;            // бит 0: enableAdvancedColor
+            public uint value;            // bit 0: enableAdvancedColor
         }
 
         [DllImport("user32.dll")]
         public static extern int DisplayConfigGetDeviceInfo(ref DISPLAYCONFIG_TARGET_PREFERRED_MODE requestPacket);
 
-        // Windows 11 24H2 развела расширенный цвет и HDR: старый advancedColorEnabled остаётся
-        // включённым, пока дисплей работает в широком цветовом охвате, а собственно HDR
-        // переехал в отдельные поля нового пакета и в отдельный вызов установки.
+        // Windows 11 24H2 separated advanced colour from HDR: the old advancedColorEnabled stays
+        // on while the display runs in a wide colour gamut, and HDR proper
+        // moved to separate fields of the new packet and a separate set call.
         public const uint DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO_2 = 15;
         public const uint DISPLAYCONFIG_DEVICE_INFO_SET_HDR_STATE = 16;
 
@@ -241,7 +241,7 @@ namespace DIIISPL
                                                // 4 hdrSupported, 5 hdrUserEnabled, 6 wcgSupported, 7 wcgUserEnabled
             public uint colorEncoding;
             public uint bitsPerColorChannel;
-            public uint activeColorMode;       // 2 — сейчас реально HDR
+            public uint activeColorMode;       // 2 — HDR is actually active now
 
             public bool HdrSupported { get { return (value & 0x10) != 0; } }
             public bool HdrUserEnabled { get { return (value & 0x20) != 0; } }
@@ -253,7 +253,7 @@ namespace DIIISPL
         public struct DISPLAYCONFIG_SET_HDR_STATE
         {
             public DISPLAYCONFIG_DEVICE_INFO_HEADER header;
-            public uint value;                 // бит 0: enableHdr
+            public uint value;                 // bit 0: enableHdr
         }
 
         [DllImport("user32.dll")]
@@ -364,9 +364,9 @@ namespace DIIISPL
         public static extern bool DestroyIcon(IntPtr handle);
 
         /// <summary>
-        /// Загрузить значок из ресурсов самой программы нужного размера. Так значок
-        /// хранится в файле один раз: ресурс Windows нужен проводнику и панели задач,
-        /// а отсюда его берёт и значок в области уведомлений.
+        /// Loads an icon of the required size from the program's own resources. This way the icon
+        /// is stored in the file once: the Windows resource is needed by Explorer and the taskbar,
+        /// and the notification-area icon takes it from there too.
         /// </summary>
         [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern IntPtr LoadImage(IntPtr instance, string name, uint type,
@@ -399,9 +399,9 @@ namespace DIIISPL
         public static extern int GetClassName(IntPtr hwnd, System.Text.StringBuilder buffer, int max);
 
         /// <summary>
-        /// Поиск окна по классу. Нужен там, где EnumWindows ненадёжен: пока открыт «Пуск»,
-        /// поиск или представление задач, окна оболочки появляются и исчезают, перечисление
-        /// обрывается на полпути и панель задач в него просто не попадает.
+        /// Finds a window by class. Needed where EnumWindows is unreliable: while Start,
+        /// search or Task View is open, shell windows appear and disappear, enumeration
+        /// breaks off halfway and the taskbar simply does not get into it.
         /// </summary>
         [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string className, string title);
@@ -409,7 +409,7 @@ namespace DIIISPL
         [DllImport("user32.dll")]
         public static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
-        // ---- DWM (Fluent: Mica + тёмный заголовок) ----
+        // ---- DWM (Fluent: Mica + dark title bar) ----
         public const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
         public const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
         public const int DWMSBT_MAINWINDOW = 2;   // Mica
@@ -425,13 +425,13 @@ namespace DIIISPL
         public static extern int DwmExtendFrameIntoClientArea(IntPtr hwnd, ref MARGINS margins);
 
         /// <summary>
-        /// Причина отказа человеческими словами.
+        /// The reason for a failure in plain words.
         ///
-        /// Системное описание кода сюда не годится: коды, которыми отвечает
-        /// SetDisplayConfig, в общем справочнике Windows описаны совсем из другой
-        /// области — на 1610 пользователь получал «данные конфигурации продукта
-        /// повреждены, обратитесь в службу поддержки», что к мониторам отношения
-        /// не имеет.
+        /// The system description of the code does not fit here: the codes SetDisplayConfig
+        /// returns are described in the general Windows reference as something from a completely different
+        /// area — for 1610 the user got "product configuration data is
+        /// corrupt, contact support", which has nothing to do with
+        /// monitors.
         /// </summary>
         public static string ErrorText(int code)
         {
@@ -446,10 +446,10 @@ namespace DIIISPL
             }
         }
 
-        // ------------------------------------------------------------------ подпись файла
-        // Проверка целостности подписи. Отпечаток сертификата сам по себе
-        // не доказывает ничего: его можно прочитать и из файла, в который дописали
-        // что угодно, — сертификат в нём останется прежним, а содержимое уже чужое.
+        // ------------------------------------------------------------------ file signature
+        // Signature integrity check. The certificate thumbprint by itself
+        // proves nothing: it can be read from a file with anything appended —
+        // the certificate stays the same, but the content is already foreign.
 
         [StructLayout(LayoutKind.Sequential)]
         public struct WINTRUST_FILE_INFO
@@ -487,15 +487,15 @@ namespace DIIISPL
         public static readonly Guid WINTRUST_ACTION_GENERIC_VERIFY_V2 =
             new Guid("00AAC56B-CD44-11d0-8CC2-00C04FC295EE");
 
-        /// <summary>«Места не хватило» — для QueryDisplayConfig это просьба спросить размеры заново.</summary>
+        /// <summary>"Not enough space" — for QueryDisplayConfig it is a request to ask for the sizes again.</summary>
         public const int ERROR_INSUFFICIENT_BUFFER = 122;
 
-        /// <summary>Подпись цела, но корень сертификата в системе не установлен.</summary>
+        /// <summary>The signature is intact, but the certificate root is not installed on the system.</summary>
         public const int CERT_E_UNTRUSTEDROOT = unchecked((int)0x800B0109);
         public const int CERT_E_CHAINING = unchecked((int)0x800B010A);
-        /// <summary>Срок сертификата вышел. Подпись цела — просто календарь ушёл вперёд.</summary>
+        /// <summary>The certificate has expired. The signature is intact — the calendar simply moved on.</summary>
         public const int CERT_E_EXPIRED = unchecked((int)0x800B0101);
-        /// <summary>Содержимое файла не совпадает с подписью — файл изменён после подписания.</summary>
+        /// <summary>The file content does not match the signature — the file was changed after signing.</summary>
         public const int TRUST_E_BAD_DIGEST = unchecked((int)0x80096010);
         public const int TRUST_E_NOSIGNATURE = unchecked((int)0x800B0100);
 

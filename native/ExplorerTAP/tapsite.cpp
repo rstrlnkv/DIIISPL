@@ -19,7 +19,7 @@ wil::unique_event_nothrow TAPSite::GetReadyEvent()
 
 DWORD TAPSite::Install(void*)
 {
-	DiiisplLog(L"TAPSite::Install — стартую внутри проводника");
+	DiiisplLog(L"TAPSite::Install — starting inside Explorer");
 	const auto event = GetReadyEvent();
 
 	auto [location, hr] = win32::GetDllLocation(wil::GetModuleInstanceHandle());

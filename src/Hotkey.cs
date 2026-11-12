@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — a monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -51,7 +51,7 @@ namespace DIIISPL
             return d;
         }
 
-        /// <summary>Превращает нажатие в строку вида "Ctrl+Alt+1". null — такую клавишу назначить нельзя.</summary>
+        /// <summary>Turns a key press into a string like "Ctrl+Alt+1". null — this key cannot be assigned.</summary>
         public static string Describe(System.Windows.Input.ModifierKeys mods, System.Windows.Input.Key key)
         {
             string name = KeyName(key);
@@ -120,7 +120,7 @@ namespace DIIISPL
             }
         }
 
-        /// <summary>Разбирает "Ctrl+Alt+1", "Win+F12", "Pause".</summary>
+        /// <summary>Parses "Ctrl+Alt+1", "Win+F12", "Pause".</summary>
         public static bool TryParse(string text, out uint modifiers, out uint vk, out string error)
         {
             modifiers = 0; vk = 0; error = null;
@@ -133,11 +133,11 @@ namespace DIIISPL
                 string p = parts[i].Trim();
                 if (p.Length == 0)
                 {
-                    // Случай «Ctrl++» — плюс как клавиша. Проверка по самой строке,
-                    // а не по числу частей: «Ctrl+» — незаконченный ввод — тоже даёт
-                    // пустой хвост, и прежде он молча превращался в рабочее
-                    // сочетание Ctrl+«=». Человек не дописал имя клавиши, а сочетание
-                    // ему всё равно назначили.
+                    // The "Ctrl++" case — plus as the key. Checked on the string itself,
+                    // not on the number of parts: "Ctrl+" — unfinished input — also gives
+                    // an empty tail, and it used to silently become the working
+                    // combination Ctrl+"=". The person had not finished typing the key name, yet the combination
+                    // was assigned anyway.
                     if (i == parts.Length - 1 && keyPart == null &&
                         text.Length - text.TrimEnd('+').Length == 2)
                     {
@@ -157,12 +157,12 @@ namespace DIIISPL
             if (keyPart == "+") keyPart = "Plus";
             if (!Keys.TryGetValue(keyPart, out vk)) { error = Text.ComboUnknownKey(keyPart); return false; }
 
-            // Клавиша без приставки — это клавиша, отобранная у всей системы.
-            // Назначив профилю «A», пользователь перестал бы набирать эту букву
-            // где угодно, пока программа работает: RegisterHotKey забирает нажатие
-            // до того, как оно дойдёт до окна, в котором печатают. «Shift+A» так же
-            // уносит заглавную. Приставкой считаем только Ctrl, Alt и Win; Shift
-            // сам по себе ничего не спасает.
+            // A key without a modifier is a key taken away from the whole system.
+            // Assigning "A" to a profile would stop the user typing that letter
+            // anywhere while the program runs: RegisterHotKey grabs the press
+            // before it reaches the window being typed in. "Shift+A" likewise
+            // takes the capital. Only Ctrl, Alt and Win count as modifiers; Shift
+            // alone saves nothing.
             if ((modifiers & (MOD_CONTROL | MOD_ALT | MOD_WIN)) == 0 && !StandaloneSafe(vk))
             {
                 error = Text.ComboNeedsModifier;
@@ -174,9 +174,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Клавиши, которые можно занять целиком: ими ничего не набирают и в
-        /// обычной работе их не нажимают. F13…F24 на большинстве клавиатур вообще
-        /// нет физически — их шлют макросы и дополнительные ряды.
+        /// Keys that can be taken whole: nothing is typed with them and they are
+        /// not pressed in normal work. Most keyboards have no physical F13…F24
+        /// at all — they are sent by macros and extra rows.
         /// </summary>
         private static bool StandaloneSafe(uint vk)
         {

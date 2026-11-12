@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — a monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -24,9 +24,9 @@ namespace DIIISPL
         private HwndSource _messageWindow;
         private readonly Dictionary<int, string> _hotkeyProfiles = new Dictionary<int, string>();
         private System.Windows.Threading.DispatcherTimer _recheck;
-        /// <summary>Каким был состав экранов, когда мы смотрели в прошлый раз. null — ещё не смотрели.</summary>
+        /// <summary>What the set of displays was when we last looked. null — not looked yet.</summary>
         private List<string> _composition;
-        /// <summary>Ждём тишины после WM_DISPLAYCHANGE: Windows шлёт их пачкой.</summary>
+        /// <summary>Wait for quiet after WM_DISPLAYCHANGE: Windows sends them in a burst.</summary>
         private System.Windows.Threading.DispatcherTimer _settle;
         private static uint _showMessage;
         private static Mutex _mutex;
@@ -43,7 +43,7 @@ namespace DIIISPL
             _mutex = new Mutex(true, "Local\\DIIISPL.SingleInstance", out created);
             if (!created)
             {
-                // уже запущено — просто показываем окно работающей копии
+                // already running — just show the window of the running copy
                 Native.PostMessage(Native.HWND_BROADCAST, _showMessage, IntPtr.Zero, IntPtr.Zero);
                 return 0;
             }
@@ -56,7 +56,7 @@ namespace DIIISPL
             }
             catch (Exception ex)
             {
-                // молча падать нельзя: пользователь увидит только исчезнувший значок
+                // it must not crash silently: the user would see only a vanished icon
                 try
                 {
                     System.IO.File.WriteAllText(System.IO.Path.Combine(Store.DataDir, "error.log"),
@@ -83,11 +83,11 @@ namespace DIIISPL
             FixAutoStartPath();
 
 #if DEV
-            ExplorerTap.RestoreWhenProcessExits = true;   // трей живёт долго — при выходе вернём панель
+            ExplorerTap.RestoreWhenProcessExits = true;   // the tray lives long — restore the taskbar on exit
 #endif
-            // Значок окну не задаём: без него WPF берёт значок самой программы, а там
-            // под каждый размер лежит свой кадр — и в заголовке, и на панели задач,
-            // и в Alt+Tab окно получает подходящий, а не растянутый из одного.
+            // We do not set the window icon: without it WPF takes the program's own icon, and there
+            // each size has its own frame — in the title bar, on the taskbar,
+            // and in Alt+Tab the window gets a fitting one, not one stretched from a single image.
             _window = new MainWindow();
             _window.ProfilesChanged += ReloadHotkeys;
             _window.ApplyReported += delegate(string text, bool alarming)
@@ -104,48 +104,48 @@ namespace DIIISPL
             BuildTray();
             ReloadHotkeys();
 #if DEV
-            // В фоне, и это не украшение. Подключение к панели задач ждёт от
-            // проводника сигнала готовности — до 35 секунд на каждую панель, то
-            // есть до полутора минут на трёх мониторах. Пока ждали здесь, окно
-            // программы не открывалось вовсе: человек запускал её, ничего не
-            // происходило, и он запускал ещё раз. Измерено на живой машине: 110
-            // секунд до появления окна, когда сигнала не дождались.
+            // In the background, and this is no decoration. Connecting to the taskbar waits for
+            // a readiness signal from Explorer — up to 35 seconds per taskbar, that
+            // is up to a minute and a half on three monitors. While we waited here, the program
+            // window did not open at all: the person launched it, nothing
+            // happened, and they launched it again. Measured on a live machine: 110
+            // seconds until the window appeared, when the signal never came.
             //
-            // Не дождаться — обычное дело: в проводнике могла остаться прежняя
-            // копия библиотеки (выгрузить её нельзя, она закрепляется намертво),
-            // может мешать чужая программа вроде TranslucentTB, может не пустить
-            // антивирус. Панель задач — украшение профиля, а окно — сама
-            // программа; ждать первого ради второго нельзя.
+            // Not getting the signal is normal: Explorer may still hold the previous
+            // copy of the library (it cannot be unloaded, it pins itself for good),
+            // a foreign program like TranslucentTB may interfere, an
+            // antivirus may not allow it. The taskbar is a decoration of the profile, while the window is the
+            // program itself; one must not wait for the first for the sake of the second.
             ThreadPool.QueueUserWorkItem(delegate { StartTaskbarForActiveProfile(); });
 #endif
 
             CheckForUpdateQuietly();
 
-            // ...и потом раз в час. Прежде спрашивали ровно один раз, при
-            // запуске, — а программа поднимается вместе с Windows, когда сети
-            // чаще всего ещё нет. Не дозвонившись, проверка молча выходила и
-            // повторить её было некому: следующая попытка — только при
-            // следующем запуске, а запускают редко, программа живёт в трее
-            // неделями.
+            // ...and then once an hour. It used to ask exactly once, at
+            // launch — yet the program starts together with Windows, when the network
+            // is most often not up yet. Unable to get through, the check quietly gave up and
+            // there was nobody to repeat it: the next attempt came only at the
+            // next launch, and launches are rare, the program lives in the tray
+            // for weeks.
             //
-            // Измерено 26.08.2026 на живой машине: работала копия 0.1.2,
-            // 0.1.3 вышла пятью днями раньше, окно говорило «проверялось
-            // 4 дня назад» — а кнопка «Проверить» находила её сразу.
+            // Measured on 26.08.2026 on a live machine: copy 0.1.2 was running,
+            // 0.1.3 had come out five days earlier, the window said "checked
+            // 4 days ago" — while the "Check" button found it at once.
             //
-            // Час — это период будильника, а не частота обращений к GitHub:
-            // внутри стоит условие «прошло ли 24 часа с последней удачной
-            // проверки». Значит удачная остаётся одна в сутки, а неудачная
-            // повторяется через час, пока не выйдет.
+            // An hour is the alarm period, not the frequency of requests to GitHub:
+            // inside sits the condition "have 24 hours passed since the last successful
+            // check". So a successful one stays at one a day, and a failed one
+            // repeats after an hour until it succeeds.
             _recheck = new System.Windows.Threading.DispatcherTimer();
             _recheck.Interval = TimeSpan.FromHours(1);
             _recheck.Tick += delegate { CheckForUpdateQuietly(); };
             _recheck.Start();
 
-            // И сразу посмотреть, не подходит ли составу экранов другой профиль.
-            // Это тот самый случай, ради которого всё писалось: человек включает
-            // ПК, телевизор доступен, а раскладка остаётся вчерашней. Смотрим не
-            // сию секунду, а через паузу — после входа в Windows экраны ещё
-            // договариваются между собой.
+            // And right away see whether another profile fits the set of displays.
+            // This is the very case the whole thing was written for: the person turns on
+            // the PC, the TV is available, and the layout stays yesterday's. We look not
+            // this second but after a pause — after signing in to Windows the displays are still
+            // negotiating among themselves.
             ScheduleAutoSwitch();
 
             if (!startHidden) ShowManager();
@@ -153,9 +153,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Раз в сутки спросить GitHub, не вышло ли новое, и если вышло — сказать
-        /// всплывающей подсказкой. Молча: неудачную проверку показывать незачем,
-        /// а страницу «О программе» человек откроет сам, когда захочет.
+        /// Once a day ask GitHub whether a new one is out, and if so, say so
+        /// with a balloon tip. Quietly: there is no need to show a failed check,
+        /// and the person will open the About page themselves when they want to.
         /// </summary>
         private void CheckForUpdateQuietly()
         {
@@ -179,7 +179,7 @@ namespace DIIISPL
             });
         }
 
-        // ---------------------------------------------------------------- трей
+        // ---------------------------------------------------------------- tray
         private void BuildTray()
         {
             _tray = new Forms.NotifyIcon();
@@ -218,7 +218,7 @@ namespace DIIISPL
                     item.Style = (Style)Resources["FlyoutMenuItem"];
                     item.Header = layout.Name;
                     item.InputGestureText = layout.Hotkey;
-                    item.IsChecked = layout.MatchesCurrent(live);   // точкой отмечена действующая раскладка
+                    item.IsChecked = layout.MatchesCurrent(live);   // the active layout is marked with a dot
                     string name = layout.Name;
                     item.Click += delegate { ApplyByName(name); };
                     menu.Items.Add(item);
@@ -233,8 +233,8 @@ namespace DIIISPL
             manager.Click += delegate { ShowManager(); };
             menu.Items.Add(manager);
 
-            // Рядом с автозапуском: обе настройки — про поведение программы,
-            // а не про отдельный профиль.
+            // Next to autostart: both settings are about the program's behaviour,
+            // not about a single profile.
             var follow = new MenuItem();
             follow.Style = (Style)Resources["FlyoutMenuItem"];
             follow.Header = Text.AutoSwitchMenu;
@@ -243,9 +243,9 @@ namespace DIIISPL
             follow.Click += delegate
             {
                 Settings.AutoSwitch = !Settings.AutoSwitch;
-                // Включили — запоминаем нынешний состав и ждём настоящей смены.
-                // Иначе переключатель сам бы и перестроил экраны, а человек
-                // просил лишь включить настройку.
+                // Turned on — remember the current set and wait for a real change.
+                // Otherwise the switch would itself rebuild the displays, while the person
+                // only asked to turn the setting on.
                 if (Settings.AutoSwitch)
                     try { _composition = AutoSwitch.Composition(Monitors.Enumerate()); }
                     catch { _composition = null; }
@@ -253,10 +253,10 @@ namespace DIIISPL
             menu.Items.Add(follow);
 
 #if DEV
-            // Ручной сброс — тот же, что делается сам после применения профиля.
-            // Нужен потому, что сам он может опоздать: панели пересоздаются, когда
-            // Windows сочтёт нужным, и разглядеть застрявший вид человек может
-            // раньше программы.
+            // A manual reset — the same one that happens by itself after a profile is applied.
+            // Needed because it may be late on its own: taskbars are recreated when
+            // Windows sees fit, and the person can spot a stuck look
+            // before the program does.
             var repaint = new MenuItem();
             repaint.Style = (Style)Resources["FlyoutMenuItem"];
             repaint.Header = Text.TrayTaskbarReset;
@@ -296,8 +296,8 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Разделитель именно как Separator, а не как произвольный элемент: меню оборачивает
-        /// посторонние элементы в обычные пункты, и в списке появляются пустые полосы.
+        /// The separator specifically as a Separator, not as an arbitrary element: the menu wraps
+        /// foreign elements in ordinary items, and empty stripes appear in the list.
         /// </summary>
         private Separator NewSeparator()
         {
@@ -319,8 +319,8 @@ namespace DIIISPL
 
 #if DEV
         /// <summary>
-        /// При запуске подхватываем вид панели того профиля, который сейчас применён:
-        /// иначе после перезагрузки панель осталась бы системной до первого переключения.
+        /// At launch we pick up the taskbar look of the profile that is currently applied:
+        /// otherwise after a reboot the taskbar would stay the system one until the first switch.
         /// </summary>
         private void StartTaskbarForActiveProfile()
         {
@@ -340,13 +340,13 @@ namespace DIIISPL
 #endif
 
         /// <summary>
-        /// Подтянуть под выбранный язык всё остальное, что показывает Windows:
-        /// разделитель дробей у частоты обновления и надписи в чужих окнах —
-        /// меню правки в поле ввода, кнопки системных сообщений.
+        /// Pull in, for the chosen language, everything else that Windows shows:
+        /// the decimal separator in the refresh rate and the labels in foreign windows —
+        /// the edit menu in an input box, the system message buttons.
         ///
-        /// Без этого английское окно на русской Windows показывало «59,94 Hz»:
-        /// текст переведён, а число осталось по-русски. Внутренние файлы это не
-        /// затрагивает — их программа пишет и читает независимо от культуры.
+        /// Without this an English window on a Russian Windows showed "59,94 Hz":
+        /// the text was translated, but the number stayed Russian. Internal files are not
+        /// affected — the program writes and reads them independently of culture.
         /// </summary>
         private static void MatchCultureToLanguage()
         {
@@ -356,20 +356,20 @@ namespace DIIISPL
                 System.Threading.Thread.CurrentThread.CurrentCulture = culture;
                 System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
             }
-            catch { /* язык из файла может не иметь культуры в Windows — не беда */ }
+            catch { /* a language from a file may have no culture in Windows — no matter */ }
         }
 
         /// <summary>
-        /// Перезапустить программу на другом языке.
+        /// Restart the program in another language.
         ///
-        /// Настройку пишем здесь, а не до вызова: отсюда можно уйти ни с чем —
-        /// идёт перестроение экранов или человек передумал закрывать окно с
-        /// правками. Записанный заранее язык в таком случае оставался бы в
-        /// файле и менял бы окно при следующем запуске, хотя человек отменил.
+        /// The setting is written here, not before the call: one can leave here with nothing —
+        /// a display rebuild is under way, or the person changed their mind about closing a window with
+        /// edits. A language written in advance would in that case stay in
+        /// the file and change the window on the next launch, although the person cancelled.
         ///
-        /// Мьютекс единственного экземпляра отпускаем до запуска новой копии:
-        /// иначе она увидит занятое имя, покажет окно этой копии и выйдет, а
-        /// смена языка не случится вовсе.
+        /// The single-instance mutex is released before the new copy launches:
+        /// otherwise it would see the name taken, show this copy's window and exit, and
+        /// the language change would not happen at all.
         /// </summary>
         public void RestartForLanguage(string code)
         {
@@ -398,11 +398,11 @@ namespace DIIISPL
             }
             catch
             {
-                // Новая копия не поднялась. Закрыть эту значило бы оставить
-                // человека вообще без программы: значка нет, горячих клавиш нет,
-                // и ничего не сказано. Остаёмся жить на прежнем языке — и снова
-                // занимаем имя единственного экземпляра, которое только что
-                // освободили, иначе рядом сможет встать вторая копия.
+                // The new copy did not come up. Closing this one would mean leaving
+                // the person without the program altogether: no icon, no hotkeys,
+                // and nothing said. We stay on the previous language — and again
+                // take the single-instance name that was just
+                // released, otherwise a second copy could appear beside this one.
                 Settings.Language = previous;
                 try { bool mine; _mutex = new Mutex(true, "Local\\DIIISPL.SingleInstance", out mine); }
                 catch { }
@@ -416,25 +416,25 @@ namespace DIIISPL
 
         private void Quit()
         {
-            // Посреди перестроения не выходим: работа идёт в фоновом потоке, и
-            // Shutdown оборвал бы её на середине вызовов в драйвер, не дав
-            // поставить отметку затвора.
+            // We do not exit in the middle of a rebuild: the work runs on a background thread, and
+            // Shutdown would cut it off in the middle of driver calls, without letting it
+            // set the gate mark.
             if (ApplyBusy.Active)
             {
                 Balloon(Text.BusyWait, Forms.ToolTipIcon.Info);
                 return;
             }
 
-            // Спрашиваем до выхода, а не через Closing окна: Shutdown закрывает окна,
-            // не глядя на отмену, — вопрос показывался, ответ «я передумал» ничего
-            // не менял, и правки пропадали вместе с программой.
+            // We ask before exiting, not via the window's Closing: Shutdown closes windows
+            // ignoring cancellation — the question was shown, the answer "I changed my mind" changed
+            // nothing, and the edits vanished along with the program.
             if (_window != null && !_window.AskBeforeClosing()) return;
 
             Cleanup();
             Shutdown();
         }
 
-        /// <summary>Убрать за собой: вид панели, горячие клавиши, значок в трее.</summary>
+        /// <summary>Clean up after ourselves: taskbar look, hotkeys, tray icon.</summary>
         private void Cleanup()
         {
 #if DEV
@@ -445,7 +445,7 @@ namespace DIIISPL
             if (_tray != null) { _tray.Visible = false; _tray.Dispose(); _tray = null; }
         }
 
-        // ---------------------------------------------------------------- горячие клавиши
+        // ---------------------------------------------------------------- hotkeys
         private void ReloadHotkeys()
         {
             UnregisterHotkeys();
@@ -458,11 +458,11 @@ namespace DIIISPL
                 if (string.IsNullOrEmpty(layout.Hotkey)) continue;
                 uint mods, vk; string err;
                 if (!Hotkey.TryParse(layout.Hotkey, out mods, out vk, out err)) { problems.Add(Text.HotkeyProblem(layout.Hotkey, err)); continue; }
-                // Тёзку среди своих же профилей ищем ДО попытки регистрации: она
-                // на втором профиле заведомо не пройдёт — сочетание уже занял
-                // первый, из этого же окна, — и в подсказку уехали бы обе строки,
-                // первая из которых валит на постороннюю программу то, чего она
-                // не делала.
+                // A namesake among our own profiles is looked for BEFORE the registration attempt: it
+                // will certainly fail on the second profile — the combination was already taken by
+                // the first, from this very window — and both lines would end up in the hint,
+                // the first of which blames an outside program for something it
+                // did not do.
                 string already;
                 if (taken.TryGetValue(layout.Hotkey, out already))
                 {
@@ -490,24 +490,24 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Применить профиль по имени — горячей клавишей или из меню значка.
+        /// Apply a profile by name — by hotkey or from the tray menu.
         ///
-        /// Работа идёт в стороннем потоке. Это главный, ежедневный путь: кнопку в
-        /// окне от заморозки уже избавили, а здесь `Applier.Apply` по-прежнему
-        /// вызывался в потоке окна — с паузами на секунды и ожиданием затвора до
-        /// тридцати. Программа замирала целиком, нажатия горячей клавиши копились
-        /// в очереди сообщений и после разморозки перестраивали дисплеи подряд —
-        /// ровно та нагрузка, из-за которой 19.08.2026 машина ушла в синий экран.
+        /// The work runs on a separate thread. This is the main, daily path: the button in
+        /// the window was already freed from freezing, but here `Applier.Apply` was still
+        /// called on the window thread — with pauses of seconds and a gate wait of up to
+        /// thirty. The whole program froze, hotkey presses piled up
+        /// in the message queue and after the thaw rebuilt the displays back to back —
+        /// exactly the load that sent the machine to a blue screen on 19.08.2026.
         ///
-        /// Пока перестроение идёт, второе не начинаем: затвор его всё равно не
-        /// пустит, а очередь из ждущих потоков не нужна никому.
+        /// While a rebuild is going, we do not start a second: the gate would not let it
+        /// through anyway, and a queue of waiting threads is needed by no one.
         /// </summary>
         /// <summary>
-        /// Подождать тишины и посмотреть, не сменился ли состав экранов.
+        /// Wait for quiet and see whether the set of displays has changed.
         ///
-        /// Каждое новое событие отодвигает решение: Windows шлёт их пачкой, пока
-        /// дожёвывает подключение, и состав, посчитанный на середине, — это
-        /// состав, которого через секунду уже не будет.
+        /// Each new event pushes the decision back: Windows sends them in a burst while it
+        /// chews through a connection, and a set counted midway is
+        /// a set that will be gone a second later.
         /// </summary>
         private void ScheduleAutoSwitch()
         {
@@ -522,18 +522,18 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Подходит ли составу экранов другой профиль — и применить его, если да.
+        /// Whether another profile fits the set of displays — and apply it if so.
         ///
-        /// Решение принимается по составу, а не по событию, и это главная
-        /// защита от петли: применение раскладки шлёт WM_DISPLAYCHANGE, но
-        /// набор подключённых мониторов при этом не меняется. Значит второй
-        /// раз здесь ничего не случится, даже если снять все прочие замки.
+        /// The decision is made on the set, not on the event, and this is the main
+        /// protection against a loop: applying a layout sends WM_DISPLAYCHANGE, but
+        /// the set of connected monitors does not change. So the second
+        /// time nothing happens here, even if all the other locks are removed.
         /// </summary>
         private void ConsiderAutoSwitch()
         {
             if (!Settings.AutoSwitch) return;
 
-            // Своё применение идёт прямо сейчас — вернёмся, когда закончится.
+            // Our own apply is going on right now — we will come back when it finishes.
             if (ApplyBusy.Active) { ScheduleAutoSwitch(); return; }
 
             List<MonitorInfo> live;
@@ -543,16 +543,16 @@ namespace DIIISPL
 
             List<string> now = AutoSwitch.Composition(live);
 
-            // Состав тот же — значит поменялась раскладка, а не набор экранов.
-            // Поменять её мог человек, и приходить сюда со своим мнением незачем.
+            // The set is the same — so the layout changed, not the set of displays.
+            // The person could have changed it, and there is no reason to come here with our own opinion.
             if (AutoSwitch.Same(now, _composition)) return;
             _composition = now;
 
             Layout pick = AutoSwitch.Pick(now, profiles);
             if (pick == null) return;
 
-            // Уже стоит — молчим: иначе каждое включение телевизора отвечало бы
-            // подсказкой о том, что ничего не произошло.
+            // Already in place — we stay silent: otherwise every TV power-on would be answered
+            // with a hint that nothing happened.
             if (pick.ChangesNothing(live)) return;
 
             ApplyByName(pick.Name, true);
@@ -563,15 +563,15 @@ namespace DIIISPL
             ApplyByName(name, false);
         }
 
-        /// <param name="announce">Сказать подсказкой и об удаче: человек этого применения не просил.</param>
+        /// <param name="announce">Say it with a hint on success too: the person did not ask for this apply.</param>
         private void ApplyByName(string name, bool announce)
         {
             var layout = Store.LoadByName(name);
             if (layout == null) return;
 
-            // Признак занятости один на всю программу: применять умеет и окно.
-            // Отказ молчаливым быть не должен — из меню значка щелчок иначе
-            // выглядит как «ничего не произошло».
+            // The busy flag is one for the whole program: the window can apply too.
+            // A refusal must not be silent — from the tray menu a click otherwise
+            // looks like "nothing happened".
             if (!ApplyBusy.Begin())
             {
                 Balloon(Text.BusyWait, Forms.ToolTipIcon.Info);
@@ -590,13 +590,13 @@ namespace DIIISPL
 
                 Dispatcher.BeginInvoke(new Action(delegate
                 {
-                    // Полный разбор — в окно, короткое — в подсказку.
+                    // The full breakdown goes to the window, the short one to the hint.
                     //
-                    // Прежде сюда сваливались все предупреждения через пробел, а
-                    // подсказка обрезается на 255 знаках и обрезается молча. Это
-                    // ежедневный путь — клавиша и меню значка, — и полного текста
-                    // при этом не было нигде: в окно он не попадал вовсе, так что
-                    // открыть его и дочитать было нельзя.
+                    // All the warnings used to be dumped here separated by spaces, while
+                    // the hint is cut at 255 characters and cut silently. This is a
+                    // daily path — the key and the tray menu — and the full text
+                    // was nowhere: it never reached the window, so it
+                    // could not be opened and read to the end.
                     if (_window != null) _window.ShowApplyResult(layout.Name, result);
 
                     if (!result.Success)
@@ -649,14 +649,14 @@ namespace DIIISPL
             return IntPtr.Zero;
         }
 
-        // ---------------------------------------------------------------- автозапуск
+        // ---------------------------------------------------------------- autostart
         private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-        private const string OldAppName = "DIIIX";      // как программа называлась раньше
+        private const string OldAppName = "DIIIX";      // what the program was called before
 
         /// <summary>
-        /// Убрать запись автозапуска, оставшуюся от прежнего имени: она указывает на файл,
-        /// которого больше нет. Если автозапуск был включён — переносим его на себя, чтобы
-        /// настройка не пропала молча.
+        /// Remove the autostart entry left over from the former name: it points to a file
+        /// that no longer exists. If autostart was on — we move it to ourselves so that
+        /// the setting does not vanish silently.
         /// </summary>
         private static void AdoptOldAutoStart()
         {
@@ -673,16 +673,16 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Поправить запись автозапуска, если она указывает не туда.
+        /// Fix the autostart entry if it points to the wrong place.
         ///
-        /// Путь записывается один раз — в тот момент, когда человек включил
-        /// автозапуск. Программу с тех пор могли переставить в другую папку или
-        /// удалить и поставить заново: запись остаётся прежней, Windows каждый
-        /// вход запускает несуществующий файл, а в программе пункт меню при этом
-        /// отмечен галочкой. Настройка есть, работы от неё нет.
+        /// The path is written once — at the moment the person turned on
+        /// autostart. Since then the program may have been moved to another folder or
+        /// deleted and installed anew: the entry stays the old one, Windows at each
+        /// sign-in launches a nonexistent file, and in the program the menu item
+        /// is ticked. The setting is there, the work from it is not.
         ///
-        /// Раз запись существует — автозапуск человек включал сознательно, и наше
-        /// дело здесь только выправить путь, а не решать за него.
+        /// Since the entry exists, the person turned autostart on deliberately, and our
+        /// business here is only to correct the path, not to decide for them.
         /// </summary>
         private static void FixAutoStartPath()
         {
@@ -694,10 +694,10 @@ namespace DIIISPL
                     string current = k.GetValue(AppName) as string;
                     if (string.IsNullOrEmpty(current)) return;
 
-                    // Правим только запись на несуществующий файл. Не «на другой» —
-                    // копий программы на машине может быть несколько, и запущенная
-                    // не имеет права молча забирать вход в Windows у той, которую
-                    // человек туда поставил.
+                    // We fix only an entry pointing to a nonexistent file. Not "to another" —
+                    // there may be several copies of the program on the machine, and the one running
+                    // has no right to silently take the Windows sign-in away from the one the
+                    // person put there.
                     string path = current.Trim();
                     if (path.StartsWith("\""))
                     {
@@ -718,7 +718,7 @@ namespace DIIISPL
             catch { }
         }
 
-        /// <summary>Строка, которой программа прописывает себя в автозапуск.</summary>
+        /// <summary>The string with which the program registers itself in autostart.</summary>
         private static string AutoStartCommand
         {
             get

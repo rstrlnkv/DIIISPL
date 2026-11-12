@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — a monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -9,21 +9,21 @@ using System.Globalization;
 namespace DIIISPL
 {
     /// <summary>
-    /// Все тексты, которые видит человек, — через именованные члены этого класса.
+    /// All the texts a person sees go through named members of this class.
     ///
-    /// Устроено в два слоя намеренно. Здесь — имена, которыми пользуется код:
-    /// `Text.Apply`, `Text.Overlap(a, b)`. Имя проверяет компилятор, опечатка в
-    /// нём — ошибка сборки, а не пустая строка в чужом окне. Сами переводы лежат
-    /// в <see cref="Lang"/>, по словарю на язык.
+    /// Deliberately built in two layers. Here are the names the code uses:
+    /// `Text.Apply`, `Text.Overlap(a, b)`. The compiler checks a name, and a typo in
+    /// it is a build error, not an empty string in someone's window. The translations
+    /// themselves live in <see cref="Lang"/>, one dictionary per language.
     ///
-    /// Почему не пара «русский рядом с английским», как было сначала: пара — это
-    /// пара. Третий язык в неё не помещается, а восемь позиционных аргументов —
-    /// способ перепутать чешский с польским и не заметить. Теперь добавить язык
-    /// значит добавить один словарь; ни один из четырёхсот вызовов в программе
-    /// при этом не меняется.
+    /// Why not a "Russian next to English" pair, as it was at first: a pair is
+    /// a pair. A third language does not fit in it, and eight positional arguments are
+    /// a way to mix up Czech with Polish and not notice. Now adding a language
+    /// means adding one dictionary; none of the four hundred calls in the program
+    /// changes.
     ///
-    /// Почему не .resx: он требует сборки через MSBuild, а её здесь нет —
-    /// программа собирается одним вызовом csc.
+    /// Why not .resx: it requires a build through MSBuild, and there is none here —
+    /// the program is built with a single csc call.
     /// </summary>
     internal static class Text
     {
@@ -33,7 +33,7 @@ namespace DIIISPL
         private static Dictionary<string, string> _fallback;
         private static string _code;
 
-        /// <summary>Код текущего языка: «ru», «en», …</summary>
+        /// <summary>Code of the current language: "ru", "en", …</summary>
         public static string Code
         {
             get
@@ -46,10 +46,10 @@ namespace DIIISPL
         private static readonly object _lock = new object();
 
         /// <summary>
-        /// Словари собираются целиком и только потом попадают в поля. Иначе
-        /// сосед, зашедший за строкой в этот момент, видел бы наполовину готовое:
-        /// таблицу уже есть, запасной ещё нет — и промах по ключу заканчивался
-        /// бы падением. Растущий словарь читать тем более нельзя.
+        /// The dictionaries are assembled whole and only then land in the fields. Otherwise
+        /// a neighbour that came for a string at that moment would see a half-ready state:
+        /// the table already there, the fallback not yet — and a key miss would end
+        /// in a crash. A growing dictionary must not be read either.
         /// </summary>
         private static void Load()
         {
@@ -61,33 +61,33 @@ namespace DIIISPL
                 var table = Lang.Table(code);
                 var fallback = code == Lang.Codes[0] ? table : Lang.Table(Lang.Codes[0]);
 
-                // Файл поверх встроенного словаря, а не вместо него: перевод, в котором
-                // чего-то не хватает, дополняется тем, что программа знает сама, и окно
-                // не остаётся с пустыми местами.
+                // The file goes on top of the built-in dictionary, not instead of it: a translation
+                // that lacks something is supplemented with what the program knows itself, and the window
+                // is not left with blank spots.
                 LangFile.Overlay(code, table);
                 if (!ReferenceEquals(fallback, table)) LangFile.Overlay(Lang.Codes[0], fallback);
 
                 _fallback = fallback;
                 _code = code;
-                _table = table;      // последним: по нему судят, загружено ли
+                _table = table;      // last: it is what decides whether loading is done
             }
         }
 
         /// <summary>
-        /// Во что превращается выбор из настроек. «auto» — язык Windows, если он
-        /// у нас есть; иначе запасной. Явный выбор человека сильнее системы:
-        /// английская Windows не повод отбирать русский у того, кто его выбрал.
+        /// What the choice from the settings turns into. "auto" is the Windows language, if we
+        /// have it; otherwise the fallback. A person's explicit choice beats the system:
+        /// English Windows is no reason to take Russian away from someone who chose it.
         /// </summary>
         public static string Resolve(string setting)
         {
             var all = AvailableCodes();
             foreach (string c in all) if (c == setting) return c;
 
-            // Спрашиваем оба языка системы. Первый — язык, которым человек
-            // пользуется; второй — язык, на котором Windows поставлена. Обычно
-            // они совпадают, но не всегда: у процесса язык бывает английским на
-            // насквозь русской Windows, и тогда программа заговорила бы
-            // по-английски там, где всё вокруг по-русски.
+            // Ask both system languages. The first is the language the person
+            // uses; the second is the language Windows was installed in. Usually
+            // they match, but not always: a process can have English as its language on
+            // a thoroughly Russian Windows, and then the program would speak
+            // English where everything around is Russian.
             foreach (string system in new string[] {
                         CultureInfo.CurrentUICulture.TwoLetterISOLanguageName,
                         CultureInfo.InstalledUICulture.TwoLetterISOLanguageName })
@@ -98,16 +98,16 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Чего не хватает в переводе. Пусто — язык полон. Нужна не программе, а
-        /// тому, кто добавляет язык: без такой проверки неполнота обнаруживается
-        /// в чужом окне и не сразу.
+        /// What is missing from a translation. Empty — the language is complete. Needed not by the program but by
+        /// whoever adds a language: without such a check the gap is discovered
+        /// in someone's window, and not at once.
         /// </summary>
         public static List<string> Missing(string code)
         {
             var result = new List<string>();
             var full = Lang.Table(Lang.Codes[0]);
-            // Язык из файла не наследует английский: непереведённой считается
-            // каждая строка, которой в файле нет, — иначе счёт всегда нулевой.
+            // A language from a file does not inherit English: every string
+            // missing from the file counts as untranslated — otherwise the count is always zero.
             bool builtIn = false;
             foreach (string c in Lang.Codes) if (c == code) builtIn = true;
             var one = builtIn ? Lang.Table(code) : new Dictionary<string, string>(StringComparer.Ordinal);
@@ -118,9 +118,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Все языки, которые программа может показать: встроенные плюс лежащие
-        /// файлами. Файл с кодом встроенного языка новым языком не считается — он
-        /// просто правит его строки.
+        /// All the languages the program can show: built-in ones plus those lying
+        /// as files. A file with the code of a built-in language does not count as a new language — it
+        /// just overrides its strings.
         /// </summary>
         public static List<string> AvailableCodes()
         {
@@ -129,21 +129,21 @@ namespace DIIISPL
             return all;
         }
 
-        /// <summary>Как язык подписывает себя сам.</summary>
+        /// <summary>How a language labels itself.</summary>
         public static string NameOf(string code)
         {
             foreach (string c in Lang.Codes) if (c == code) return Lang.NativeName(code);
             return LangFile.NameOf(code);
         }
 
-        // ------------------------------------------------------------------ доступ к словарю
+        // ------------------------------------------------------------------ dictionary access
         private static string G(string key)
         {
             if (_table == null) Load();
             string v;
             if (_table.TryGetValue(key, out v)) return v;
             if (_fallback.TryGetValue(key, out v)) return v;
-            return key;      // ключ виден в окне — значит его забыли завести
+            return key;      // the key is visible in the window — so someone forgot to define it
         }
 
         private static string G(string key, params object[] args)
@@ -152,15 +152,15 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Подставить значения в строку — и пережить перевод, который обещает
-        /// больше, чем ему дают.
+        /// Substitute values into a string — and survive a translation that promises
+        /// more than it is given.
         ///
-        /// Переводы приходят файлами от людей, и «{2}» там, где программа
-        /// передаёт два значения, — обычная опечатка. Без этой оговорки она
-        /// роняла окно: строка складывается прямо во время отрисовки, и
-        /// FormatException выходил наружу. Ошибка в чужом файле не должна
-        /// стоить работающей программы — берём английскую строку, а если и она
-        /// не сходится, показываем шаблон как есть.
+        /// Translations come as files from people, and "{2}" where the program
+        /// passes two values is a common typo. Without this safeguard it
+        /// crashed the window: the string is composed right during rendering, and
+        /// FormatException came out. An error in someone else's file must not
+        /// cost a working program — we take the English string, and if it does not
+        /// fit either, show the template as is.
         /// </summary>
         private static string Fill(string format, string key, object[] args)
         {
@@ -177,16 +177,16 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Форма после числа. У английского их две, у русского три — поэтому
-        /// выбор формы делается здесь, а не в месте вызова: там о нём забыли бы.
-        /// Ключи ищутся как «имя.one», «имя.few», «имя.many».
+        /// Plural form after a number. English has two, Russian three — so
+        /// the choice of form is made here, not at the call site: it would be forgotten there.
+        /// Keys are looked up as "name.one", "name.few", "name.many".
         ///
-        /// Правило пока знает два языка: русское — для русского, английское —
-        /// для остальных. Язык, приехавший файлом, третью форму задать может
-        /// (ключ «имя.few» из файла попадёт в словарь), а вот выбрать её
-        /// программа сумеет только для русского. Для польского или чешского это
-        /// заметно; чинится, когда такой перевод появится, — гадать о правилах
-        /// языка, которого ещё нет, значит написать их неправильно.
+        /// For now the rule knows two languages: the Russian one for Russian, the English one
+        /// for the rest. A language that arrived as a file can define the third form
+        /// (a "name.few" key from the file lands in the dictionary), but the program
+        /// can only choose it for Russian. This is noticeable for Polish or Czech;
+        /// it gets fixed when such a translation appears — guessing the rules of a
+        /// language that does not exist yet means writing them wrong.
         /// </summary>
         private static string Plural(string key, int n)
         {
@@ -211,7 +211,7 @@ namespace DIIISPL
             return key;
         }
 
-        // ------------------------------------------------------------------ общее
+        // ------------------------------------------------------------------ general
         public static string AppTagline { get { return G("app.tagline"); } }
         public static string Cancel { get { return G("common.cancel"); } }
         public static string Save { get { return G("common.save"); } }
@@ -223,7 +223,7 @@ namespace DIIISPL
         public static string Exit { get { return G("common.exit"); } }
         public static string Hz { get { return G("common.hz"); } }
 
-        // ------------------------------------------------------------------ окно менеджера
+        // ------------------------------------------------------------------ manager window
         public static string ProfilesHeader { get { return G("win.profiles"); } }
         public static string NewProfileTip { get { return G("win.newProfileTip"); } }
         public static string ProfileActionsTip { get { return G("win.profileActionsTip"); } }
@@ -234,7 +234,7 @@ namespace DIIISPL
         public static string MonitorsCount(int n) { return G("win.monitors", n); }
         public static string KeyLabel(string combo) { return G("win.key", combo); }
 
-        // ------------------------------------------------------------------ свойства монитора
+        // ------------------------------------------------------------------ monitor properties
         public static string PickMonitor { get { return G("prop.pick"); } }
         public static string Enabled { get { return G("prop.enabled"); } }
         public static string PrimaryScreen { get { return G("prop.primary"); } }
@@ -249,7 +249,7 @@ namespace DIIISPL
         public static string HdrOn { get { return G("hdr.on"); } }
         public static string HdrOff { get { return G("hdr.off"); } }
 
-        // ------------------------------------------------------------------ холст
+        // ------------------------------------------------------------------ canvas
         public static string NotInProfile { get { return G("canvas.notInProfile"); } }
         public static string NotConnected { get { return G("canvas.notConnected"); } }
         public static string BadgePrimary { get { return G("canvas.badgePrimary"); } }
@@ -258,7 +258,7 @@ namespace DIIISPL
         public static string GapBetween { get { return G("canvas.gap"); } }
         public static string Overlap(string a, string b) { return G("canvas.overlap", a, b); }
 
-        // ------------------------------------------------------------------ применение
+        // ------------------------------------------------------------------ applying
         public static string AlreadyApplying { get { return G("apply.busy"); } }
         public static string WindowsRefused(string why) { return G("apply.refused", why); }
         public static string WindowsPartly(string why) { return G("apply.partly", why); }
@@ -297,13 +297,13 @@ namespace DIIISPL
             return G(cloned ? "hdr.noOnCloned" : "hdr.noOnPlain", name);
         }
 
-        // ------------------------------------------------------------------ сочетания клавиш
+        // ------------------------------------------------------------------ hotkeys
         public static string ComboEmpty { get { return G("combo.empty"); } }
         public static string ComboNoKey(string text) { return G("combo.noKey", text); }
         public static string ComboUnknownKey(string key) { return G("combo.unknownKey", key); }
         public static string ComboNeedsModifier { get { return G("combo.needsModifier"); } }
 
-        // ------------------------------------------------------------------ мониторы и коды системы
+        // ------------------------------------------------------------------ monitors and system codes
         public static string ConnBuiltIn { get { return G("mon.builtIn"); } }
         public static string ConnDigital { get { return G("mon.digital"); } }
         public static string ErrNoRights { get { return G("err.noRights"); } }
@@ -313,7 +313,7 @@ namespace DIIISPL
         public static string ErrImpossible { get { return G("err.impossible"); } }
         public static string ErrUnexplained { get { return G("err.unexplained"); } }
 
-        // ------------------------------------------------------------------ трей и запуск
+        // ------------------------------------------------------------------ tray and startup
         public static string StartFailed(string app, string why, string folder)
         {
             return G("tray.startFailed", app, why, folder);
@@ -337,7 +337,7 @@ namespace DIIISPL
         public static string ApplyDoneShort(string profile, int warnings) { return G("tray.applyDoneMore", profile, warnings); }
         public static string ApplyDone(string profile) { return G("tray.applyDone", profile); }
 
-        // ------------------------------------------------------------------ обновления
+        // ------------------------------------------------------------------ updates
         public static string GitHubGibberish { get { return G("upd.gibberish"); } }
         public static string OnlyPrereleases { get { return G("upd.onlyPre"); } }
         public static string NoReleasesYet { get { return G("upd.noReleases"); } }
@@ -358,7 +358,7 @@ namespace DIIISPL
         public static string CheckedHours(int n) { return Plural("upd.hours", n); }
         public static string CheckedDays(int n) { return Plural("upd.days", n); }
 
-        // ------------------------------------------------------------------ окно: подписи и ответы
+        // ------------------------------------------------------------------ window: captions and answers
         public static string RenameTip { get { return G("win.renameTip"); } }
         public static string PrimaryTip { get { return G("win.primaryTip"); } }
         public static string TurnOnNote { get { return G("win.turnOnNote"); } }
@@ -401,7 +401,7 @@ namespace DIIISPL
         public static string ComboSet(string combo, string profile) { return G("win.comboSet", combo, profile); }
         public static string ComboNeedsAutostart { get { return G("win.comboNeedsAutostart"); } }
 
-        // ------------------------------------------------------------------ командная строка
+        // ------------------------------------------------------------------ command line
         public static string CliUnknownCmd(string cmd) { return G("cli.unknownCmd", cmd); }
         public static string CliError(string why) { return G("cli.error", why); }
         public static string CliTitle { get { return G("cli.title"); } }
@@ -484,7 +484,7 @@ namespace DIIISPL
         public static string CliLangLeft(int n) { return G("cli.lang.left", n); }
         public static string CliLangHowTo { get { return G("cli.lang.howTo"); } }
 
-        // ------------------------------------------------------------------ «О программе»
+        // ------------------------------------------------------------------ "About"
         public static string AboutTagline { get { return G("about.tagline"); } }
         public static string AboutVersion { get { return G("about.version"); } }
         public static string AboutBuild { get { return G("about.build"); } }
@@ -526,7 +526,7 @@ namespace DIIISPL
         public static string LangRestartOk { get { return G("about.langRestartOk"); } }
         public static string LangRestartFailed { get { return G("about.langRestartFailed"); } }
 
-        // ------------------------------------------------------------------ панель задач (Dev)
+        // ------------------------------------------------------------------ taskbar (Dev)
         public static string TbState(string key) { return G("tb." + key); }
         public static string TbNoTaskbar { get { return G("tb.noTaskbar"); } }
         public static string TbNoExplorer { get { return G("tb.noExplorer"); } }

@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — a monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Collections.Generic;
@@ -8,25 +8,25 @@ using System.Globalization;
 
 namespace DIIISPL
 {
-    /// <summary>Состояния, при которых панель задач может выглядеть по-разному.</summary>
+    /// <summary>States in which the taskbar can look different.</summary>
     internal enum TaskbarState
     {
-        Desktop,          // виден рабочий стол
-        VisibleWindow,    // на этом экране есть открытое окно
-        MaximizedWindow,  // на этом экране окно развёрнуто во весь экран
-        StartOpened,      // открыто меню «Пуск»
-        SearchOpened,     // открыт поиск
-        TaskViewOpened,   // открыто представление задач
-        BatterySaver      // включена экономия заряда
+        Desktop,          // the desktop is visible
+        VisibleWindow,    // there is an open window on this screen
+        MaximizedWindow,  // a window is maximized on this screen
+        StartOpened,      // the Start menu is open
+        SearchOpened,     // search is open
+        TaskViewOpened,   // Task View is open
+        BatterySaver      // Battery Saver is on
     }
 
-    /// <summary>Как выглядит панель в одном состоянии.</summary>
+    /// <summary>What the taskbar looks like in one state.</summary>
     internal class TaskbarAppearance
     {
         public bool Enabled;
         public string Accent = "default";     // default, opaque, clear, blur, acrylic
         public uint Color = 0x00000000;       // AARRGGBB
-        public bool ShowLine = true;          // тонкая линия у края панели
+        public bool ShowLine = true;          // a thin line at the edge of the taskbar
         public float BlurRadius = 9.0f;
 
         public TaskbarAppearance Copy() { return (TaskbarAppearance)MemberwiseClone(); }
@@ -57,22 +57,22 @@ namespace DIIISPL
     }
 
     /// <summary>
-    /// Набор видов панели задач для всех состояний. Порядок важен: состояния проверяются
-    /// сверху вниз, и первое включённое и подходящее задаёт вид. «Рабочий стол» —
-    /// базовое состояние, оно применяется, когда не подошло ничто другое.
+    /// The set of taskbar looks for all states. Order matters: states are checked
+    /// top to bottom, and the first one that is enabled and matches sets the look. "Desktop" is
+    /// the base state, applied when nothing else matched.
     /// </summary>
     internal class TaskbarSettings
     {
-        /// <summary>Номер формата: по нему видно, писал файл нынешний экран настроек или прежний.</summary>
+        /// <summary>Format number: shows whether the file was written by the current settings screen or the previous one.</summary>
         public const int Format = 2;
 
         public readonly Dictionary<TaskbarState, TaskbarAppearance> States =
             new Dictionary<TaskbarState, TaskbarAppearance>();
 
-        /// <summary>Файл записан нынешним форматом — чистить особые случаи не нужно.</summary>
+        /// <summary>The file was written in the current format — no special cases to clean up.</summary>
         public bool Versioned;
 
-        /// <summary>Приоритет проверки: от самого частного к общему.</summary>
+        /// <summary>Check priority: from the most specific to the most general.</summary>
         public static readonly TaskbarState[] Order =
         {
             TaskbarState.BatterySaver,
@@ -114,20 +114,20 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Прежний экран настроек показывал семь равноправных строк, и в каждой по умолчанию
-        /// стояло «Как в системе». Строку, до которой не дошли руки, это превращало в приказ:
-        /// «в этом случае верни панель Windows». Поэтому у профиля с прозрачной панелью она
-        /// становилась обычной, стоило развернуть окно или открыть «Пуск», — вид, который
-        /// никто не выбирал. Нынешний экран для этого держит «Как обычно», так что все
-        /// нетронутые случаи переводим в него — по одному разу, у файлов без номера формата.
-        /// Осознанный выбор «Как в системе» так тоже пропадёт, но задать его снова —
-        /// одна строка в настройках, а разбираться, почему панель живёт своей жизнью, дольше.
+        /// The previous settings screen showed seven equal rows, and each had "As in the system"
+        /// by default. A row nobody got around to turned into an order:
+        /// "in this case give back the Windows taskbar". So for a profile with a transparent taskbar it
+        /// became ordinary once a window was maximized or "Start" opened — a look
+        /// nobody chose. The current screen holds "Usual look" for that, so all
+        /// untouched cases are moved to it — once, for files without a format number.
+        /// A deliberate "As in the system" choice is lost this way too, but setting it again is
+        /// one row in the settings, whereas working out why the taskbar lives its own life takes longer.
         /// </summary>
         public void DropUntouchedSpecialCases()
         {
             foreach (TaskbarState s in Order)
             {
-                if (s == TaskbarState.Desktop) continue;   // обычный вид, он и есть запасной
+                if (s == TaskbarState.Desktop) continue;   // the usual look, which is also the fallback
                 var a = States[s];
                 if (a.Enabled && a.Accent == "default" && a.Color == 0) a.Enabled = false;
             }
@@ -173,7 +173,7 @@ namespace DIIISPL
             return false;
         }
 
-        /// <summary>Строки для файла профиля — по одной на состояние.</summary>
+        /// <summary>Lines for the profile file — one per state.</summary>
         public List<string> Serialize()
         {
             var lines = new List<string>();
@@ -183,7 +183,7 @@ namespace DIIISPL
             return lines;
         }
 
-        /// <summary>Старый формат: единственное поле taskbar = clear.</summary>
+        /// <summary>Old format: the single field taskbar = clear.</summary>
         public void AdoptLegacy(string accent)
         {
             if (string.IsNullOrEmpty(accent)) return;

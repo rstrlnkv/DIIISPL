@@ -1,6 +1,6 @@
-// DIIISPL — менеджер раскладок мониторов для Windows.
+// DIIISPL — monitor layout manager for Windows.
 // Copyright (C) 2026 r.strlnkv
-// Свободная программа под GNU General Public License v3 или новее; см. LICENSE.
+// Free software under the GNU General Public License v3 or later; see LICENSE.
 
 using System;
 using System.Threading;
@@ -14,12 +14,12 @@ using System.Windows.Threading;
 namespace DIIISPL
 {
     /// <summary>
-    /// О программе: значок, версия, автор и обновление.
+    /// About: icon, version, author and update.
     ///
-    /// Про чужой код и лицензию здесь ничего нет намеренно: текст лицензии едет
-    /// вместе с программой файлом LICENSE.txt, чужой код описан в NOTICE.md, а в
-    /// подвале страницы стоит строка с лицензией. Исключение — сборка Dev: она
-    /// несёт чужие компоненты, и их лицензии показывает кнопка «Лицензии».
+    /// Nothing about third-party code or the licence is here on purpose: the licence text travels
+    /// with the program as the file LICENSE.txt, third-party code is described in NOTICE.md, and the
+    /// page footer has a licence line. The exception is the Dev build: it
+    /// carries third-party components, and the "Licences" button shows their licences.
     /// </summary>
     internal class AboutWindow : Window
     {
@@ -32,8 +32,8 @@ namespace DIIISPL
         private readonly Button _copy = new Button();
         private readonly DispatcherTimer _copyReset = new DispatcherTimer();
 
-        private Updater.Release _found;      // найденный выпуск, если он новее
-        /// <summary>«Что нового» под строкой находки — пока не нашли, пусто и не видно.</summary>
+        private Updater.Release _found;      // the release found, if it is newer
+        /// <summary>"What's new" under the found-release line — empty and invisible until something is found.</summary>
         private readonly StackPanel _notes = new StackPanel();
         private bool _busy;
 
@@ -44,10 +44,10 @@ namespace DIIISPL
             MinWidth = 480;
             MinHeight = 520;
 
-            // Высота по содержимому, а не намертво заданная. Прежде стояло 700, и
-            // окно всегда открывалось с полосой прокрутки — при том что не влезала
-            // из него пара десятков точек. Прокрутка внутри осталась: на невысоком
-            // экране она нужна, и потолок ей ставит рабочая область.
+            // Height follows the content, not hard-coded. It used to be 700, and
+            // the window always opened with a scrollbar — though only a couple of dozen
+            // pixels did not fit. Scrolling inside stayed: on a short
+            // screen it is needed, and the work area sets its ceiling.
             SizeToContent = SizeToContent.Height;
             MaxHeight = Math.Max(MinHeight, SystemParameters.WorkArea.Height - 80);
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -60,7 +60,7 @@ namespace DIIISPL
             ShowIdle();
         }
 
-        // ---------------------------------------------------------------- разметка
+        // ---------------------------------------------------------------- layout
         private UIElement Build()
         {
             var stack = new StackPanel();
@@ -86,7 +86,7 @@ namespace DIIISPL
             return scroll;
         }
 
-        /// <summary>Значок программы, крупно. Берётся из неё же — отдельный файл не нужен.</summary>
+        /// <summary>The program icon, large. Taken from the program itself — no separate file needed.</summary>
         private UIElement Mark()
         {
             var image = new Image();
@@ -109,12 +109,12 @@ namespace DIIISPL
                     finally { Native.DestroyIcon(handle); }
                 }
             }
-            catch { /* без значка страница всё равно читается */ }
+            catch { /* without the icon the page still reads fine */ }
 
             return image;
         }
 
-        /// <summary>Название и, если канал ранний, метка рядом с ним.</summary>
+        /// <summary>The name and, if the channel is early, a label beside it.</summary>
         private UIElement NameRow()
         {
             var row = new StackPanel();
@@ -144,7 +144,7 @@ namespace DIIISPL
             badgeBox.Child = _badge;
             row.Children.Add(badgeBox);
 
-            _badge.Tag = badgeBox;   // прячем и показываем вместе с рамкой
+            _badge.Tag = badgeBox;   // hidden and shown together with the frame
             return row;
         }
 
@@ -158,7 +158,7 @@ namespace DIIISPL
             return t;
         }
 
-        /// <summary>Три числа в строку: версия, номер сборки, сколько профилей.</summary>
+        /// <summary>Three numbers in a row: version, build number, how many profiles.</summary>
         private UIElement Numbers()
         {
             int profiles = 0;
@@ -266,7 +266,7 @@ namespace DIIISPL
             return card;
         }
 
-        /// <summary>Проверка обновлений и выбор канала — одной карточкой.</summary>
+        /// <summary>Update check and channel choice — in one card.</summary>
         private UIElement UpdateCard()
         {
             var top = new Grid();
@@ -297,7 +297,7 @@ namespace DIIISPL
             var label = new TextBlock();
             label.Text = Text.AboutChannel;
             label.VerticalAlignment = VerticalAlignment.Center;
-            label.Margin = new Thickness(0, 0, 12, 0);   // иначе подпись упирается в кнопку
+            label.Margin = new Thickness(0, 0, 12, 0);   // otherwise the caption bumps into the button
             bottom.Children.Add(label);
 
             var switcher = new StackPanel();
@@ -341,12 +341,12 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Выбор языка — рядом с каналом обновлений, в той же карточке: обе строки
-        /// про то, «какой быть программе», и обе меняются раз в жизни.
+        /// Language choice — next to the update channel, in the same card: both rows
+        /// are about "what the program should be like", and both change once in a lifetime.
         ///
-        /// Кнопок ровно столько, сколько языков видит программа — встроенных и
-        /// лежащих файлами, — и подписаны они на себе самих: человек, ищущий свой
-        /// язык, узнаёт его по написанию, а не по переводу названия на чужой.
+        /// There are exactly as many buttons as languages the program sees — built-in and
+        /// ones lying around as files — and each is labelled in itself: a person looking for their own
+        /// language recognises it by its spelling, not by a translation of its name into another.
         /// </summary>
         private UIElement LanguageRow()
         {
@@ -400,26 +400,26 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Сменить язык. Перезапуск, а не пересборка окон на ходу: окна собраны в
-        /// коде, и обойти их все, ничего не забыв, — работа, которую пришлось бы
-        /// повторять при каждой новой надписи. Перезапуск честнее и не врёт.
+        /// Change language. A restart, not rebuilding windows on the fly: the windows are built in
+        /// code, and walking through all of them without missing any is work that would have to be
+        /// repeated with every new caption. A restart is more honest and does not lie.
         /// </summary>
         private void SetLanguage(string code)
         {
             if (code == Text.Code) return;
 
-            // Text.NameOf, а не Lang.NativeName: у языка, приехавшего файлом,
-            // встроенного имени нет, и вопрос звучал бы «Перейти на English?»
-            // при нажатии на «Čeština».
+            // Text.NameOf, not Lang.NativeName: a language that arrived as a file
+            // has no built-in name, and the question would read "Switch to English?"
+            // on pressing "Čeština".
             var ask = new ConfirmDialog(Text.LangRestartTitle(Text.NameOf(code)),
                                         Text.LangRestart, Text.LangRestartOk);
             ask.Owner = this;
             if (ask.ShowDialog() != true) return;
 
-            // Выбор своего же системного языка записываем как «как в Windows».
-            // Иначе вернуться к нему было бы нельзя: отдельной кнопки для этого
-            // нет, а однажды сделанный явный выбор сильнее системы навсегда —
-            // включая случай, когда человек потом сменит язык самой Windows.
+            // Choosing one's own system language is recorded as "as in Windows".
+            // Otherwise going back to it would be impossible: there is no separate button
+            // for that, and an explicit choice once made beats the system forever —
+            // including when the person later changes the language of Windows itself.
             string keep = code == Text.Resolve(Text.Auto) ? Text.Auto : code;
 
             var app = Application.Current as App;
@@ -468,7 +468,7 @@ namespace DIIISPL
             return grid;
         }
 
-        /// <summary>История выпусков — своим окном, из того, что лежит внутри программы.</summary>
+        /// <summary>Release history — in its own window, from what lies inside the program.</summary>
         private void ShowChangelog()
         {
             var window = new ChangelogWindow();
@@ -487,7 +487,7 @@ namespace DIIISPL
             return t;
         }
 
-        // ---------------------------------------------------------------- обновление
+        // ---------------------------------------------------------------- update
         private void SetChannel(string channel)
         {
             if (Settings.Channel == channel) return;
@@ -503,16 +503,16 @@ namespace DIIISPL
 
             _stableButton.Style = (Style)Application.Current.Resources[dev ? "Btn" : "BtnAccent"];
             _devButton.Style = (Style)Application.Current.Resources[dev ? "BtnAccent" : "Btn"];
-            // Подпись должна называть разницу, а не намекать на неё. Прежде здесь
-            // стояло «вместе с недоделками» — выбор между двумя каналами, о котором
-            // не сказано, что в одном есть, а в другом нет.
+            // The caption must name the difference, not hint at it. It used to read
+            // "with the unfinished bits" — a choice between two channels that does not
+            // say what one has and the other lacks.
             _channelHint.Text = dev
                 ? Text.ChannelDevHint
                 : Text.ChannelStableHint;
 
-            // Метка говорит про саму сборку, а не про выбранный канал: канал — это
-            // «что присылать дальше», а метка отвечает на вопрос «что у меня сейчас».
-            // Пока она показывала выбор каналов, она повторяла соседние кнопки.
+            // The label speaks about the build itself, not the chosen channel: the channel is
+            // "what to send next", and the label answers "what do I have now".
+            // While it showed the channel choice, it repeated the neighbouring buttons.
 #if DEV
             ((UIElement)_badge.Tag).Visibility = Visibility.Visible;
 #else
@@ -520,7 +520,7 @@ namespace DIIISPL
 #endif
         }
 
-        /// <summary>Обычный вид: когда проверяли и кнопка «Проверить».</summary>
+        /// <summary>Normal view: when checked and the "Check" button.</summary>
         private void ShowIdle()
         {
             _busy = false;
@@ -532,9 +532,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Показать «что нового» прямо здесь. Описание выпуска и так скачано:
-        /// прежде его разбирали и выбрасывали, а человек шёл за тем же текстом
-        /// в браузер. У старых выпусков раздела нет — тогда не показываем ничего.
+        /// Show "what's new" right here. The release description is already downloaded:
+        /// it used to be parsed and thrown away, and the person went to the browser
+        /// for the same text. Old releases have no such section — then we show nothing.
         /// </summary>
         private void ShowHighlights(Updater.Release release)
         {
@@ -577,7 +577,7 @@ namespace DIIISPL
             _updateStatus.Foreground = (Brush)Application.Current.Resources[alarming ? "Text" : "TextSec"];
         }
 
-        /// <summary>Одна кнопка на два действия: сперва проверить, потом поставить.</summary>
+        /// <summary>One button for two actions: first check, then install.</summary>
         private void Act()
         {
             if (_busy) return;
@@ -627,11 +627,11 @@ namespace DIIISPL
         {
             Updater.Release release = _found;
 #if DEV
-            // Уход со сборки Dev на общий выпуск — это не просто «версия новее»:
-            // вид панели задач пропадёт вместе с этой сборкой. Сказать об этом
-            // надо до установки, а не показать пустое место после неё. Сами
-            // настройки в профилях переживают переход — файл их сохраняет
-            // как есть и отдаёт обратно, если снова поставить Dev.
+            // Leaving a Dev build for the common release is not just "a newer version":
+            // the taskbar look disappears together with this build. This has to be
+            // said before installing, not shown as an empty spot after it. The
+            // settings in profiles survive the move — the file keeps them
+            // as they are and gives them back if Dev is installed again.
             if (release != null && !release.Early)
             {
                 var warn = new ConfirmDialog(Text.DowngradeTitle,
@@ -674,8 +674,8 @@ namespace DIIISPL
             });
         }
 
-        // ---------------------------------------------------------------- мелочи
-        /// <summary>Ссылка, открываемая тем, чем её открывает система.</summary>
+        // ---------------------------------------------------------------- misc
+        /// <summary>A link opened with whatever the system opens it with.</summary>
         private static UIElement Link(string text, string target)
         {
             var button = new Button();
