@@ -17,5 +17,5 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyFileVersion("0.2.4.0")]
 // The full version with its -dev.N suffix, shown on the About screen. release.yml checks
 // that it equals the whole release tag.
-[assembly: AssemblyInformationalVersion("0.2.4-dev.1")]
+[assembly: AssemblyInformationalVersion("0.2.4-dev.2")]
 [assembly: ComVisible(false)]
