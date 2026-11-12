@@ -136,6 +136,10 @@
         <File Id="README.md" Source="$(var.SourceDir)\README.md" KeyPath="yes" />
       </Component>
 
+      <Component Id="Manual" Guid="*" Win64="yes">
+        <File Id="MANUAL.md" Source="$(var.SourceDir)\MANUAL.md" KeyPath="yes" />
+      </Component>
+
       <!-- Where it was installed. Read at the next upgrade, see RegistrySearch above. -->
       <Component Id="InstallState" Guid="*" Win64="yes">
         <RegistryValue Root="HKLM" Key="Software\DIIISPL" Name="InstallFolder"
@@ -178,6 +182,7 @@
       <?endif ?>
       <ComponentRef Id="License" />
       <ComponentRef Id="Readme" />
+      <ComponentRef Id="Manual" />
       <ComponentRef Id="InstallState" />
       <ComponentRef Id="StartMenuShortcut" />
     </Feature>

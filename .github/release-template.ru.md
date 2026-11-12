@@ -25,7 +25,7 @@ DIIISPL — менеджер раскладок мониторов для Window
 поставить новое кнопкой в окне «О программе». Профили лежат в `%AppData%\DIIISPL`
 и переустановку с удалением переживают.
 
-Что умеет программа и как ею пользоваться — в [README](https://github.com/rstrlnkv/DIIISPL#readme).
+Что умеет программа — в [README](https://github.com/rstrlnkv/DIIISPL#readme); как ею пользоваться — в [руководстве](https://github.com/rstrlnkv/DIIISPL/blob/main/MANUAL.ru.md).
 
 ## Что дальше
 

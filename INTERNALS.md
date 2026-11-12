@@ -1,7 +1,7 @@
 # How DIIISPL works and how to build it
 
 Everything you need if you rebuild the program or want to understand why it behaves the way
-it does. What a user needs is in [README.md](README.md).
+it does. What a user needs is in [README.md](README.md) and [MANUAL.md](MANUAL.md).
 
 - [How a layout is applied](#how-a-layout-is-applied)
 - [The taskbar from the inside](#the-taskbar-from-the-inside)

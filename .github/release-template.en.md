@@ -25,8 +25,9 @@ A copy already installed updates itself: it looks at the releases once a day and
 the new one in the About window. Profiles live in `%AppData%\DIIISPL` and survive
 reinstalling, uninstalling included.
 
-What the program does and how to use it — see the
-[README](https://github.com/rstrlnkv/DIIISPL#readme).
+What the program does — see the
+[README](https://github.com/rstrlnkv/DIIISPL#readme); how to use it — in the
+[manual](https://github.com/rstrlnkv/DIIISPL/blob/main/MANUAL.md).
 
 ## What's next
 

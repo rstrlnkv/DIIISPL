@@ -60,9 +60,9 @@ if /i not "%BUILTCHANNEL%"=="%CHANNEL%" (
   echo Rebuild the program: scripts\build.cmd %CHANNEL%
   exit /b 1
 )
-rem These three cannot be built; they simply sit in the repository. The earlier advice
+rem These four cannot be built; they simply sit in the repository. The earlier advice
 rem "build the program" sent people to do something that does not help.
-for %%F in ("%ROOT%\src\DIIISPL.ico" "%ROOT%\LICENSE" "%ROOT%\README.md") do (
+for %%F in ("%ROOT%\src\DIIISPL.ico" "%ROOT%\LICENSE" "%ROOT%\README.md" "%ROOT%\MANUAL.md") do (
   if not exist %%F (
     echo Missing file %%F, it must be in the repository at this path.
     exit /b 1

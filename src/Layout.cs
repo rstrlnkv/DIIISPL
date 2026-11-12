@@ -635,7 +635,7 @@ namespace DIIISPL
         /// <summary>
         /// Bring the values to those that can exist at all.
         ///
-        /// Profiles are plain text, and the README directly invites editing them in Notepad.
+        /// Profiles are plain text, and the manual (MANUAL.md) directly invites editing them by hand.
         /// So typos get into the file: "rotation = 7", "hz = -60", "width =
         /// 0", two sections with the same monitor. The program survived these
         /// differently: rotation became impossible, and Windows rejected
