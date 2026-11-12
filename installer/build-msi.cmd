@@ -12,7 +12,7 @@ set HERE=%~dp0
 set ROOT=%HERE%..
 rem Default version: the first three parts of AssemblyVersion in AssemblyInfo.cs.
 set VERSION=
-for /f "tokens=2 delims=()" %%A in ('findstr /b /c:"[assembly: AssemblyVersion(" "%ROOT%\AssemblyInfo.cs"') do set VERSION=%%~A
+for /f "tokens=2 delims=()" %%A in ('findstr /b /c:"[assembly: AssemblyVersion(" "%ROOT%\src\AssemblyInfo.cs"') do set VERSION=%%~A
 if defined VERSION for /f "tokens=1-3 delims=." %%a in ("%VERSION%") do set VERSION=%%a.%%b.%%c
 if not defined VERSION (
   echo Cannot read AssemblyVersion from AssemblyInfo.cs.
@@ -39,7 +39,7 @@ endlocal & set "VERSION=%VERSION%" & set "CHANNEL=%CHANNEL%"
 echo === Пакет канала %CHANNEL% ===
 
 if not exist "%ROOT%\DIIISPL.exe" (
-  echo Нет DIIISPL.exe — сначала соберите программу: build.cmd %CHANNEL%
+  echo Нет DIIISPL.exe — сначала соберите программу: scripts\build.cmd %CHANNEL%
   exit /b 1
 )
 
@@ -52,19 +52,19 @@ set BUILTCHANNEL=
 if exist "%ROOT%\.channel" set /p BUILTCHANNEL=<"%ROOT%\.channel"
 for /f "tokens=* delims= " %%C in ("%BUILTCHANNEL%") do set BUILTCHANNEL=%%C
 if not defined BUILTCHANNEL (
-  echo Неизвестно, каким каналом собрана программа. Пересоберите: build.cmd %CHANNEL%
+  echo Неизвестно, каким каналом собрана программа. Пересоберите: scripts\build.cmd %CHANNEL%
   exit /b 1
 )
 if /i not "%BUILTCHANNEL%"=="%CHANNEL%" (
   echo Программа собрана каналом %BUILTCHANNEL%, а пакет просят каналом %CHANNEL%.
-  echo Пересоберите программу: build.cmd %CHANNEL%
+  echo Пересоберите программу: scripts\build.cmd %CHANNEL%
   exit /b 1
 )
 rem Эти три собирать нечем — они просто лежат в репозитории. Прежний совет
 rem «соберите программу» отправлял человека делать то, что не помогает.
-for %%F in ("%ROOT%\DIIISPL.ico" "%ROOT%\LICENSE" "%ROOT%\README.md") do (
+for %%F in ("%ROOT%\src\DIIISPL.ico" "%ROOT%\LICENSE" "%ROOT%\README.md") do (
   if not exist %%F (
-    echo Нет файла %%F — он должен лежать в корне репозитория.
+    echo Missing file %%F, it must be in the repository at this path.
     exit /b 1
   )
 )

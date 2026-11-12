@@ -8,7 +8,7 @@ it does, build, installer, signing, release) is in [INTERNALS.md](INTERNALS.md).
 DIIISPL is a tray application for Windows 11 that stores monitor layouts as profiles and
 switches them with a hotkey.
 
-- It is written in C# 5 and compiled by `csc.exe` of .NET Framework from `build.cmd`. There is
+- It is written in C# 5 and compiled by `csc.exe` of .NET Framework from `scripts\build.cmd`. There is
   no NuGet and no project file.
 - It does not ask Windows to restore a saved configuration. It builds the CCD path and mode
   arrays (`DISPLAYCONFIG_PATH_INFO`, `DISPLAYCONFIG_MODE_INFO`) itself and passes them to
@@ -20,27 +20,28 @@ switches them with a hotkey.
 
 ## Where things live
 
-Core:
+Core (sources are in `src/`):
 
-- `Native.cs` WinAPI declarations; `Edid.cs` EDID parsing; `Monitors.cs` monitor
-  identification and modes; `Layout.cs` the profile.
-- `Applier.cs` builds and applies the configuration, then HDR; `AutoSwitch.cs` picks a
+- `src/Native.cs` WinAPI declarations; `src/Edid.cs` EDID parsing; `src/Monitors.cs` monitor
+  identification and modes; `src/Layout.cs` the profile.
+- `src/Applier.cs` builds and applies the configuration, then HDR; `src/AutoSwitch.cs` picks a
   profile by the set of connected monitors.
-- `Store.cs` files; `Hotkey.cs` key combinations; `App.cs` tray, autostart, watching the set
-  of monitors; `Cli.cs` the command line.
+- `src/Store.cs` files; `src/Hotkey.cs` key combinations; `src/App.cs` tray, autostart, watching the set
+  of monitors; `src/Cli.cs` the command line.
 
 Taskbar (Dev channel only):
 
-- `TaskbarSettings.cs`, `TaskbarWatcher.cs`, `TaskbarWindow.cs`, `ExplorerTap.cs`.
+- `src/TaskbarSettings.cs`, `src/TaskbarWatcher.cs`, `src/TaskbarWindow.cs`, `src/ExplorerTap.cs`.
 
 UI (WPF windows; the tray icon uses Windows Forms):
 
-- `Theme.cs`, `Fluent.cs`, `Ui.cs`, `MonitorCanvas.cs`, `MainWindow.cs`, `ConfirmDialog.cs`, `ChangelogWindow.cs`,
-  `AboutWindow.cs`.
+- `src/Theme.cs`, `src/Fluent.cs`, `src/Ui.cs`, `src/MonitorCanvas.cs`, `src/MainWindow.cs`, `src/ConfirmDialog.cs`, `src/ChangelogWindow.cs`,
+  `src/AboutWindow.cs`.
 
 Folders:
 
 - `native/` the ExplorerTAP library (C++, built by `native\build-native.cmd`).
+- `scripts/` `build.cmd`.
 - `installer/` the WiX 3 MSI.
 - `tests/` the self-test.
 - `tools/` the icon generator.

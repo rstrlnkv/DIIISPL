@@ -3,11 +3,11 @@
 # Run from Git Bash:  bash tests/build-guard-check.sh
 # No network. Temp dirs live under mktemp -d and are removed on exit.
 #
-# build.cmd is run as  cmd //c ".\\build.cmd"  (bare "build.cmd" fails here:
+# scripts/build.cmd is run as  cmd //c ".\\scripts\\build.cmd"  (bare "build.cmd" fails here:
 # NoDefaultCurrentDirectoryInExePath=1). Output is matched on ASCII only; the
 # refusal message for a shallow clone must contain the word "shallow".
 #
-# Copies of the tree (clones, exports) get the CURRENT build.cmd from the code
+# Copies of the tree (clones, exports) get the CURRENT scripts/build.cmd from the code
 # root laid over them, so uncommitted changes to build.cmd are what is tested.
 # Never runs tests/run-tests.cmd. The exe from the normal build is kept.
 
@@ -28,24 +28,24 @@ COMMON=$(cd "$ROOT" && cd "$COMMON" && pwd)    # repository the worktree belongs
 # run_build <dir> [env assignments...] -> sets RC and OUT
 run_build() {
   local dir=$1; shift
-  OUT=$(cd "$dir" && env "$@" cmd //c ".\\build.cmd" 2>&1 </dev/null)
+  OUT=$(cd "$dir" && env "$@" cmd //c ".\\scripts\\build.cmd" 2>&1 </dev/null)
   RC=$?
 }
 
-# full_clone <name> -> full (non-shallow) clone at the worktree's HEAD, current build.cmd laid over
+# full_clone <name> -> full (non-shallow) clone at the worktree's HEAD, current scripts/build.cmd laid over
 full_clone() {
   local d="$T/$1"
   git clone -q --no-checkout "file://$COMMON" "$d" >/dev/null 2>&1 &&
     git -C "$d" checkout -q "$SHA" >/dev/null 2>&1 || { fail "setup: full clone $1"; return 1; }
-  cp "$ROOT/build.cmd" "$d/build.cmd"
+  mkdir -p "$d/scripts" && cp "$ROOT/scripts/build.cmd" "$d/scripts/build.cmd"
 }
 
-compiled() { [ -e "$1/DIIISPL.exe" ] || [ -e "$1/BuildInfo.g.cs" ]; }
+compiled() { [ -e "$1/DIIISPL.exe" ] || [ -e "$1/src/BuildInfo.g.cs" ]; }
 
 # ---- 1. normal build in the code root -------------------------------------
 run_build "$ROOT"
 EXPECT=$(git -C "$ROOT" rev-list --count HEAD)
-GOT=$(grep -a -o 'Number = "[^"]*"' "$ROOT/BuildInfo.g.cs" 2>/dev/null | sed 's/.*"\(.*\)"/\1/')
+GOT=$(grep -a -o 'Number = "[^"]*"' "$ROOT/src/BuildInfo.g.cs" 2>/dev/null | sed 's/.*"\(.*\)"/\1/')
 [ "$RC" -eq 0 ] || fail "1: normal build rc=$RC, expected 0"
 [ -n "$GOT" ] && [ "$GOT" = "$EXPECT" ] || fail "1: BuildInfo number '$GOT' != git rev-list --count HEAD '$EXPECT'"
 
@@ -57,7 +57,7 @@ mkdir "$S" && git -C "$S" init -q &&
 if [ "$(git -C "$S" rev-parse --is-shallow-repository 2>/dev/null)" != "true" ]; then
   fail "setup: clone is not shallow"
 else
-  cp "$ROOT/build.cmd" "$S/build.cmd"
+  mkdir -p "$S/scripts" && cp "$ROOT/scripts/build.cmd" "$S/scripts/build.cmd"
   run_build "$S"
   [ "$RC" -ne 0 ] || fail "2: shallow clone built with rc=0"
   echo "$OUT" | grep -aiq 'shallow' || fail "2: output does not name the shallow clone"
@@ -70,7 +70,7 @@ if full_clone gitenv; then
   run_build "$G" "GIT_DIR=$T/no-such.git"
   [ "$RC" -ne 0 ] || fail "3: GIT_DIR=no-such.git built with rc=0"
   compiled "$G" && fail "3: GIT_DIR set, yet compiled (not refused before compiling)"
-  rm -f "$G/DIIISPL.exe" "$G/BuildInfo.g.cs"
+  rm -f "$G/DIIISPL.exe" "$G/src/BuildInfo.g.cs"
 
   run_build "$G" "GIT_WORK_TREE=$G"
   [ "$RC" -ne 0 ] || fail "3: GIT_WORK_TREE set built with rc=0"
@@ -80,15 +80,15 @@ fi
 # ---- 4. no git repository at all ------------------------------------------
 N="$T/norepo"
 mkdir "$N" && git -C "$ROOT" archive HEAD | tar -x -C "$N" || fail "setup: git archive export"
-cp "$ROOT/build.cmd" "$N/build.cmd"
+mkdir -p "$N/scripts" && cp "$ROOT/scripts/build.cmd" "$N/scripts/build.cmd"
 run_build "$N"
 [ "$RC" -ne 0 ] || fail "4: tree without a repository built with rc=0 (silent fallback)"
 compiled "$N" && fail "4: no repository, yet compiled (not refused before compiling)"
 
-# ---- 5. git top level is not the build.cmd folder -------------------------
+# ---- 5. git top level is not the repository root -------------------------
 P="$T/parent"
 mkdir -p "$P/sub" && git -C "$ROOT" archive HEAD | tar -x -C "$P/sub" || fail "setup: export into subfolder"
-cp "$ROOT/build.cmd" "$P/sub/build.cmd"
+mkdir -p "$P/sub/scripts" && cp "$ROOT/scripts/build.cmd" "$P/sub/scripts/build.cmd"
 git -C "$P" init -q &&
   git -C "$P" add -A >/dev/null 2>&1 &&
   git -c user.name=t -c user.email=t@t -C "$P" commit -q -m one >/dev/null 2>&1 || fail "setup: parent repo"
@@ -121,7 +121,7 @@ fi
 E="$T/empty"
 mkdir "$E" && git -C "$E" init -q || fail "setup: empty repo"
 git -C "$ROOT" archive HEAD | tar -x -C "$E" || fail "setup: export into empty repo"
-cp "$ROOT/build.cmd" "$E/build.cmd"
+mkdir -p "$E/scripts" && cp "$ROOT/scripts/build.cmd" "$E/scripts/build.cmd"
 run_build "$E"
 [ "$RC" -ne 0 ] || fail "6b: repo with no commits built with rc=0 (fallback number)"
 compiled "$E" && fail "6b: repo with no commits, yet compiled (not refused before compiling)"
@@ -130,7 +130,7 @@ compiled "$E" && fail "6b: repo with no commits, yet compiled (not refused befor
 # build-msi.cmd cannot run here (needs nuget/WiX, network), so this is a static
 # check of the default it sets: a literal default must match AssemblyInfo.cs,
 # otherwise the script must read AssemblyInfo.cs itself.
-ASM=$(grep -a -o 'AssemblyVersion("[0-9.]*")' "$ROOT/AssemblyInfo.cs" | sed 's/.*("\(.*\)")/\1/')
+ASM=$(grep -a -o 'AssemblyVersion("[0-9.]*")' "$ROOT/src/AssemblyInfo.cs" | sed 's/.*("\(.*\)")/\1/')
 ASM3=$(echo "$ASM" | cut -d. -f1-3)
 MSI="$ROOT/installer/build-msi.cmd"
 # Real run, in a sandbox that has the script and AssemblyInfo.cs but no
@@ -139,7 +139,7 @@ MSI="$ROOT/installer/build-msi.cmd"
 # right after the checks, to print the version they computed.
 M="$T/msi"
 mkdir -p "$M/installer"
-cp "$ROOT/AssemblyInfo.cs" "$M/AssemblyInfo.cs"
+mkdir -p "$M/src" && cp "$ROOT/src/AssemblyInfo.cs" "$M/src/AssemblyInfo.cs"
 sed 's/^\(endlocal & set .*\)\r\?$/\1\r\necho COMPUTED=%VERSION%\r/' "$MSI" > "$M/installer/build-msi.cmd"
 grep -aq '^echo COMPUTED=' "$M/installer/build-msi.cmd" || fail "7: setup: probe line not inserted"
 msi_sandbox() {   # env assignments... -> OUT, RC

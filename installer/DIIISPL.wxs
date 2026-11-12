@@ -58,7 +58,7 @@
                            TerminateProcess="1"
                            RebootPrompt="no" />
 
-    <Icon Id="DIIISPL.ico" SourceFile="$(var.SourceDir)\DIIISPL.ico" />
+    <Icon Id="DIIISPL.ico" SourceFile="$(var.SourceDir)\src\DIIISPL.ico" />
     <Property Id="ARPPRODUCTICON" Value="DIIISPL.ico" />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/rstrlnkv/DIIISPL" />
 

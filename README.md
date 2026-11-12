@@ -209,7 +209,7 @@ There are two channels, the switch is on the same page:
 
 ## Build from source
 
-The program is built with one command, `build.cmd`; it needs the C# compiler of .NET Framework that Windows 11 has by default, and git with a full clone of the repository: the build number is the commit count, so `build.cmd` refuses to build outside a complete clone (a shallow clone, no git, `GIT_DIR` set). `build.cmd dev` builds the Dev channel.
+The program is built with one command, `scripts\build.cmd`; it needs the C# compiler of .NET Framework that Windows 11 has by default, and git with a full clone of the repository: the build number is the commit count, so `scripts\build.cmd` refuses to build outside a complete clone (a shallow clone, no git, `GIT_DIR` set). `scripts\build.cmd dev` builds the Dev channel.
 
 How a layout is really applied, why the taskbar has to be styled from inside Explorer, what the installer, the icon and the release are built with, what the automatic test covers and how the repository is arranged are in [INTERNALS.md](INTERNALS.md) (in Russian); a short map of the code is in [ARCHITECTURE.md](ARCHITECTURE.md). Vulnerabilities are reported as described in [SECURITY.md](SECURITY.md).
 

@@ -11,7 +11,7 @@ if not exist "%NETDIR%\csc.exe" (
 
 "%NETDIR%\csc.exe" /nologo /target:exe /codepage:65001 ^
   /out:"%~dp0changelog-check.exe" ^
-  "%~dp0..\Changelog.cs" "%~dp0ChangelogCheck.cs"
+  "%~dp0..\src\Changelog.cs" "%~dp0ChangelogCheck.cs"
 if errorlevel 1 exit /b 1
 
 "%~dp0changelog-check.exe"

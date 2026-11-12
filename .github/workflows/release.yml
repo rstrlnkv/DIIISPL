@@ -73,7 +73,7 @@ jobs:
 
           # The tagged commit must already carry the tag's version (Core
           # standards/versioning.md rule 7): check it, never patch it here.
-          $asm = Get-Content 'AssemblyInfo.cs' -Raw
+          $asm = Get-Content 'src/AssemblyInfo.cs' -Raw
           foreach ($name in 'AssemblyVersion', 'AssemblyFileVersion') {
             if ($asm -notmatch ($name + '\("(\d+\.\d+\.\d+)\.\d+"\)')) { throw "AssemblyInfo.cs has no $name." }
             if ($Matches[1] -ne $number) { throw "$name is $($Matches[1]) in AssemblyInfo.cs, the tag says $number." }
@@ -118,7 +118,7 @@ jobs:
       # только потому, что в их строках есть разделитель пути, и PowerShell
       # считает их относительным путём.
       - name: Программа
-        run: .\build.cmd ${{ env.DIIISPL_CHANNEL }}
+        run: .\scripts\build.cmd ${{ env.DIIISPL_CHANNEL }}
 
       - name: Установщик
         run: .\installer\build-msi.cmd ${{ env.DIIISPL_CHANNEL }}
@@ -140,7 +140,7 @@ jobs:
           }
 
           # И отпечаток тот самый. Программа сверяет установщик именно с ним
-          # (Updater.cs), поэтому подписанный чужим ключом выпуск она отвергнет —
+          # (src/Updater.cs), поэтому подписанный чужим ключом выпуск она отвергнет —
           # а сборка без этой проверки позеленела бы и опубликовала его.
           $want = '103850469089DEECC19D0DD6CE1D4DD3307601FA'
           if ($sig.SignerCertificate.Thumbprint -ne $want) {

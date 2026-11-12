@@ -41,7 +41,12 @@ namespace DIIISPL.Tools
 
         private static int Main(string[] args)
         {
-            string outPath = args.Length > 0 ? args[0] : "DIIISPL.ico";
+            if (args.Length == 0)
+            {
+                Console.Error.WriteLine("Usage: MakeIcon <output.ico> [preview.png]  (tools\\make-icon.cmd passes src\\DIIISPL.ico)");
+                return 1;
+            }
+            string outPath = args[0];
             string preview = args.Length > 1 ? args[1] : null;
 
             var frames = new List<Bitmap>();

@@ -1,5 +1,5 @@
 @echo off
-rem Пересобрать значок программы: tools\MakeIcon.cs -> DIIISPL.ico
+rem Пересобрать значок программы: tools\MakeIcon.cs -> src\DIIISPL.ico
 setlocal
 set NETDIR=%WINDIR%\Microsoft.NET\Framework64\v4.0.30319
 if not exist "%NETDIR%\csc.exe" set NETDIR=%WINDIR%\Microsoft.NET\Framework\v4.0.30319
@@ -13,4 +13,4 @@ if not exist "%NETDIR%\csc.exe" (
   /r:System.dll /r:System.Drawing.dll ^
   "%~dp0MakeIcon.cs" || exit /b 1
 
-"%TEMP%\diiispl-makeicon.exe" "%~dp0..\DIIISPL.ico" %1
+"%TEMP%\diiispl-makeicon.exe" "%~dp0..\src\DIIISPL.ico" %1

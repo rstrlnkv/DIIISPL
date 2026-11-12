@@ -34,7 +34,7 @@ recipient has everything needed to build the program again.
 
 - **What:** calls to the system (CCD API: `QueryDisplayConfig`, `SetDisplayConfig`), EDID
   parsing and HDR control.
-- **Where:** the C# sources in the repository root (`Native.cs`, `Edid.cs`, `Applier.cs`).
+- **Where:** the C# sources in `src/` (`Native.cs`, `Edid.cs`, `Applier.cs`).
 - **Source:** written for this program from Microsoft's public documentation.
 - **Holder / licence:** DIIISPL authors, GPL v3 or later.
 - **Headers of undocumented Explorer interfaces:** `native/Common/undoc/` came with ExplorerTAP
