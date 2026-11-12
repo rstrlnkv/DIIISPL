@@ -126,6 +126,8 @@ note says so:
   `Microsoft.SourceLink.Common`, `Microsoft.SourceLink.GitHub`,
   `Microsoft.Build.Tasks.Git`, `Microsoft.Trusted.Signing.Client`.
 
+The Dev build shows the licence texts of four of the components above on its Licences page (TranslucentTB (ExplorerTAP), Detours, wil and C++/WinRT); this file stays the authoritative list.
+
 ## Not in the tree
 
 `native/Common/config/*.hpp` mention RapidJSON and spdlog, as they did in TranslucentTB. Neither

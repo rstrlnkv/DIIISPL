@@ -175,6 +175,8 @@ A downloaded package must be signed with the same certificate as the program its
 
 To see what changed from version to version, press **What’s new** on the same page: it opens the whole release history that lies inside the program, in its language and without a network. The same entries are in [CHANGELOG.md](CHANGELOG.md) and [CHANGELOG.ru.md](CHANGELOG.ru.md), and they also greet you on the page of each release on GitHub.
 
+The same page shows the full version and the build number; **Copy** puts “version (build)” on the clipboard for a bug report. Dev builds also have a **Licences** button with the licences of the bundled third-party components.
+
 There are two channels, the switch is on the same page:
 
 | Channel | What arrives |

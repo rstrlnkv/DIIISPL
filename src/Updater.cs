@@ -86,6 +86,33 @@ namespace DIIISPL
             }
         }
 
+        /// <summary>
+        /// Full version for display, with the -dev.N suffix: the ProductVersion of the exe,
+        /// which csc fills from AssemblyInformationalVersion (version-check forbids a missing or
+        /// empty attribute). Falls back to CurrentText if the version cannot be read.
+        /// </summary>
+        public static string DisplayText
+        {
+            get
+            {
+                try
+                {
+                    string v = FileVersionInfo.GetVersionInfo(
+                        Assembly.GetExecutingAssembly().Location).ProductVersion;
+                    if (v != null) v = v.Split('+')[0].Trim();
+                    if (!string.IsNullOrEmpty(v)) return v;
+                }
+                catch { }
+                return CurrentText;
+            }
+        }
+
+        /// <summary>What the About screen copies: "version (build)".</summary>
+        public static string VersionBuild
+        {
+            get { return DisplayText + " (" + BuildInfo.Number + ")"; }
+        }
+
         // ------------------------------------------------------------------ проверка
         /// <summary>
         /// Спросить GitHub, что вышло. Возвращает более новый выпуск или null, если

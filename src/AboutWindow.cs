@@ -9,6 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 namespace DIIISPL
 {
@@ -17,8 +18,8 @@ namespace DIIISPL
     ///
     /// Про чужой код и лицензию здесь ничего нет намеренно: текст лицензии едет
     /// вместе с программой файлом LICENSE.txt, чужой код описан в NOTICE.md, а в
-    /// подвале страницы стоит строка с лицензией. Разворачивать это на экране
-    /// не требуется ни лицензией, ни человеком, который сюда заходит за версией.
+    /// подвале страницы стоит строка с лицензией. Исключение — сборка Dev: она
+    /// несёт чужие компоненты, и их лицензии показывает кнопка «Лицензии».
     /// </summary>
     internal class AboutWindow : Window
     {
@@ -28,6 +29,8 @@ namespace DIIISPL
         private readonly Button _devButton = new Button();
         private readonly TextBlock _channelHint = new TextBlock();
         private readonly TextBlock _badge = new TextBlock();
+        private readonly Button _copy = new Button();
+        private readonly DispatcherTimer _copyReset = new DispatcherTimer();
 
         private Updater.Release _found;      // найденный выпуск, если он новее
         /// <summary>«Что нового» под строкой находки — пока не нашли, пусто и не видно.</summary>
@@ -165,26 +168,53 @@ namespace DIIISPL
             for (int i = 0; i < 3; i++)
                 grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-            Add(grid, 0, Updater.CurrentText, Text.AboutVersion);
-            Add(grid, 1, BuildInfo.Number, Text.AboutBuild);
-            Add(grid, 2, profiles.ToString(), Text.AboutProfiles);
+            // The full version (with -dev.N) is longer than "0.2.4", so it gets a smaller size.
+            Add(grid, 0, Updater.DisplayText, Text.AboutVersion, 18);
+            Add(grid, 1, BuildInfo.Number, Text.AboutBuild, 22);
+            Add(grid, 2, profiles.ToString(), Text.AboutProfiles, 22);
+
+            // Copies "version (build)", for a bug report.
+            _copy.Style = (Style)Application.Current.Resources["BtnSubtle"];
+            _copy.Content = Text.AboutCopy;
+            _copy.Height = 30;
+            _copy.HorizontalAlignment = HorizontalAlignment.Center;
+            _copy.Margin = new Thickness(0, 12, 0, 0);
+            _copy.Click += delegate { CopyVersion(); };
+
+            _copyReset.Interval = TimeSpan.FromMilliseconds(1500);
+            _copyReset.Tick += delegate { _copyReset.Stop(); _copy.Content = Text.AboutCopy; };
+            Closed += delegate { _copyReset.Stop(); };
+
+            var stack = new StackPanel();
+            stack.Children.Add(grid);
+            stack.Children.Add(_copy);
 
             var card = new Border();
             card.Style = (Style)Application.Current.Resources["Card"];
             card.Padding = new Thickness(18, 16, 18, 16);
             card.Margin = new Thickness(0, 0, 0, 12);
-            card.Child = grid;
+            card.Child = stack;
             return card;
         }
 
-        private static void Add(Grid grid, int column, string value, string caption)
+        private void CopyVersion()
+        {
+            try { Clipboard.SetText(Updater.VersionBuild); }
+            catch { return; }   // the clipboard can be held by another program
+
+            _copy.Content = Text.AboutCopied;
+            _copyReset.Stop();
+            _copyReset.Start();
+        }
+
+        private static void Add(Grid grid, int column, string value, string caption, double size)
         {
             var box = new StackPanel();
             box.HorizontalAlignment = HorizontalAlignment.Center;
 
             var big = new TextBlock();
             big.Text = value;
-            big.FontSize = 22;
+            big.FontSize = size;
             big.FontWeight = FontWeights.SemiBold;
             big.HorizontalAlignment = HorizontalAlignment.Center;
             box.Children.Add(big);
@@ -419,6 +449,21 @@ namespace DIIISPL
             github.Click += delegate { Updater.OpenPage(Updater.ProjectPage); };
             Grid.SetColumn(github, 1);
             grid.Children.Add(github);
+
+#if DEV
+            // Only Dev bundles third-party components, so only Dev has a Licences page.
+            grid.RowDefinitions.Add(new RowDefinition());
+            grid.RowDefinitions.Add(new RowDefinition());
+            var licenses = new Button();
+            licenses.Style = (Style)Application.Current.Resources["Btn"];
+            licenses.Content = Text.AboutLicenses;
+            licenses.Height = 38;
+            licenses.Margin = new Thickness(0, 12, 0, 0);
+            licenses.Click += delegate { new LicensesWindow { Owner = this }.ShowDialog(); };
+            Grid.SetRow(licenses, 1);
+            Grid.SetColumnSpan(licenses, 2);
+            grid.Children.Add(licenses);
+#endif
 
             return grid;
         }

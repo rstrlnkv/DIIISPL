@@ -78,6 +78,9 @@ jobs:
             if ($asm -notmatch ($name + '\("(\d+\.\d+\.\d+)\.\d+"\)')) { throw "AssemblyInfo.cs has no $name." }
             if ($Matches[1] -ne $number) { throw "$name is $($Matches[1]) in AssemblyInfo.cs, the tag says $number." }
           }
+          if ([regex]::Matches($asm, 'AssemblyInformationalVersion\(').Count -ne 1) { throw 'AssemblyInfo.cs must have exactly one AssemblyInformationalVersion.' }
+          if ($asm -notmatch 'AssemblyInformationalVersion\("([^"]+)"\)') { throw 'AssemblyInfo.cs has no AssemblyInformationalVersion.' }
+          if ($Matches[1] -cne $version) { throw "AssemblyInformationalVersion is $($Matches[1]) in AssemblyInfo.cs, the tag says $version." }
           foreach ($log in 'CHANGELOG.md', 'CHANGELOG.ru.md') {
             $head = Get-Content $log -Encoding utf8 | Where-Object { $_ -match '^## \[' } | Select-Object -First 2
             if (@($head).Count -lt 2 -or $head[0] -notmatch '^## \[Unreleased\]\s*$') { throw "${log}: the first heading must be '## [Unreleased]'." }

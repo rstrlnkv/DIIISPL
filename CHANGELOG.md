@@ -6,6 +6,11 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- The About screen shows the full version with its -dev.N suffix and has a Copy button for “version (build)”.
+- A Licences page in Dev builds, with the licences of the bundled third-party components.
+
 ## [0.2.4-dev.1] - 2026-08-28
 
 ### Fixed

@@ -15,4 +15,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCopyright("© 2026 Rostislav Strelnikov. GNU GPL v3 или новее")]
 [assembly: AssemblyVersion("0.2.4.0")]
 [assembly: AssemblyFileVersion("0.2.4.0")]
+// The full version with its -dev.N suffix, shown on the About screen. release.yml checks
+// that it equals the whole release tag.
+[assembly: AssemblyInformationalVersion("0.2.4-dev.1")]
 [assembly: ComVisible(false)]

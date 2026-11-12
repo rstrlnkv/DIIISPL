@@ -233,6 +233,19 @@ installer\build-msi.cmd dev      пакет канала Dev
 если первые три части не совпали или если первый выпущенный заголовок
 CHANGELOG.md / CHANGELOG.ru.md (под `## [Unreleased]`) не равен версии тега.
 
+The third version bump is `[assembly: AssemblyInformationalVersion("x.y.z[-dev.N]")]` in
+`src/AssemblyInfo.cs`: it must equal the whole tag, suffix included. It is what the About
+screen shows (the exe's `ProductVersion`), and `release.yml` fails the run if the attribute
+is missing, appears twice or differs from the tag. `tests\version-check.cmd` checks the form
+of the attribute and its first three parts locally; only `release.yml` compares it with the tag. Dev builds of the same x.y.z still compare equal in the updater, which looks
+at the first three parts only.
+
+The `licenses/` folder and the `DEVRES` resources in `scripts\build.cmd` are Dev-only: the
+Stable build bundles no third-party component, so it embeds no licence text and has no
+Licences page. To bundle a new component, add it to `NOTICE.md`, put its licence text in
+`licenses/`, embed it in `scripts\build.cmd` (`DEVRES`, with an existence guard) and add a
+card to `src/LicensesWindow.cs`.
+
 Номер сборки — число коммитов (`git rev-list --count HEAD`), и `scripts\build.cmd` до
 компиляции отказывается собирать, если счёт может быть неточным: нет git или
 репозитория, корень git не корень репозитория (родитель `scripts\`), задана `GIT_DIR` или `GIT_WORK_TREE`,

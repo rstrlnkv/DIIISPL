@@ -340,6 +340,15 @@ namespace DIIISPL
             d["about.langRestartTitle"] = "Switch the language to {0}?";
             d["about.langRestartOk"] = "Switch and restart";
             d["about.langRestartFailed"] = "Could not restart to switch the language — the program stays as it was.";
+            d["about.copy"] = "Copy";
+            d["about.copied"] = "Copied";
+            d["about.licenses"] = "Licences";
+            d["licenses.title"] = "Third-party licences";
+            d["licenses.note"] = "The Dev build bundles the components below. Stable bundles none of them.";
+            d["licenses.missing"] = "Licence text is missing from this build.";
+            d["licenses.sameGpl"] = "Same GPL-3.0 text as DIIISPL itself.";
+            d["licenses.translucentHolder"] = "TranslucentTB contributors";
+            d["licenses.gplOnly"] = "GPL-3.0 only";
 
             // панель задач — только в сборках Dev
             d["tb.desktop"] = "Desktop is visible";
@@ -681,6 +690,15 @@ namespace DIIISPL
             d["about.langRestartTitle"] = "Сменить язык на «{0}»?";
             d["about.langRestartOk"] = "Сменить и перезапустить";
             d["about.langRestartFailed"] = "Не удалось перезапуститься для смены языка — программа осталась прежней.";
+            d["about.copy"] = "Копировать";
+            d["about.copied"] = "Скопировано";
+            d["about.licenses"] = "Лицензии";
+            d["licenses.title"] = "Лицензии сторонних компонентов";
+            d["licenses.note"] = "Сборка Dev включает компоненты ниже. Stable не включает ни одного.";
+            d["licenses.missing"] = "Текст лицензии отсутствует в этой сборке.";
+            d["licenses.sameGpl"] = "Тот же текст GPL-3.0, что и у самой DIIISPL.";
+            d["licenses.translucentHolder"] = "участники проекта TranslucentTB";
+            d["licenses.gplOnly"] = "только GPL-3.0";
 
             d["tb.desktop"] = "Виден рабочий стол";
             d["tb.visibleWindow"] = "Открыто окно";

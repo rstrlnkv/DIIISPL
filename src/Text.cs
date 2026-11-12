@@ -494,6 +494,15 @@ namespace DIIISPL
         public static string AboutChannel { get { return G("about.channel"); } }
         public static string AboutLanguage { get { return G("about.language"); } }
         public static string WhatsNew { get { return G("about.whatsNew"); } }
+        public static string AboutCopy { get { return G("about.copy"); } }
+        public static string AboutCopied { get { return G("about.copied"); } }
+        public static string AboutLicenses { get { return G("about.licenses"); } }
+        public static string LicensesTitle { get { return G("licenses.title"); } }
+        public static string LicensesNote { get { return G("licenses.note"); } }
+        public static string LicensesMissing { get { return G("licenses.missing"); } }
+        public static string LicensesSameGpl { get { return G("licenses.sameGpl"); } }
+        public static string LicensesTranslucentHolder { get { return G("licenses.translucentHolder"); } }
+        public static string LicensesGplOnly { get { return G("licenses.gplOnly"); } }
         public static string ChangelogYours { get { return G("changelog.yours"); } }
         public static string ChangelogEmpty { get { return G("changelog.empty"); } }
         public static string NotesHeading { get { return G("upd.notesHeading"); } }

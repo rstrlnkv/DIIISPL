@@ -25,10 +25,19 @@ if /i "%CHANNEL%"=="dev" (set CHANNEL=dev) else (set CHANNEL=stable)
 if "%CHANNEL%"=="dev" (
   set DEFINE=/define:DEV
   set TASKBAR="%ROOT%\src\ExplorerTap.cs" "%ROOT%\src\TaskbarSettings.cs" "%ROOT%\src\TaskbarWatcher.cs" "%ROOT%\src\TaskbarWindow.cs"
+  set DEVSRC="%ROOT%\src\LicensesWindow.cs"
+  rem Licence texts of the bundled third-party components, embedded in Dev only.
+  for %%F in ("%ROOT%\LICENSE" "%ROOT%\licenses\detours.txt" "%ROOT%\licenses\wil.txt" "%ROOT%\licenses\cppwinrt.txt") do if not exist %%F (
+    echo Build refused: licence file %%F is missing, the Dev build embeds it.
+    exit /b 1
+  )
+  set DEVRES=/resource:"%ROOT%\LICENSE",licenses.gpl3 /resource:"%ROOT%\licenses\detours.txt",licenses.detours /resource:"%ROOT%\licenses\wil.txt",licenses.wil /resource:"%ROOT%\licenses\cppwinrt.txt",licenses.cppwinrt
   echo === Сборка Dev: с панелью задач ===
 ) else (
   set DEFINE=
   set TASKBAR=
+  set DEVSRC=
+  set DEVRES=
   echo === Сборка Stable: без панели задач ===
 )
 
@@ -100,13 +109,13 @@ echo %BUILD%| findstr /r /x "[0-9][0-9]*" >nul || (
 "%NETDIR%\csc.exe" /nologo /target:winexe /optimize+ /platform:anycpu /codepage:65001 %DEFINE% ^
   /out:"%ROOT%\DIIISPL.exe" ^
   /win32icon:"%ROOT%\src\DIIISPL.ico" ^
-  /resource:"%ROOT%\CHANGELOG.ru.md",changelog.ru /resource:"%ROOT%\CHANGELOG.md",changelog.en ^
+  /resource:"%ROOT%\CHANGELOG.ru.md",changelog.ru /resource:"%ROOT%\CHANGELOG.md",changelog.en %DEVRES% ^
   /r:System.dll /r:System.Core.dll /r:System.Xml.dll ^
   /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Web.Extensions.dll ^
   /r:"%NETDIR%\System.Xaml.dll" ^
   /r:"%WPF%\WindowsBase.dll" /r:"%WPF%\PresentationCore.dll" /r:"%WPF%\PresentationFramework.dll" ^
   "%ROOT%\src\AssemblyInfo.cs" "%ROOT%\src\BuildInfo.g.cs" "%ROOT%\src\Lang.cs" "%ROOT%\src\LangFile.cs" "%ROOT%\src\Text.cs" "%ROOT%\src\Native.cs" "%ROOT%\src\Edid.cs" "%ROOT%\src\Monitors.cs" "%ROOT%\src\Layout.cs" "%ROOT%\src\Applier.cs" "%ROOT%\src\AutoSwitch.cs" "%ROOT%\src\Changelog.cs" ^
-  "%ROOT%\src\Store.cs" "%ROOT%\src\Settings.cs" "%ROOT%\src\ApplyGate.cs" "%ROOT%\src\Updater.cs" "%ROOT%\src\Hotkey.cs" %TASKBAR% ^
+  "%ROOT%\src\Store.cs" "%ROOT%\src\Settings.cs" "%ROOT%\src\ApplyGate.cs" "%ROOT%\src\Updater.cs" "%ROOT%\src\Hotkey.cs" %TASKBAR% %DEVSRC% ^
   "%ROOT%\src\Cli.cs" "%ROOT%\src\Theme.cs" "%ROOT%\src\Fluent.cs" ^
   "%ROOT%\src\MonitorCanvas.cs" "%ROOT%\src\ConfirmDialog.cs" "%ROOT%\src\Ui.cs" "%ROOT%\src\ChangelogWindow.cs" "%ROOT%\src\AboutWindow.cs" "%ROOT%\src\MainWindow.cs" "%ROOT%\src\App.cs"
 
