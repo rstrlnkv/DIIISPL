@@ -161,7 +161,10 @@ namespace DIIISPL
                 Ui.Row(Text.TbWinLine, Text.TbWinLineHint,
                        Switch(look.ShowLine, delegate(bool on)
                        {
-                           foreach (TaskbarState s in TaskbarSettings.Order) _settings[s].ShowLine = on;
+                           // Только обычный вид: у каждого особого случая линия своя.
+                           // Прежде этот переключатель ставил её всем разом, и случай,
+                           // которому линия не нужна, отменить её не мог.
+                           _settings[TaskbarState.Desktop].ShowLine = on;
                            Preview();
                        }), 60));
         }
@@ -174,7 +177,7 @@ namespace DIIISPL
             {
                 TaskbarAppearance look = _settings[state];
                 rows.Add(Ui.Row(TaskbarSettings.Describe(state), HintFor(state),
-                                StateControls(look), 330));
+                                StateControls(look), 386));
             }
 
             return Ui.Card(Text.TbWinCasesCard,
@@ -188,6 +191,7 @@ namespace DIIISPL
             var panel = new Grid();
             panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(190) });
             panel.ColumnDefinitions.Add(new ColumnDefinition());
+            panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(46) });
 
             ComboBox accent = AccentBox(look, true);
             panel.Children.Add(accent);
@@ -197,6 +201,18 @@ namespace DIIISPL
             color.Visibility = look.Enabled && UsesColor(look.Accent) ? Visibility.Visible : Visibility.Hidden;
             Grid.SetColumn(color, 1);
             panel.Children.Add(color);
+
+            // Линия у края — своя у каждого случая. Подпись ей взять негде,
+            // поэтому объясняет подсказка: три управления в строке и так тесно.
+            UIElement line = Switch(look.ShowLine, delegate(bool on)
+            {
+                look.ShowLine = on;
+                Preview();
+            });
+            line.SetValue(FrameworkElement.ToolTipProperty, Text.TbWinLine);
+            line.Visibility = look.Enabled ? Visibility.Visible : Visibility.Hidden;
+            Grid.SetColumn(line, 2);
+            panel.Children.Add(line);
 
             return panel;
         }

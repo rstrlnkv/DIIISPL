@@ -373,7 +373,7 @@ namespace DIIISPL
             d["tb.win.usual"] = "Usual look";
             d["tb.win.usualHint"] = "This is how the taskbar looks when nothing special is happening.";
             d["tb.win.line"] = "A thin line at the edge of the taskbar";
-            d["tb.win.lineHint"] = "The same for every case.";
+            d["tb.win.lineHint"] = "For the usual look; every special case has its own.";
             d["tb.win.casesCard"] = "When the look is different";
             d["tb.win.casesHint"] = "The cases are checked top to bottom — the first match wins. A case with no special look is not counted: the taskbar takes the look of the next matching case.";
             d["tb.win.colorOpaque"] = "The first two digits do nothing — the taskbar is opaque.";
@@ -713,7 +713,7 @@ namespace DIIISPL
             d["tb.win.usual"] = "Обычный вид";
             d["tb.win.usualHint"] = "Так панель выглядит, когда ничего особенного не происходит.";
             d["tb.win.line"] = "Тонкая линия у края панели";
-            d["tb.win.lineHint"] = "Одинаково для всех случаев.";
+            d["tb.win.lineHint"] = "Для обычного вида; у каждого особого случая своя.";
             d["tb.win.casesCard"] = "Когда вид другой";
             d["tb.win.casesHint"] = "Случаи проверяются сверху вниз — побеждает первый подходящий. Случай без особого вида в счёт не идёт: панель возьмёт вид следующего подходящего.";
             d["tb.win.colorOpaque"] = "Первые две цифры не действуют — панель непрозрачная.";
