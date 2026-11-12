@@ -114,7 +114,7 @@ echo %BUILD%| findstr /r /x "[0-9][0-9]*" >nul || (
   /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Web.Extensions.dll ^
   /r:"%NETDIR%\System.Xaml.dll" ^
   /r:"%WPF%\WindowsBase.dll" /r:"%WPF%\PresentationCore.dll" /r:"%WPF%\PresentationFramework.dll" ^
-  "%ROOT%\src\AssemblyInfo.cs" "%ROOT%\src\BuildInfo.g.cs" "%ROOT%\src\Lang.cs" "%ROOT%\src\LangFile.cs" "%ROOT%\src\Text.cs" "%ROOT%\src\Native.cs" "%ROOT%\src\Edid.cs" "%ROOT%\src\Monitors.cs" "%ROOT%\src\Layout.cs" "%ROOT%\src\Applier.cs" "%ROOT%\src\AutoSwitch.cs" "%ROOT%\src\Changelog.cs" ^
+  "%ROOT%\src\AssemblyInfo.cs" "%ROOT%\src\BuildInfo.g.cs" "%ROOT%\src\Lang.cs" "%ROOT%\src\LangFile.cs" "%ROOT%\src\Text.cs" "%ROOT%\src\Native.cs" "%ROOT%\src\Edid.cs" "%ROOT%\src\Monitors.cs" "%ROOT%\src\Layout.cs" "%ROOT%\src\Applier.cs" "%ROOT%\src\AutoSwitch.cs" "%ROOT%\src\Changelog.cs" "%ROOT%\src\VersionText.cs" ^
   "%ROOT%\src\Store.cs" "%ROOT%\src\Settings.cs" "%ROOT%\src\ApplyGate.cs" "%ROOT%\src\Updater.cs" "%ROOT%\src\Hotkey.cs" %TASKBAR% %DEVSRC% ^
   "%ROOT%\src\Cli.cs" "%ROOT%\src\Theme.cs" "%ROOT%\src\Fluent.cs" ^
   "%ROOT%\src\MonitorCanvas.cs" "%ROOT%\src\ConfirmDialog.cs" "%ROOT%\src\Ui.cs" "%ROOT%\src\ChangelogWindow.cs" "%ROOT%\src\AboutWindow.cs" "%ROOT%\src\MainWindow.cs" "%ROOT%\src\App.cs"

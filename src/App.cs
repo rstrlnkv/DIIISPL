@@ -130,7 +130,7 @@ namespace DIIISPL
             //
             // Measured on 26.08.2026 on a live machine: copy 0.1.2 was running,
             // 0.1.3 had come out five days earlier, the window said "checked
-            // 4 days ago" — while the "Check" button found it at once.
+            // 4 days ago" — while the "Check now" button found it at once.
             //
             // An hour is the alarm period, not the frequency of requests to GitHub:
             // inside sits the condition "have 24 hours passed since the last successful

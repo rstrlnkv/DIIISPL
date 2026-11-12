@@ -5,7 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Reflection;
@@ -99,7 +98,7 @@ namespace DIIISPL
                 {
                     string v = FileVersionInfo.GetVersionInfo(
                         Assembly.GetExecutingAssembly().Location).ProductVersion;
-                    if (v != null) v = v.Split('+')[0].Trim();
+                    v = VersionText.Display(v);
                     if (!string.IsNullOrEmpty(v)) return v;
                 }
                 catch { }
@@ -138,7 +137,7 @@ namespace DIIISPL
                     if (Truthy(item, "draft")) continue;
                     // the Stable channel is not offered Dev builds
                     if (r.Early && channel != Settings.Dev) { skippedEarly = true; continue; }
-                    if (best == null || r.Version > best.Version) best = r;
+                    if (best == null || VersionText.IsNewer(r.Version, best.Version)) best = r;
                 }
 
                 // The mark is set even when no suitable release was found:
@@ -156,7 +155,7 @@ namespace DIIISPL
                         : Text.NoReleasesYet;
                     return null;
                 }
-                return best.Version > Current ? best : null;
+                return VersionText.IsNewer(best.Version, Current) ? best : null;
             }
             catch (WebException ex)
             {
@@ -513,10 +512,12 @@ namespace DIIISPL
         /// it was parsed and thrown away: nobody read the Notes field, and the person
         /// went to the browser for the same text.
         ///
-        /// The release body is assembled by the builder from CHANGELOG.ru.md and CHANGELOG.md,
-        /// so it has a predictable shape: "## Что нового в 0.2.0", followed by
-        /// "## Whats new in 0.2.0", then a rule and a story about the program. The language names its own
-        /// heading, with a string from the dictionary; a language that arrived as
+        /// The release body is assembled by release.yml from .github/release-template.ru.md and
+        /// .github/release-template.en.md, filled with the CHANGELOG.ru.md and CHANGELOG.md sections,
+        /// so it has a predictable shape: the Russian page first, with "## Что нового" holding the
+        /// changelog lines, then "## Установка и обновление" and "## Что дальше"; then the English page
+        /// inside a "&lt;details&gt;" block, with "## What's new" holding the English lines. The language
+        /// names its own heading, with a string from the dictionary; a language that arrived as
         /// a file has no section of its own in the description — and gets English,
         /// because a string that is not defined falls back to the fallback language.
         ///
@@ -552,30 +553,10 @@ namespace DIIISPL
             catch { }
         }
 
-        /// <summary>"v1.0.1", "1.0.1", "1.0.1-beta.2" — we take the numbers, discard the rest.</summary>
+        /// <summary>"v1.0.1", "1.0.1", "1.0.1-beta.2" — see VersionText.Parse.</summary>
         public static Version ParseVersion(string text)
         {
-            if (string.IsNullOrEmpty(text)) return null;
-            string s = text.Trim();
-            if (s.StartsWith("v", StringComparison.OrdinalIgnoreCase)) s = s.Substring(1);
-            int cut = s.IndexOfAny(new char[] { '-', '+', ' ' });
-            if (cut > 0) s = s.Substring(0, cut);
-
-            string[] parts = s.Split('.');
-            var numbers = new List<int>();
-            foreach (string p in parts)
-            {
-                int n;
-                if (!int.TryParse(p, NumberStyles.Integer, CultureInfo.InvariantCulture, out n)) break;
-                numbers.Add(n);
-            }
-            // Whether there are numbers must be asked before padding with zeros, not after:
-            // the line used to add four zeros first, and the answer was always
-            // "yes". A label like "latest" became version 0.0.0.0 — that is, a
-            // release to be compared with ours, not garbage.
-            if (numbers.Count == 0) return null;
-            while (numbers.Count < 4) numbers.Add(0);
-            return new Version(numbers[0], numbers[1], numbers[2], numbers[3]);
+            return VersionText.Parse(text);
         }
 
         /// <summary>A string field from the GitHub reply. Named Field, not Text: the class

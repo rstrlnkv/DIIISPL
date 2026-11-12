@@ -325,7 +325,7 @@ namespace DIIISPL
             d["about.footer"] = "© 2026 {0} · GPL-3.0";
             d["about.devHint"] = "Dev builds arrive before the general release and can do more — set the taskbar look, for one. In exchange, they break more often.";
             d["about.stableHint"] = "Only finished releases arrive. What is still being worked on — the taskbar look — is in Dev builds only.";
-            d["about.check"] = "Check";
+            d["about.check"] = "Check now";
             d["about.checking"] = "checking…";
             d["about.again"] = "Again";
             d["about.upToDate"] = "you have the latest version";
@@ -675,7 +675,7 @@ namespace DIIISPL
             d["about.footer"] = "© 2026 {0} · GPL-3.0";
             d["about.devHint"] = "Сборки Dev приходят раньше общего выпуска и умеют больше — например, задавать вид панели задач. Взамен в них чаще что-то не работает.";
             d["about.stableHint"] = "Приходят только готовые выпуски. То, что ещё дорабатывается — вид панели задач, — есть только в сборках Dev.";
-            d["about.check"] = "Проверить";
+            d["about.check"] = "Проверить сейчас";
             d["about.checking"] = "проверяю…";
             d["about.again"] = "Ещё раз";
             d["about.upToDate"] = "установлена последняя версия";

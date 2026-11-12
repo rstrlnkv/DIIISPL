@@ -44,6 +44,7 @@ if not exist "%NETDIR%\csc.exe" (
   /out:"%~dp0selftest.exe" ^
   /r:System.dll /r:System.Core.dll ^
   /r:"%NETDIR%\WPF\WindowsBase.dll" ^
+  "%~dp0..\src\Lang.cs" "%~dp0..\src\LangFile.cs" "%~dp0..\src\Settings.cs" "%~dp0..\src\Text.cs" ^
   "%~dp0..\src\Native.cs" "%~dp0..\src\Edid.cs" "%~dp0..\src\Monitors.cs" ^
   "%~dp0..\src\Layout.cs" "%~dp0..\src\Applier.cs" "%~dp0..\src\Store.cs" "%~dp0..\src\ApplyGate.cs" ^
   "%~dp0Harness.cs"

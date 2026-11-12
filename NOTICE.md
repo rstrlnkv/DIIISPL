@@ -98,33 +98,74 @@ DEALINGS IN THE SOFTWARE.
 - **Licence:** MIT (text as above).
 - **Changes:** none.
 
-## member_thunk (build recipe only, not linked)
-
-- **What:** a header-only library that lets C callbacks call C++ member functions.
-- **Where:** only the vcpkg port recipe `native/vcpkg/ports/member-thunk` lies in the tree,
-  pointing at commit `3acf1402af87de495f073233c9b842c230a7fb12`. It is not listed in
-  `native/ExplorerTAP/vcpkg.json`, no source file includes it, and the build does not fetch
-  it; the only trace is the `MEMBER_THUNK_DEFAULT_HEAP_SAFETY` define in
-  `native/Common/CppProject.props`. The built DLL does not contain it.
-- **Source:** https://github.com/sylveon/member_thunk
-- **Holder:** Copyright 2020 Charles Milette (sylveon).
-- **Licence:** MIT (upstream LICENSE; the port installs it). The text is not repeated here
-  because the library is not linked into anything shipped.
-- **Changes:** none.
-
 ## Build-time tools (not distributed)
 
-These are used to build the program and are not part of anything shipped, except where a
-note says so:
+Everything in this section is used only to build the program. None of it is copied into the
+repository (the `native/packages/` and `installer/wix/` folders are ignored by git) and none
+of it is part of what is shipped, except where an entry says so. "Referenced in" names the
+file of this tree that asks for the item. Facts below come from the tree and from the
+`.nuspec` and licence files inside the packages restored on the maintainer's machine; what
+could not be confirmed there is marked "not confirmed locally".
 
-- WiX Toolset 3.14.1 (https://wixtoolset.org), downloaded by `installer\build-msi.cmd`. The
-  MSI carries the `CloseApplication` custom action of `WixUtilExtension`
-  (`installer/DIIISPL.wxs`). Source: https://github.com/wixtoolset/wix3. Holder: .NET Foundation
-  and contributors. Licence: Microsoft Reciprocal License (MS-RL).
-- NuGet packages listed in `native/ExplorerTAP/packages.config` that only help the build:
-  `Microsoft.Windows.SDK.BuildTools`, `Microsoft.Windows.SDK.CPP` (and `.x64`, `.arm64`),
-  `Microsoft.SourceLink.Common`, `Microsoft.SourceLink.GitHub`,
-  `Microsoft.Build.Tasks.Git`, `Microsoft.Trusted.Signing.Client`.
+### WiX Toolset 3.14.1
+
+- **What:** builds the MSI installer. The MSI carries the `CloseApplication` custom action of
+  `WixUtilExtension` (`installer/DIIISPL.wxs`); this is the one part that is shipped.
+- **Referenced in:** `installer/build-msi.cmd` (`nuget install WiX -Version 3.14.1`).
+- **Source:** https://wixtoolset.org, https://github.com/wixtoolset/wix3
+- **Holder:** .NET Foundation and contributors (package `.nuspec`).
+- **Licence:** Microsoft Reciprocal License (MS-RL) (package `.nuspec`, `LICENSE.TXT`).
+
+### NuGet command-line client (`nuget.exe`)
+
+- **What:** restores the NuGet packages below and the WiX package.
+- **Referenced in:** `native/build-native.cmd` and `installer/build-msi.cmd`, which download it
+  from https://dist.nuget.org/win-x86-commandline/latest/nuget.exe into `native/nuget.exe`.
+- **Source:** https://github.com/NuGet/NuGet.Client
+- **Holder and licence:** not confirmed locally.
+
+### Microsoft.Windows.CppWinRT 2.0.250303.1
+
+- **What:** the C++/WinRT compiler and headers (see the C++/WinRT section above, where it is
+  used by the library).
+- **Referenced in:** `native/ExplorerTAP/packages.config`.
+- **Source:** https://github.com/Microsoft/cppwinrt
+- **Holder:** Microsoft Corporation. **Licence:** MIT (package `LICENSE`).
+
+### Microsoft.Windows.SDK.BuildTools 10.0.26100.7463
+
+- **What:** tools for building projects that target the Windows SDK.
+- **Referenced in:** `native/ExplorerTAP/packages.config`.
+- **Source:** https://aka.ms/WinSDKProjectURL
+- **Holder:** Microsoft Corporation. **Licence:** the Windows SDK licence at
+  https://aka.ms/WinSDKLicenseURL (package `.nuspec`; the terms themselves are not confirmed
+  locally).
+
+### Microsoft.Windows.SDK.CPP, .x64 and .arm64 10.0.26100.7463
+
+- **What:** the Windows SDK headers and libraries for C++ (the base package and the x64 and
+  ARM64 parts).
+- **Referenced in:** `native/ExplorerTAP/packages.config`.
+- **Source:** https://aka.ms/WinSDKProjectURL
+- **Holder:** Microsoft Corporation. **Licence:** the Windows SDK licence at
+  https://aka.ms/WinSDKLicenseURL (package `.nuspec`; the terms themselves are not confirmed
+  locally).
+
+### Microsoft.Build.Tasks.Git, Microsoft.SourceLink.Common, Microsoft.SourceLink.GitHub (each 8.0.0)
+
+- **What:** MSBuild tasks that read git information and write Source Link data into the build;
+  marked `developmentDependency` in `packages.config`.
+- **Referenced in:** `native/ExplorerTAP/packages.config`.
+- **Source:** https://github.com/dotnet/sourcelink
+- **Holder:** Microsoft Corporation. **Licence:** MIT (package `.nuspec`).
+
+### Microsoft.Trusted.Signing.Client 1.0.95
+
+- **What:** client for Microsoft's code-signing service.
+- **Referenced in:** `native/ExplorerTAP/packages.config`.
+- **Source:** https://aka.ms/trustedsigning/
+- **Holder:** Microsoft Corporation. **Licence:** Microsoft software licence terms
+  (titled MICROSOFT SOFTWARE LICENSE TERMS / AZURE CODE SIGNING, package `LICENSE.md`).
 
 The Dev build shows the licence texts of four of the components above on its Licences page (TranslucentTB (ExplorerTAP), Detours, wil and C++/WinRT); this file stays the authoritative list.
 

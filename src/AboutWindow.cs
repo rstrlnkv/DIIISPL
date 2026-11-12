@@ -520,7 +520,7 @@ namespace DIIISPL
 #endif
         }
 
-        /// <summary>Normal view: when checked and the "Check" button.</summary>
+        /// <summary>Normal view: when checked and the "Check now" button.</summary>
         private void ShowIdle()
         {
             _busy = false;
