@@ -486,7 +486,7 @@ namespace DIIISPL
         /// пор его разбирали и выбрасывали: поле Notes не читал никто, а человек
         /// шёл за тем же текстом в браузер.
         ///
-        /// Тело выпуска сборщик складывает из CHANGELOG.md и CHANGELOG.en.md,
+        /// Тело выпуска сборщик складывает из CHANGELOG.ru.md и CHANGELOG.md,
         /// поэтому оно устроено предсказуемо: «## Что нового в 0.2.0», следом
         /// «## Whats new in 0.2.0», потом черта и рассказ о программе. Свой
         /// заголовок язык называет сам, строкой из словаря; язык, приехавший
@@ -495,39 +495,11 @@ namespace DIIISPL
         ///
         /// Описание выпуска — чужой текст с чужого сервера. Разметку отсюда
         /// показывать нельзя, поэтому берутся только строки списка, и только
-        /// первые несколько.
+        /// первые несколько. Строка без своего бейджа берёт бейдж своей группы «###».
         /// </summary>
         public static List<string> Highlights(string notes, int max, out int more)
         {
-            more = 0;
-            var found = new List<string>();
-            if (string.IsNullOrEmpty(notes)) return found;
-
-            string heading = Text.NotesHeading;
-            bool inside = false;
-            // Разбираем по переводам строки; возврат каретки снимет Trim ниже.
-            foreach (string raw in notes.Split((char)10))
-            {
-                string line = raw.Trim();
-                if (line.StartsWith("## "))
-                {
-                    if (inside) break;                 // свой раздел кончился
-                    inside = line.Substring(3).TrimStart()
-                                 .StartsWith(heading, StringComparison.CurrentCultureIgnoreCase);
-                    continue;
-                }
-                if (!inside) continue;
-                if (line == "---") break;
-                if (!line.StartsWith("- ")) continue;
-                found.Add(Changelog.Plain(line.Substring(2)));
-            }
-
-            if (max > 0 && found.Count > max)
-            {
-                more = found.Count - max;
-                found.RemoveRange(max, more);
-            }
-            return found;
+            return Changelog.Highlights(notes, Text.NotesHeading, max, out more);
         }
 
 

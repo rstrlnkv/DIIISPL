@@ -144,9 +144,9 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Бейдж: подложка своего цвета и надпись на ней. Цвета живут в палитре
-        /// темы, а не здесь: в светлой теме те же три рода изменений нужны в других
-        /// тонах, иначе надпись на подложке не читается.
+        /// Badge: a chip of its own colour with the label on it. The colours live in the
+        /// theme palette, not here: the light theme needs other tones for the same six
+        /// kinds (DEL and DEP use the Upd colours, SEC the Fix colours), or the label is unreadable.
         /// </summary>
         private static UIElement Badge(string name)
         {
@@ -155,7 +155,8 @@ namespace DIIISPL
             switch (kind)
             {
                 case "NEW": bg = "BadgeNewBg"; fg = "BadgeNewText"; break;
-                case "FIX": bg = "BadgeFixBg"; fg = "BadgeFixText"; break;
+                case "FIX":
+                case "SEC": bg = "BadgeFixBg"; fg = "BadgeFixText"; break;   // DEL and DEP fall to Upd colours
                 default:    bg = "BadgeUpdBg"; fg = "BadgeUpdText"; break;
             }
 
@@ -170,8 +171,8 @@ namespace DIIISPL
             chip.Background = (Brush)Application.Current.Resources[bg];
             chip.CornerRadius = new CornerRadius(4);
             chip.Padding = new Thickness(8, 3, 8, 4);
-            // Ширина одна на все три: «FIX» короче «NEW», и без этого колонка
-            // бейджей идёт волной, а глаз ищет в ней ровный край.
+            // One width for every badge: "FIX" is shorter than "NEW", and without it the
+            // badge column wavers while the eye looks for an even edge.
             chip.MinWidth = 44;
             chip.HorizontalAlignment = HorizontalAlignment.Left;
             chip.VerticalAlignment = VerticalAlignment.Top;

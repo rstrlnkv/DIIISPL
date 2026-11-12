@@ -41,7 +41,7 @@ for /f "delims=" %%I in ('git -C "%~dp0." rev-list --count HEAD 2^>nul') do set 
 "%NETDIR%\csc.exe" /nologo /target:winexe /optimize+ /platform:anycpu /codepage:65001 %DEFINE% ^
   /out:"%~dp0DIIISPL.exe" ^
   /win32icon:"%~dp0DIIISPL.ico" ^
-  /resource:"%~dp0CHANGELOG.md",changelog.ru /resource:"%~dp0CHANGELOG.en.md",changelog.en ^
+  /resource:"%~dp0CHANGELOG.ru.md",changelog.ru /resource:"%~dp0CHANGELOG.md",changelog.en ^
   /r:System.dll /r:System.Core.dll /r:System.Xml.dll ^
   /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Web.Extensions.dll ^
   /r:"%NETDIR%\System.Xaml.dll" ^

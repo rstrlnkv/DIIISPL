@@ -28,7 +28,7 @@ installer/LICENSE.rtf
 *.wixpdb
 installer/sign.thumbprint
 
-# описание выпуска, собранное сборщиком из CHANGELOG.md и CHANGELOG.en.md
+# описание выпуска, собранное сборщиком из CHANGELOG.md и CHANGELOG.ru.md
 release-body.md
 
 # local tooling folders (untracked, not part of the product)

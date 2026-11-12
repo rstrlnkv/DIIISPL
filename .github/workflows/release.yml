@@ -155,8 +155,10 @@ jobs:
             $found = $false
             $lines = New-Object System.Collections.Generic.List[string]
             foreach ($line in (Get-Content $file -Encoding utf8)) {
-              # Заголовок раздела — «## 0.2.2-dev.1 — 2026-08-27»; сверяем первое слово.
-              if ($line -match '^##\s+(\S+)') {
+              # Section heading: "## [0.2.2-dev.1] - 2026-08-27". Exactly the form
+              # Changelog.Parse shows, so a heading the app cannot show cannot be released.
+              # [Unreleased] never equals $version: the tag is checked numeric earlier.
+              if ($line -match '^##\s+\[([^\]]+)\]\s*(?:-\s*\d{4}-\d{2}-\d{2})?\s*$') {
                 if ($found) { break }
                 if ($Matches[1] -eq $version) { $found = $true }
                 continue
@@ -183,12 +185,12 @@ jobs:
           $nextPatch = "{0}.{1}.{2}" -f $parts[0], $parts[1], ([int]$parts[2] + 1)
           $nextMinor = "{0}.{1}.0"   -f $parts[0], ([int]$parts[1] + 1)
 
-          $ru = Section 'CHANGELOG.md'    $tag
-          $en = Section 'CHANGELOG.en.md' $tag
+          $ru = Section 'CHANGELOG.ru.md' $tag
+          $en = Section 'CHANGELOG.md'    $tag
 
           # Род выпуска берём из самих строк, а не из номера: 0.2.2 по номеру —
           # PATCH, а возможностей в нём пять, и номер соврал бы.
-          $hasNew = $ru -match '\*\*NEW\*\*'
+          $hasNew = $en -match '(?m)^### Added\s*$'
           $early = $env:DIIISPL_EARLY -eq 'true'
           $kindRu = if ($hasNew) { 'с новыми возможностями' } else { 'с исправлениями' }
           $kindEn = if ($hasNew) { 'with new features' } else { 'with fixes' }

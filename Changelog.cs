@@ -7,13 +7,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace DIIISPL
 {
     /// <summary>Строка изменения: бейдж и текст порознь — в окне они рисуются по-разному.</summary>
     internal sealed class ChangelogLine
     {
-        public string Badge = "";          // NEW, FIX, UPD; пусто — строка без бейджа
+        public string Badge = "";          // NEW, FIX, UPD, DEL, DEP, SEC; empty - no badge
+        public string Group = "";          // the "###" heading it sits under; kept for tests/ChangelogCheck.cs, the app never reads it
         public string Text = "";
     }
 
@@ -29,7 +31,7 @@ namespace DIIISPL
     /// <summary>
     /// Чейнджлог, лежащий внутри программы.
     ///
-    /// `CHANGELOG.md` и `CHANGELOG.en.md` кладутся в сборку ресурсами — так же,
+    /// `CHANGELOG.ru.md` и `CHANGELOG.md` (английский) кладутся в сборку ресурсами — так же,
     /// как номер сборки вписывается в `BuildInfo.g.cs`. Причина простая: до этого
     /// прочитать «что нового» изнутри было нельзя ни при каких условиях, кроме
     /// «вышло что-то новее». Человек, который только что обновился, хочет знать,
@@ -50,39 +52,76 @@ namespace DIIISPL
             // перевод надписей — дело пользователя, перевод истории выпусков — нет.
             if (text == null) text = Raw(Lang.Codes[0]);
 
+            return Parse(text);
+        }
+
+        /// <summary>
+        /// Parse a Keep a Changelog text: "## [0.2.2-dev.1] - 2026-08-27" sections,
+        /// each with "### Added" (or "### Добавлено") groups of "- text" lines.
+        /// A line without a bold badge takes the badge of its group; "## [Unreleased]" is skipped.
+        /// </summary>
+        public static List<ChangelogEntry> Parse(string text)
+        {
             var list = new List<ChangelogEntry>();
             if (string.IsNullOrEmpty(text)) return list;
 
             ChangelogEntry current = null;
+            string group = "", groupBadge = "";
             foreach (string raw in text.Split((char)10))
             {
                 string line = raw.Trim();
 
                 if (line.StartsWith("## "))
                 {
-                    current = new ChangelogEntry();
-                    string head = line.Substring(3).Trim();
-
-                    // «0.1.4-dev.1 — 2026-08-26»: номер, длинное тире, дата.
-                    int dash = head.IndexOf('—');
-                    if (dash > 0)
+                    group = ""; groupBadge = "";
+                    Match m = Regex.Match(line.Substring(3).Trim(), @"^\[([^\]]+)\]\s*(?:-\s*(\d{4}-\d{2}-\d{2}))?\s*$");
+                    if (!m.Success || m.Groups[1].Value.Equals("Unreleased", StringComparison.OrdinalIgnoreCase))
                     {
-                        current.Version = head.Substring(0, dash).Trim();
-                        current.Date = head.Substring(dash + 1).Trim();
+                        current = null;
+                        continue;
                     }
-                    else current.Version = head;
-
+                    current = new ChangelogEntry();
+                    current.Version = m.Groups[1].Value;
+                    current.Date = m.Groups[2].Value;
                     list.Add(current);
                     continue;
                 }
 
-                if (current == null) continue;      // шапка файла до первого выпуска
+                if (line.StartsWith("### "))
+                {
+                    group = line.Substring(4).Trim();
+                    groupBadge = BadgeOfGroup(group);
+                    continue;
+                }
+
+                if (current == null) continue;      // file header and Unreleased
                 if (line.Length == 0 || line.StartsWith("#")) continue;
 
-                if (line.StartsWith("- ")) current.Lines.Add(Split(line.Substring(2)));
+                if (line.StartsWith("- "))
+                {
+                    ChangelogLine l = Split(line.Substring(2));
+                    if (l.Badge.Length == 0) l.Badge = groupBadge;
+                    l.Group = group;
+                    current.Lines.Add(l);
+                }
                 else if (current.Lines.Count == 0 && current.Note.Length == 0) current.Note = Plain(line);
             }
             return list;
+        }
+
+        /// <summary>Badge of a group (Added/Добавлено is NEW and so on); an unknown group gives "".</summary>
+        public static string BadgeOfGroup(string group)
+        {
+            switch (group.ToLowerInvariant())
+            {
+                case "added": case "добавлено": return "NEW";
+                case "fixed": case "исправлено": return "FIX";
+                case "changed": case "изменено": return "UPD";
+                case "removed": case "удалено": return "DEL";
+                case "deprecated": case "устарело": return "DEP";
+                case "security": case "безопасность": return "SEC";
+                default: return "";
+            }
         }
 
         /// <summary>
@@ -110,12 +149,55 @@ namespace DIIISPL
 
         /// <summary>
         /// То же самое одной строкой — для мест, где бейджу негде быть отдельным:
-        /// подсказка о найденном обновлении и абзац перед списком.
+        /// подсказка о найденном обновлении и абзац перед списком. Строка без своего
+        /// бейджа берёт бейдж группы (groupBadge).
         /// </summary>
-        public static string Plain(string text)
+        public static string Plain(string text, string groupBadge = "")
         {
             ChangelogLine line = Split(text);
-            return line.Badge.Length > 0 ? line.Badge + " · " + line.Text : line.Text;
+            string badge = line.Badge.Length > 0 ? line.Badge : groupBadge;
+            return badge.Length > 0 ? badge + " · " + line.Text : line.Text;
+        }
+
+        /// <summary>
+        /// The list lines of one section of a published release body: the section whose
+        /// "## " heading starts with <paramref name="heading"/>, up to the next "## " or "---".
+        /// A bullet without a bold badge takes the badge of its "###" group. At most
+        /// <paramref name="max"/> lines come back (0 - all); the rest is counted in <paramref name="more"/>.
+        /// </summary>
+        public static List<string> Highlights(string notes, string heading, int max, out int more)
+        {
+            more = 0;
+            var found = new List<string>();
+            if (string.IsNullOrEmpty(notes)) return found;
+
+            bool inside = false;
+            string groupBadge = "";                // badge of the current "###" group
+            // Split on line feeds; Trim below removes the carriage return.
+            foreach (string raw in notes.Split((char)10))
+            {
+                string line = raw.Trim();
+                if (line.StartsWith("## "))
+                {
+                    if (inside) break;                 // the section is over
+                    groupBadge = "";
+                    inside = line.Substring(3).TrimStart()
+                                 .StartsWith(heading, StringComparison.CurrentCultureIgnoreCase);
+                    continue;
+                }
+                if (!inside) continue;
+                if (line.StartsWith("### ")) { groupBadge = BadgeOfGroup(line.Substring(4).Trim()); continue; }
+                if (line == "---") break;
+                if (!line.StartsWith("- ")) continue;
+                found.Add(Plain(line.Substring(2), groupBadge));
+            }
+
+            if (max > 0 && found.Count > max)
+            {
+                more = found.Count - max;
+                found.RemoveRange(max, more);
+            }
+            return found;
         }
 
         private static string Raw(string code)

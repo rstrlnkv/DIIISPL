@@ -1,63 +1,89 @@
-# Что менялось
+# Changelog
 
-Заметные изменения в DIIISPL, свежее сверху. Бейдж в начале строки говорит,
-что это за изменение: **NEW** — появилось, **FIX** — исправлено, **UPD** —
-переделано.
+All notable changes to this project are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-То же самое по-английски — [CHANGELOG.en.md](CHANGELOG.en.md).
+**English** · [Русский](CHANGELOG.ru.md)
 
-Выпуски с суффиксом `-dev` идут на канале Dev: в них есть настройки панели
-задач, которых в стабильных сборках нет вовсе.
+## [Unreleased]
 
-## 0.2.4-dev.1 — 2026-08-28
+## [0.2.4-dev.1] - 2026-08-28
 
-- **FIX** Тонкая линия у края панели задаётся отдельно для каждого случая, а не одна на все сразу.
+### Fixed
 
-## 0.2.3-dev.1 — 2026-08-28
+- The thin line at the taskbar edge is set for each case separately, not once for all of them.
 
-- **UPD** Переделан внешний вид окна «Что нового».
+## [0.2.3-dev.1] - 2026-08-28
 
-## 0.2.2-dev.1 — 2026-08-27
+### Changed
 
-- **NEW** Профиль встаёт сам, когда меняется набор подключённых мониторов: включили телевизор — раскладка под него.
-- **NEW** Профиль можно убрать из автоматики — «Выбирать автоматически» в меню «···»; клавишей он применяется по-прежнему.
-- **NEW** Вся история выпусков лежит внутри программы: кнопка «Что нового» открывает её окном, без похода в браузер.
-- **NEW** Команда `/auto` печатает, какой профиль подходит мониторам сейчас и что программа сделала бы.
-- **NEW** «Сбросить вид панели задач» — кнопка в настройках панели и пункт в меню значка.
-- **FIX** Вид панели задач больше не застревает от прежней раскладки: память о применённом правилась из двух потоков без всякой защиты.
-- **UPD** Виды панели задач названы по делу: «Прозрачная» стала «Цвет с прозрачностью», «Непрозрачная» — «Цвет без прозрачности». Разница между ними не в прозрачности вида, а в том, учитывается ли прозрачность цвета.
-- **UPD** «Как обычно» в списке случаев стало «Без особого вида»: такой случай не рассматривается вовсе, и панель берёт вид следующего подходящего, а вовсе не обычный.
+- The “What’s new” window has been redesigned.
 
-## 0.1.4-dev.1 — 2026-08-26
+## [0.2.2-dev.1] - 2026-08-27
 
-- **FIX** Обновление проверяется не только при запуске: не дозвонившись до GitHub, программа повторяет попытку через час.
-- **UPD** Кнопка панели задач снова подписана словами, пока они помещаются, а значок стал про панель, а не про монитор.
-- **NEW** `/help` и `/?` печатают справку, а команда `/state` в ней наконец описана.
+### Added
 
-## 0.1.3-dev.1 — 2026-08-21
+- The profile follows the monitors: plug a display in and the layout that fits it is applied.
+- A profile can be kept out of the automatic pick — “Pick automatically” in the “···” menu; a hotkey still applies it.
+- The whole release history lives inside the program: the “What’s new” button opens it in a window, no browser needed.
+- The `/auto` command prints which profile matches the monitors now and what the program would do.
+- “Reset the taskbar look” — a button in the taskbar settings and an item in the tray menu.
 
-- **FIX** Окно открывается сразу и больше не ждёт, пока подключится панель задач.
+### Changed
 
-## 0.1.1 — 2026-08-21
+- The taskbar looks are named for what they do: “Transparent” is now “Colour with transparency”, “Opaque” is “Colour, no transparency”. The difference is not the look’s transparency but whether the colour’s transparency is honoured.
+- “As usual” in the list of cases is now “No special look”: such a case is not considered at all, and the taskbar takes the look of the next matching case, not the usual one.
 
-- **FIX** Скачанный пакет нельзя подменить между проверкой подписи и установкой.
-- **FIX** Настройки, поправленные в блокноте, подхватываются на ходу.
-- **FIX** Профиль, поправленный руками, приводится к возможным значениям вместо отказа Windows.
-- **FIX** В установщике «Назад» возвращает туда, откуда пришли.
-- **FIX** Шапка окна больше не вытесняет имя профиля за край.
-- **FIX** Опечатка в `/taskbar` больше не отвечает «применено».
-- **UPD** README переставлен по порядку чтения и получил оглавление.
+### Fixed
 
-## 0.1.0 — 2026-08-20
+- The taskbar look no longer gets stuck from a previous layout: the memory of what had been applied was written from two threads without a lock.
 
-Первый выпуск.
+## [0.1.4-dev.1] - 2026-08-26
 
-- **NEW** Профили раскладок: положение экранов, разрешение, частота, поворот, основной.
-- **NEW** Мониторы опознаются по EDID, а не по номеру выхода видеокарты.
-- **NEW** HDR переключается вместе с раскладкой.
-- **NEW** Профиль переключается горячей клавишей.
-- **NEW** Значок в трее и запуск вместе с Windows.
-- **NEW** Командная строка: применить, сохранить, удалить, список, состояние мониторов и HDR.
-- **NEW** Обновление из GitHub с проверкой подписи пакета.
-- **NEW** Установка пакетом `.msi`.
-- **NEW** Два языка — русский и английский; свой добавляется файлом, без пересборки.
+### Added
+
+- `/help` and `/?` print the help, and the `/state` command is finally listed in it.
+
+### Changed
+
+- The taskbar button is labelled in words while they fit, and its icon is about the taskbar, not a monitor.
+
+### Fixed
+
+- Updates are checked more than once per launch: if GitHub cannot be reached, the program tries again in an hour.
+
+## [0.1.3-dev.1] - 2026-08-21
+
+### Fixed
+
+- The window opens right away instead of waiting for the taskbar to connect.
+
+## [0.1.1] - 2026-08-21
+
+### Changed
+
+- The README is reordered for reading and has a table of contents.
+
+### Fixed
+
+- A downloaded package can no longer be swapped between the signature check and install.
+- Settings edited in a text editor are picked up while the program is running.
+- A hand-edited profile is corrected to valid values instead of being rejected by Windows.
+- In the installer, Back returns where you came from.
+- The window header no longer pushes the profile name off the edge.
+- A typo in `/taskbar` no longer answers "applied".
+
+## [0.1.0] - 2026-08-20
+
+First release.
+
+### Added
+
+- Layout profiles: screen positions, resolution, refresh rate, rotation, primary display.
+- Monitors are identified by EDID, not by the graphics card output number.
+- HDR is switched together with the layout.
+- A profile is switched by a hotkey.
+- Tray icon and start together with Windows.
+- Command line: apply, save, delete, list, monitor state and HDR state.
+- Updates from GitHub with a signature check on the package.
+- Installed from an `.msi` package.
+- Two languages — Russian and English; your own is added by a file, without a rebuild.
