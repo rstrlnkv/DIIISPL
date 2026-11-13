@@ -13,9 +13,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProduct("DIIISPL")]
 [assembly: AssemblyCompany("Rostislav Strelnikov")]
 [assembly: AssemblyCopyright("© 2026 Rostislav Strelnikov. GNU GPL v3 or later")]
-[assembly: AssemblyVersion("0.2.4.0")]
-[assembly: AssemblyFileVersion("0.2.4.0")]
+[assembly: AssemblyVersion("0.3.0.0")]
+[assembly: AssemblyFileVersion("0.3.0.0")]
 // The full version with its -dev.N suffix, shown on the About screen. release.yml checks
 // that it equals the whole release tag.
-[assembly: AssemblyInformationalVersion("0.2.4-dev.2")]
+[assembly: AssemblyInformationalVersion("0.3.0")]
 [assembly: ComVisible(false)]
