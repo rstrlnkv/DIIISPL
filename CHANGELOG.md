@@ -6,6 +6,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [0.3.0-dev.1] - 2026-11-13
+
+### Changed
+
+- The window frame no longer shows the program name and icon, like the Windows 11 Settings frame: only the Mica strip and the caption buttons are left.
+
 ## [0.3.0] - 2026-11-13
 
 ### Changed
