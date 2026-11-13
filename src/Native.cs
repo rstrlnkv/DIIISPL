@@ -421,6 +421,16 @@ namespace DIIISPL
         [DllImport("dwmapi.dll")]
         public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
 
+        public const int WTA_NONCLIENT = 1;
+        public const uint WTNCA_NODRAWCAPTION = 1;
+        public const uint WTNCA_NODRAWICON = 2;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct WTA_OPTIONS { public uint Flags, Mask; }
+
+        [DllImport("uxtheme.dll")]
+        public static extern int SetWindowThemeAttribute(IntPtr hwnd, int attr, ref WTA_OPTIONS options, int size);
+
         [DllImport("dwmapi.dll")]
         public static extern int DwmExtendFrameIntoClientArea(IntPtr hwnd, ref MARGINS margins);
 

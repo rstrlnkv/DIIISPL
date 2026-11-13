@@ -28,6 +28,13 @@ namespace DIIISPL
                 // otherwise live windows show through unpainted spots instead of the backdrop.
                 int backdrop = Native.DWMSBT_MAINWINDOW;
                 Native.DwmSetWindowAttribute(hwnd, Native.DWMWA_SYSTEMBACKDROP_TYPE, ref backdrop, sizeof(int));
+
+                // Like the Windows 11 Settings frame: a bare Mica strip with only the caption
+                // buttons. The title stays set, so the taskbar and Alt+Tab still name the window.
+                Native.WTA_OPTIONS bare = new Native.WTA_OPTIONS();
+                bare.Flags = Native.WTNCA_NODRAWCAPTION | Native.WTNCA_NODRAWICON;
+                bare.Mask = bare.Flags;
+                Native.SetWindowThemeAttribute(hwnd, Native.WTA_NONCLIENT, ref bare, System.Runtime.InteropServices.Marshal.SizeOf(typeof(Native.WTA_OPTIONS)));
             }
             catch { /* without Mica the window just stays a solid colour */ }
         }
