@@ -28,7 +28,7 @@ namespace DIIISPL
 
         private static void Newer(string a, string b, bool expected)
         {
-            bool got = VersionText.IsNewer(VersionText.Parse(a), VersionText.Parse(b));
+            bool got = VersionText.IsNewer(a, b);
             Check(got == expected, "IsNewer(" + a + ", " + b + ") = " + got + ", expected " + expected);
         }
 
@@ -60,11 +60,21 @@ namespace DIIISPL
             Newer("0.2.4", "0.2.5", false);
             Newer("0.2.4", "0.2.4", false);
             Newer("1.0.0", "0.9.9", true);
-            // Dev builds of one x.y.z compare equal: the -dev.N suffix is dropped by Parse.
-            Newer("0.2.4-dev.2", "0.2.4-dev.1", false);
+            // Dev builds of one x.y.z are ordered by N: 0.2.4-dev.1 did not see 0.2.4-dev.2.
+            Newer("0.2.4-dev.2", "0.2.4-dev.1", true);
             Newer("0.2.4-dev.1", "0.2.4-dev.2", false);
-            Newer("v0.2.4", "0.2.4-dev.1", false);
+            Newer("v0.2.4-dev.2", "0.2.4-dev.2", false);
+            Newer("0.2.4-dev.10", "0.2.4-dev.9", true);
+            // The running build's ProductVersion may carry +build metadata.
+            Newer("v0.2.4-dev.2", "0.2.4-dev.1+abc123", true);
+            Newer("v0.2.4-dev.1", "0.2.4-dev.1+abc123", false);
+            // As in semver, a release is newer than the dev builds of its own number.
+            Newer("v0.2.4", "0.2.4-dev.1", true);
+            Newer("0.2.4-dev.9", "0.2.4", false);
             Newer("0.2.5-dev.1", "0.2.4", true);
+            Newer("0.2.4-dev.9", "0.2.5-dev.1", false);
+            // A tag without numbers is never an update.
+            Newer("latest", "0.2.4", false);
 
             Shows("0.2.4-dev.1+abc123", "0.2.4-dev.1");
             Shows("  0.2.4  ", "0.2.4");

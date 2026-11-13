@@ -41,12 +41,29 @@ namespace DIIISPL
         }
 
         /// <summary>
-        /// Whether a release is newer than the running program. The -dev.N suffix is dropped by
-        /// Parse, so Dev builds of one x.y.z compare equal and are never offered to each other.
+        /// Whether a release is newer than the running program, both given as text ("v0.2.4-dev.2",
+        /// "0.2.4-dev.1+abc"). Comparing the numbers alone hid 0.2.4-dev.2 from 0.2.4-dev.1, so
+        /// equal numbers fall back to the -dev.N suffix; as in semver, no suffix beats any suffix.
         /// </summary>
-        public static bool IsNewer(Version candidate, Version current)
+        public static bool IsNewer(string candidate, string current)
         {
-            return candidate > current;
+            Version a = Parse(candidate);
+            if (a == null) return false;
+            Version b = Parse(current);
+            if (b == null) return true;
+            if (a != b) return a > b;
+            return PreRank(candidate) > PreRank(current);
+        }
+
+        /// <summary>N of "-dev.N"; int.MaxValue for a release without a suffix.</summary>
+        private static int PreRank(string text)
+        {
+            string s = text.Split('+')[0].Trim();
+            int dash = s.IndexOf('-');
+            if (dash < 0) return int.MaxValue;
+            string tail = s.Substring(s.LastIndexOf('.') + 1);
+            int n;
+            return int.TryParse(tail, NumberStyles.None, CultureInfo.InvariantCulture, out n) ? n : 0;
         }
 
         /// <summary>

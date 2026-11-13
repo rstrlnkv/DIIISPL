@@ -49,7 +49,8 @@ namespace DIIISPL
         /// <summary>What was found on GitHub.</summary>
         internal class Release
         {
-            public Version Version;
+            /// <summary>The tag without the "v", e.g. "0.2.4-dev.2": shown to the person.</summary>
+            public string Number;
             public string Tag;
             public string Title;
             public string Notes;
@@ -131,7 +132,7 @@ namespace DIIISPL
                     if (Truthy(item, "draft")) continue;
                     // the Stable channel is not offered Dev builds
                     if (r.Early && channel != Settings.Dev) { skippedEarly = true; continue; }
-                    if (best == null || VersionText.IsNewer(r.Version, best.Version)) best = r;
+                    if (best == null || VersionText.IsNewer(r.Tag, best.Tag)) best = r;
                 }
 
                 // The mark is set even when no suitable release was found:
@@ -149,7 +150,8 @@ namespace DIIISPL
                         : Text.NoReleasesYet;
                     return null;
                 }
-                return VersionText.IsNewer(best.Version, Current) ? best : null;
+                // DisplayText, not Current: Current is the FileVersion, which has no -dev.N.
+                return VersionText.IsNewer(best.Tag, DisplayText) ? best : null;
             }
             catch (WebException ex)
             {
@@ -171,12 +173,11 @@ namespace DIIISPL
         private static Release Read(Dictionary<string, object> item, string channel)
         {
             string tag = Field(item, "tag_name");
-            Version v = ParseVersion(tag);
-            if (v == null) return null;
+            if (ParseVersion(tag) == null) return null;
 
             var r = new Release();
             r.Tag = tag;
-            r.Version = v;
+            r.Number = VersionText.Display(tag.Trim().TrimStart('v', 'V'));
             r.Title = Field(item, "name");
             r.Notes = Field(item, "body");
             r.Page = Field(item, "html_url");

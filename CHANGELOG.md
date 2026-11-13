@@ -6,6 +6,10 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Fixed
+
+- A new Dev build of the same number (0.2.4-dev.2 after 0.2.4-dev.1) is now offered as an update, and the update message shows the full version.
+
 ## [0.2.4-dev.2] - 2026-11-13
 
 ### Removed

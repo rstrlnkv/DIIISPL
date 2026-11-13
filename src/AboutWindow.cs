@@ -586,8 +586,7 @@ namespace DIIISPL
                         return;
                     }
                     _found = release;
-                    Say(Text.NewVersionFound(release.Version.Major + "." + release.Version.Minor +
-                                             "." + release.Version.Build), true);
+                    Say(Text.NewVersionFound(release.Number), true);
                     ShowHighlights(release);
                     _updateAction.Content = Text.UpdateButton;
                     _updateAction.Style = (Style)Application.Current.Resources["BtnAccent"];
@@ -607,8 +606,7 @@ namespace DIIISPL
             if (release != null && !release.Early)
             {
                 var warn = new ConfirmDialog(Text.DowngradeTitle,
-                    Text.DowngradeBody(release.Version.Major + "." + release.Version.Minor +
-                                       "." + release.Version.Build),
+                    Text.DowngradeBody(release.Number),
                     Text.DowngradeOk);
                 warn.Owner = this;
                 if (warn.ShowDialog() != true) return;

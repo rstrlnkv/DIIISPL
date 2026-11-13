@@ -169,7 +169,7 @@ namespace DIIISPL
                 Updater.Release release = Updater.Check(channel, out error);
                 if (release == null || error != null) return;
 
-                string version = release.Version.Major + "." + release.Version.Minor + "." + release.Version.Build;
+                string version = release.Number;
                 if (Settings.SkippedVersion == version) return;
 
                 Dispatcher.BeginInvoke(new Action(delegate

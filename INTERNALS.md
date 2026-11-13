@@ -245,8 +245,8 @@ The third version bump is `[assembly: AssemblyInformationalVersion("x.y.z[-dev.N
 `src/AssemblyInfo.cs`: it must equal the whole tag, suffix included. It is what the About
 screen shows (the exe's `ProductVersion`), and `release.yml` fails the run if the attribute
 is missing, appears twice or differs from the tag. `tests\version-check.cmd` checks the form
-of the attribute and its first three parts locally; only `release.yml` compares it with the tag. Dev builds of the same x.y.z still compare equal in the updater, which looks
-at the first three parts only.
+of the attribute and its first three parts locally; only `release.yml` compares it with the tag. The updater reads the suffix too: between equal x.y.z, `-dev.2` is newer
+than `-dev.1`, and a release without a suffix is newer than any `-dev.N` of its number.
 
 The `licenses/` folder and the `DEVRES` resources in `scripts\build.cmd` are Dev-only: the
 Stable build bundles no third-party component, so it embeds no licence text and has no
